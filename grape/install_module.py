@@ -77,14 +77,11 @@ class Recipe(object):
         log = logging.getLogger(self.name)
         # Move the contents of the package in to the correct destination
         top_level_contents = os.listdir(extract_dir)
-        if self.options['strip-top-level-dir'].strip().lower() in TRUE_VALUES:
-            if len(top_level_contents) != 1:
-                log.error('Unable to strip top level directory because there are more '
-                          'than one element in the root of the package.')
-                raise zc.buildout.UserError('Invalid package contents')
-            base = os.path.join(extract_dir, top_level_contents[0])
-        else:
-            base = extract_dir
+        if len(top_level_contents) != 1:
+            log.error('Unable to strip top level directory because there are more '
+                      'than one element in the root of the package.')
+            raise zc.buildout.UserError('Invalid package contents')
+        base = os.path.join(extract_dir, top_level_contents[0])
         return base
 
     def install(self):
@@ -149,6 +146,7 @@ class Recipe(object):
                     ignore_existing = self.options['ignore-existing'].strip().lower() in TRUE_VALUES
                     for filename in os.listdir(base):
                         dest = os.path.join(version_dir, filename)
+
                         if os.path.exists(dest):
                             if ignore_existing:
                                 log.info('Ignoring existing target: %s' % dest)
@@ -163,8 +161,15 @@ class Recipe(object):
                             # not get accidentally removed when uninstalling.
                             parts.append(dest)
 
-                        print (base,filename,dest)
-                        shutil.move(os.path.join(base, filename), dest)
+                        if os.path.islink(os.path.join(base,filename)):
+                            real_path = os.path.realpath(os.path.join(base,filename))
+                            if not os.path.exists(real_path):
+                                #os.symlink(os.path.join(version_dir,os.path.basename(real_path)), dest)
+                                os.symlink(os.path.basename(real_path), dest)
+                            else:
+                                shutil.move(os.path.join(base, filename), dest)
+                        else:
+                            shutil.move(os.path.join(base, filename), dest)
                 finally:
                     shutil.rmtree(extract_dir)
 
