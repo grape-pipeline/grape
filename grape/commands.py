@@ -73,3 +73,6 @@ def buildout():
     parser = argparse.ArgumentParser(prog="grape-buildout")
     parser.add_argument('-v', '--version', action='version',
                         version='grape %s' % (grape.__version__))
+
+    args = parser.parse_args()
+    args.func(args)
