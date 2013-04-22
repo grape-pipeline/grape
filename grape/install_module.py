@@ -31,7 +31,7 @@ class Recipe(object):
         options.setdefault('strip-top-level-dir', 'false')
         options.setdefault('ignore-existing', 'false')
         options.setdefault('download-only', 'false')
-        options.setdefault('hash-name', 'true')
+        options.setdefault('hash-name', 'false')
         options.setdefault('on-update', 'false')
         options['filename'] = options.get('filename', '').strip()
 
