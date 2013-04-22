@@ -31,6 +31,9 @@ analysys.
         'console_scripts': [
             'grape = grape.commands:main',
             'grape-buildout = grape.commands:buildout'
+        ],
+        'zc.buildout': [
+            'install_module = grape.install_module:Recipe'
         ]
     },
 )

@@ -91,6 +91,7 @@ class Recipe(object):
         log = logging.getLogger(self.name)
 
         destination = self.get_destination()
+
         download = Download(self.buildout['buildout'], hash_name=self.options['hash-name'].strip() in TRUE_VALUES)
         path, is_temp = download(self.options['url'], md5sum=self.options.get('md5sum'))
 
@@ -99,13 +100,15 @@ class Recipe(object):
         try:
 
             # Create destination directory
-            module_dir='%s/%s' % destination,self.options['name']
+            module_dir='%s/%s' % (destination,self.options['name'])
             if not os.path.isdir(module_dir):
                 os.makedirs(module_dir)
 
-            version_dir='%s/%s' % module_dir,self.options['version']
+            version_dir='%s/%s' % (module_dir,self.options['version'])
             if os.path.isdir(version_dir):
-                raise ValueError("The module %s-%s is already installed") % self.options['name'],self.options['version']
+                raise ValueError("The module %s-%s is already installed" % (self.options['name'],self.options['version']))
+
+            os.makedirs(version_dir)
 
             parts.append(version_dir)
 
@@ -125,7 +128,7 @@ class Recipe(object):
                 shutil.copy(path, target_path)
                 if self.options.get('mode'):
                   os.chmod(target_path, int(self.options['mode'], 8))
-                if not destination in parts:
+                if not version_dir in parts:
                     parts.append(target_path)
             else:
                 # Extract the package
@@ -140,17 +143,6 @@ class Recipe(object):
                     if self.excluded_count > 0:
                         log.info("Excluding %s file(s) matching the exclusion pattern." % self.excluded_count)
                     base = self.calculate_base(extract_dir)
-
-                   # Create destination directory
-                    module_dir='%s/%s' % destination,self.options['name']
-                    if not os.path.isdir(module_dir):
-                        os.makedirs(module_dir)
-
-                    version_dir='%s/%s' % module_dir,self.options['version']
-                    if os.path.isdir(version_dir):
-                        raise ValueError("The module %s-%s is already installed") % self.options['name'],self.options['version']
-
-                    parts.append(version_dir)
 
                     log.info('Extracting module package to %s' % version_dir)
 
@@ -171,6 +163,7 @@ class Recipe(object):
                             # not get accidentally removed when uninstalling.
                             parts.append(dest)
 
+                        print (base,filename,dest)
                         shutil.move(os.path.join(base, filename), dest)
                 finally:
                     shutil.rmtree(extract_dir)
