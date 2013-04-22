@@ -10,9 +10,11 @@ the parsed command line options and executes the command.
 
 """
 import argparse
+import sys
+import os
 
 import grape
-
+from grape import Project
 
 
 class GrapeCommand(object):
@@ -33,10 +35,19 @@ class InitCommand(GrapeCommand):
     description = """Initialize a grape project"""
 
     def run(self, args):
-        pass
+        path = args.path
+        if path is None:
+            print >> sys.stderr, "You have to specify a path to the project"
+        project = Project(path)
+        if project.exists():
+            print >> sys.stderr, "Project exists!"
+        else:
+            print >> sys.stderr, "Initializing project"
+            project.initialize()
+            print >> sys.stderr, "Done"
 
     def add(self, parser):
-        parser.add_argument("path", default=".")
+        parser.add_argument("path", default=os.getcwd(), nargs="?")
 
 
 def _add_command(command, command_parser):
