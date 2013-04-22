@@ -2,11 +2,11 @@ from distribute_setup import use_setuptools
 use_setuptools()
 
 from setuptools import setup
-
+import grape
 
 setup(
     name='Grape',
-    version="2.0-alpha.1",
+    version=grape.__version__,
     description='The Grape RNASeq pipeline verison 2',
     author='Emilio Palumbo, Thasso Griebel',
     url='https://grape-pipeline.org/',
@@ -29,7 +29,8 @@ analysys.
     install_requires=["argparse"],
     entry_points={
         'console_scripts': [
-            'grape = grape.commands:main'
+            'grape = grape.commands:main',
+            'grape-buildout = grape.commands:buildout'
         ]
     },
 )
