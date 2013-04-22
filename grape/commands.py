@@ -14,7 +14,7 @@ import sys
 import os
 
 import grape
-from grape import Project
+from grape import Grape, Project
 
 
 class GrapeCommand(object):
@@ -50,6 +50,27 @@ class InitCommand(GrapeCommand):
         parser.add_argument("path", default=os.getcwd(), nargs="?")
 
 
+class RunCommand(GrapeCommand):
+    name = "run"
+    description = """Run the pipeline on a set of data"""
+
+    def run(self, args):
+        datasets = args.datasets
+        if datasets is None:
+            print >> sys.stderr, "You have to specify what to run!"
+
+        project = Project.find()
+        if project is None or not project.exists():
+            print >> sys.stderr, "No grape project found!"
+        else:
+            if datasets == "all":
+                # run on all datasets
+                Grape().run(project)
+
+    def add(self, parser):
+        parser.add_argument("datasets", default="all", nargs="*")
+
+
 def _add_command(command, command_parser):
     """Add a command instance to the set of command parsers
 
@@ -74,6 +95,7 @@ def main():
     # add commands
     command_parsers = parser.add_subparsers()
     _add_command(InitCommand(), command_parsers)
+    _add_command(RunCommand(), command_parsers)
 
     args = parser.parse_args()
     args.func(args)

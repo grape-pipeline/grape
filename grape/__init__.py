@@ -2,6 +2,7 @@
 """The grape main module"""
 import os
 import errno
+import re
 
 __version__ = "2.0-alpha.1"
 
@@ -9,6 +10,109 @@ __version__ = "2.0-alpha.1"
 class GrapeError(Exception):
     """Base grape error"""
     pass
+
+
+class Grape(object):
+    """Grape main class to run and submit pipelines"""
+
+    def __init__(self):
+        self.home = os.getenv("GRAPE_HOME", None)
+
+    def run(self, project, datasets=None):
+        """Run the pipeline for a given project. If no datasets are
+        specified explicitly, run on all datasets.
+
+        Parameter
+        ---------
+        project  - the project
+        datasets - optional datasets
+        """
+        if datasets is None:
+            datasets = project.get_datasets()
+
+
+class Dataset(object):
+    """A single dataset in a project
+    """
+
+    def __init__(self, primary, project=None, sort_by_name=True):
+        """Initialize a dataset with a given project and a path to
+        the main dataset file.
+
+        Parameter
+        ---------
+        project - the project
+        primary - the primary file
+        """
+        self.project = project
+        self.primary = os.path.abspath(primary)
+        self.secondary = None
+        self.type_folders = False
+        self.data_folder = os.path.dirname(self.primary)
+        # check for type folders
+        if os.path.split(self.data_folder)[1] == "fastq":
+            self.type_folders = True
+            self.data_folder = os.path.split(self.data_folder)[0]
+
+        #detect secondary
+        directory = os.path.dirname(self.primary)
+        self.secondary = Dataset.find_secondary(self.primary)
+        if self.secondary is not None:
+            self.secondary = "%s/%s" % (directory, self.secondary)
+
+        # set name
+        if self.secondary is not None:
+            # exclude _1/_2 pair identifiers
+            self.name = re.match("^(?P<name>.*)([_\.-])(\d)\.(fastq|fq)(.gz)*?$",
+                                 os.path.basename(self.primary)).group("name")
+        else:
+            # single datafile name
+            self.name = re.match("^(?P<name>.*)\.(fastq|fq)(.gz)*?$",
+                                 os.path.basename(self.primary)).group("name")
+
+        # sort primary and secondary
+        if sort_by_name and self.secondary is not None:
+            s = sorted([self.primary, self.secondary])
+            self.primary = s[0]
+            self.secondary = s[1]
+
+    def folder(self, name=None):
+        """Resolve a folder based on datasets project folder and
+        if type_folders. If type folders is True, this always resolves
+        to the data folder. Otherwise, if name is specified, it resolves
+        to the named folder under this datasets data folder.
+        """
+        if not self.type_folders or name is None:
+            return self.data_folder
+        else:
+            return os.path.join(self.data_folder, name)
+
+    @staticmethod
+    def find_secondary(name):
+        """Find secondary dataset file and return the basename of
+        that file or return None
+        """
+
+        name = os.path.basename(name)
+        expr = "^(?P<name>.*)(?P<delim>[_\.-])(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
+        match = re.match(expr, name)
+        if match is not None:
+            try:
+                id = int(match.group("id"))
+                if id < 2:
+                    id += 1
+                else:
+                    id -= 1
+                compr = match.group("compression")
+                if compr is None:
+                    compr = ""
+                return "%s%s%d.%s%s" % (match.group("name"),
+                                        match.group("delim"),
+                                        id, match.group("type"),
+                                        compr)
+            except Exception:
+                pass
+        return None
 
 
 class Project(object):
@@ -65,3 +169,52 @@ class Project(object):
             else:
                 raise GrapeError("Unable to create folder %s" % (path))
 
+    def get_datasets(self):
+        """Return a list of all datasets found in this project"""
+        data_folder = os.path.join(self.path, "data")
+        datasets = {}
+        # get the files in the data folder
+        for f in Project.__search_fastq_files(data_folder):
+            d = Dataset(f)
+            if d.primary not in datasets:
+                datasets[d.primary] = d
+
+        return [d for k, d in datasets.items()]
+
+    @staticmethod
+    def __search_fastq_files(directory, level=0):
+        """Search the given directory for fastq files and return them"""
+        if directory is None or not os.path.exists(directory):
+            return []
+        if os.path.isfile(directory):
+            return []
+
+        datasets = []
+        for f in os.listdir(directory):
+            # add fastq files in
+            absname = os.path.join(directory, f)
+            if os.path.isfile(absname) and re.match(".*\.(fastq|fq)(\.gz)*?$", f):
+                datasets.append(absname)
+            elif not os.path.isfile(absname) and level == 0 or f == "fastq":
+                # scan folder
+                sub = Project.__search_fastq_files(absname,
+                                                   level=level + 1)
+                datasets.extend(sub)
+        return datasets
+
+
+    @staticmethod
+    def find(path=None):
+        """Recursive search for a grape project folder starting at
+        the given directory
+        """
+        if path is None:
+            path = os.getcwd()
+
+        if Project(path).exists():
+            return Project(path)
+        else:
+            path = os.path.dirname(path)
+            if(path == "/"):
+                return None
+            return Project.find(path)
