@@ -1,5 +1,6 @@
 from fnmatch import fnmatch
 from zc.buildout.download import Download
+from zc.buildout import UserError
 
 import sys
 import logging
@@ -35,12 +36,14 @@ class Recipe(object):
         options.setdefault('on-update', 'true')
         options['filename'] = options.get('filename', '').strip()
 
+        log = logging.getLogger(self.name)
         if not options.get('name'):
-          print >> sys.stderr, '[WARNING] The tool name was not specified - using part name'
-          options['name'] = self.name
+            log.warning('Module name was not specified - using part name')
+            options['name'] = self.name
 
         if not options.get('version'):
-          raise UserError('The tool version is mandatory')
+            log.error('Unable to get the %s version from the configuration file', self.name)
+            raise UserError('Module version is mandatory')
 
         if options.get('mode'):
           options['mode'] = options['mode'].strip()
@@ -96,7 +99,7 @@ class Recipe(object):
         parts = []
 
         if os.path.isdir(os.path.join(destination, module['name'], module['version'])):
-            print >> sys.stderr, 'Skipping module %s-%s - already installed' % (module['name'],module['version'])
+            log.error('Skipping module %s-%s - already installed', module['name'], module['version'])
         else:
 
             download = Download(self.buildout['buildout'], hash_name=self.options['hash-name'].strip() in TRUE_VALUES)
