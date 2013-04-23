@@ -36,12 +36,11 @@ class Recipe(object):
         options['filename'] = options.get('filename', '').strip()
 
         if not options.get('name'):
-          raise ValueError('The tool name is mandatory')
-          sys.exit(1)
+          print >> sys.stderr, '[WARNING] The tool name was not specified - using part name'
+          options['name'] = self.name
 
         if not options.get('version'):
-          raise ValueError('The tool version is mandatory')
-          sys.exit(1)
+          raise UserError('The tool version is mandatory')
 
         if options.get('mode'):
           options['mode'] = options['mode'].strip()
@@ -62,8 +61,8 @@ class Recipe(object):
         return dst
 
     def get_destination(self):
-       grape_home = os.getenv(GRAPE_HOME,'%s/grape' % os.getenv('HOME'))
-       return '%s/modules' % grape_home
+       grape_home = os.getenv(GRAPE_HOME, os.path.join(os.getenv('HOME'), 'grape'))
+       return os.path.join(grape_home, 'modules')
 
 
     def update(self):
