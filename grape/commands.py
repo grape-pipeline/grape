@@ -118,8 +118,13 @@ def buildout():
     else:
         buildout = Buildout(buildout_conf, [])
         try:
+            buildout['buildout']['installed'] = ''
             buildout.install([])
         except UserError as e:
             print >> sys.stderr, '[ERROR] %s' % e
+        finally:
+            clean_up(buildout)
 
-
+def clean_up(buildout):
+    for name in ('bin', 'develop-eggs', 'eggs', 'parts'):
+        os.removedirs(buildout['buildout'][name+'-directory'])
