@@ -109,9 +109,11 @@ def buildout():
 
     args = parser.parse_args()
 
-    buildout_conf = 'buildout.conf'
+    buildout_conf = os.path.join(os.path.dirname(__file__), 'buildout.conf')
 
     if not os.path.exists(buildout_conf):
         print >> sys.stderr, "No buildout configuration file found!"
     else:
-        print >> sys.stdout, os.system('buildout -c %s' % buildout_conf)
+        os.system('buildout -c %s' % buildout_conf)
+
+

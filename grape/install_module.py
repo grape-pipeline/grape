@@ -32,7 +32,7 @@ class Recipe(object):
         options.setdefault('ignore-existing', 'false')
         options.setdefault('download-only', 'false')
         options.setdefault('hash-name', 'false')
-        options.setdefault('on-update', 'false')
+        options.setdefault('on-update', 'true')
         options['filename'] = options.get('filename', '').strip()
 
         if not options.get('name'):
@@ -67,8 +67,9 @@ class Recipe(object):
 
 
     def update(self):
-        if self.options['on-update'].strip().lower() in TRUE_VALUES:
-            self.install()
+        pass
+        #if self.options['on-update'].strip().lower() in TRUE_VALUES:
+        #    self.install()
 
     def calculate_base(self, extract_dir):
         """
@@ -89,6 +90,11 @@ class Recipe(object):
 
         destination = self.get_destination()
 
+        module = {'name' : self.options['name'], 'version' : self.options['version']}
+
+        if os.path.isdir(os.path.join(destination, module['name'], module['version'])):
+            raise zc.buildout.UserError('Module %s-%s is already installed' % (module['name'],module['version']))
+
         download = Download(self.buildout['buildout'], hash_name=self.options['hash-name'].strip() in TRUE_VALUES)
         path, is_temp = download(self.options['url'], md5sum=self.options.get('md5sum'))
 
@@ -97,13 +103,11 @@ class Recipe(object):
         try:
 
             # Create destination directory
-            module_dir='%s/%s' % (destination,self.options['name'])
+            module_dir = os.path.join(destination, module['name'])
             if not os.path.isdir(module_dir):
                 os.makedirs(module_dir)
 
-            version_dir='%s/%s' % (module_dir,self.options['version'])
-            if os.path.isdir(version_dir):
-                raise ValueError("The module %s-%s is already installed" % (self.options['name'],self.options['version']))
+            version_dir = os.path.join(module_dir, module['version'])
 
             os.makedirs(version_dir)
 
@@ -124,7 +128,7 @@ class Recipe(object):
                 target_path = os.path.join(version_dir, filename)
                 shutil.copy(path, target_path)
                 if self.options.get('mode'):
-                  os.chmod(target_path, int(self.options['mode'], 8))
+                    os.chmod(target_path, int(self.options['mode'], 8))
                 if not version_dir in parts:
                     parts.append(target_path)
             else:
