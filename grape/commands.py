@@ -12,6 +12,8 @@ the parsed command line options and executes the command.
 import argparse
 import sys
 import os
+from zc.buildout import UserError
+from zc.buildout.buildout import Buildout
 
 import grape
 from grape import Grape, Project
@@ -114,6 +116,10 @@ def buildout():
     if not os.path.exists(buildout_conf):
         print >> sys.stderr, "No buildout configuration file found!"
     else:
-        os.system('buildout -c %s' % buildout_conf)
+        buildout = Buildout(buildout_conf, [])
+        try:
+            buildout.install([])
+        except UserError as e:
+            print >> sys.stderr, '[ERROR] %s' % e
 
 
