@@ -86,7 +86,7 @@ def _add_command(command, command_parser):
 
 
 def main():
-    """The grape main mehtod that is triggered by the `grape` command
+    """The grape main method that is triggered by the `grape` command
     line tool"""
     parser = argparse.ArgumentParser(prog="grape")
     parser.add_argument('-v', '--version', action='version',
@@ -108,4 +108,10 @@ def buildout():
                         version='grape %s' % (grape.__version__))
 
     args = parser.parse_args()
-    args.func(args)
+
+    buildout_conf = 'buildout.conf'
+
+    if not os.path.exists(buildout_conf):
+        print >> sys.stderr, "No buildout configuration file found!"
+    else:
+        print >> sys.stdout, os.system('buildout -c %s' % buildout_conf)
