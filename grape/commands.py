@@ -12,6 +12,7 @@ the parsed command line options and executes the command.
 import argparse
 import sys
 import os
+import logging
 from zc.buildout import UserError
 from zc.buildout.buildout import Buildout
 
@@ -111,15 +112,25 @@ def buildout():
 
     args = parser.parse_args()
 
+    logger = logging.getLogger('grape')
     buildout_conf = os.path.join(os.path.dirname(__file__), 'buildout.conf')
 
     if not os.path.exists(buildout_conf):
-        print >> sys.stderr, "No buildout configuration file found!"
+        logger.error("No buildout configuration file found!")
     else:
         buildout = Buildout(buildout_conf, [])
         try:
+            buildout['buildout']['installed'] = ''
             buildout.install([])
         except UserError as e:
-            print >> sys.stderr, '[ERROR] %s' % e
+            logger.error('Buildout error - %r', e)
+        finally:
+            clean_up(buildout)
 
-
+def clean_up(buildout):
+    """ Cleanup method to remove the directories created by buildout """
+    for name in ('bin', 'develop-eggs', 'eggs', 'parts'):
+        logger = logging.getLogger('grape')
+        dir = buildout['buildout'][name+'-directory']
+        logger.warn('Removing directory %r.', dir)
+        os.removedirs(dir)

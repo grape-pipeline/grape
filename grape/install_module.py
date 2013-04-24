@@ -1,5 +1,6 @@
 from fnmatch import fnmatch
 from zc.buildout.download import Download
+from zc.buildout import UserError
 
 import sys
 import logging
@@ -35,13 +36,14 @@ class Recipe(object):
         options.setdefault('on-update', 'true')
         options['filename'] = options.get('filename', '').strip()
 
+        log = logging.getLogger(self.name)
         if not options.get('name'):
-          raise ValueError('The tool name is mandatory')
-          sys.exit(1)
+            log.warning('Module name was not specified - using part name')
+            options['name'] = self.name
 
         if not options.get('version'):
-          raise ValueError('The tool version is mandatory')
-          sys.exit(1)
+            log.error('Unable to get the %s version from the configuration file', self.name)
+            raise UserError('Module version is mandatory')
 
         if options.get('mode'):
           options['mode'] = options['mode'].strip()
@@ -62,8 +64,8 @@ class Recipe(object):
         return dst
 
     def get_destination(self):
-       grape_home = os.getenv(GRAPE_HOME,'%s/grape' % os.getenv('HOME'))
-       return '%s/modules' % grape_home
+       grape_home = os.getenv(GRAPE_HOME, os.path.join(os.getenv('HOME'), 'grape'))
+       return os.path.join(grape_home, 'modules')
 
 
     def update(self):
@@ -91,94 +93,97 @@ class Recipe(object):
         destination = self.get_destination()
 
         module = {'name' : self.options['name'], 'version' : self.options['version']}
-
-        if os.path.isdir(os.path.join(destination, module['name'], module['version'])):
-            raise zc.buildout.UserError('Module %s-%s is already installed' % (module['name'],module['version']))
-
-        download = Download(self.buildout['buildout'], hash_name=self.options['hash-name'].strip() in TRUE_VALUES)
-        path, is_temp = download(self.options['url'], md5sum=self.options.get('md5sum'))
+        url = self.options['url']
+        md5 = self.options.get('md5sum')
 
         parts = []
 
-        try:
+        if os.path.isdir(os.path.join(destination, module['name'], module['version'])):
+            log.error('Skipping module %s-%s - already installed', module['name'], module['version'])
+        else:
 
-            # Create destination directory
-            module_dir = os.path.join(destination, module['name'])
-            if not os.path.isdir(module_dir):
-                os.makedirs(module_dir)
+            download = Download(self.buildout['buildout'], hash_name=self.options['hash-name'].strip() in TRUE_VALUES)
+            path, is_temp = download(url, md5sum=md5)
 
-            version_dir = os.path.join(module_dir, module['version'])
+            try:
 
-            os.makedirs(version_dir)
+                # Create destination directory
+                module_dir = os.path.join(destination, module['name'])
+                if not os.path.isdir(module_dir):
+                    os.makedirs(module_dir)
 
-            parts.append(version_dir)
+                version_dir = os.path.join(module_dir, module['version'])
 
-            download_only = self.options['download-only'].strip().lower() in TRUE_VALUES
-            if download_only:
-                if self.options['filename']:
-                    # Use an explicit filename from the section configuration
-                    filename = self.options['filename']
+                os.makedirs(version_dir)
+
+                parts.append(version_dir)
+
+                download_only = self.options['download-only'].strip().lower() in TRUE_VALUES
+                if download_only:
+                    if self.options['filename']:
+                        # Use an explicit filename from the section configuration
+                        filename = self.options['filename']
+                    else:
+                        # Use the original filename of the downloaded file regardless
+                        # whether download filename hashing is enabled.
+                        # See http://github.com/hexagonit/hexagonit.recipe.download/issues#issue/2
+                        filename = os.path.basename(urlparse.urlparse(self.options['url'])[2])
+
+                    # Copy the file to destination without extraction
+                    target_path = os.path.join(version_dir, filename)
+                    shutil.copy(path, target_path)
+                    if self.options.get('mode'):
+                        os.chmod(target_path, int(self.options['mode'], 8))
+                    if not version_dir in parts:
+                        parts.append(target_path)
                 else:
-                    # Use the original filename of the downloaded file regardless
-                    # whether download filename hashing is enabled.
-                    # See http://github.com/hexagonit/hexagonit.recipe.download/issues#issue/2
-                    filename = os.path.basename(urlparse.urlparse(self.options['url'])[2])
-
-                # Copy the file to destination without extraction
-                target_path = os.path.join(version_dir, filename)
-                shutil.copy(path, target_path)
-                if self.options.get('mode'):
-                    os.chmod(target_path, int(self.options['mode'], 8))
-                if not version_dir in parts:
-                    parts.append(target_path)
-            else:
-                # Extract the package
-                extract_dir = tempfile.mkdtemp("buildout-" + self.name)
-                self.excluded_count = 0
-                try:
+                    # Extract the package
+                    extract_dir = tempfile.mkdtemp("buildout-" + self.name)
+                    self.excluded_count = 0
                     try:
-                        setuptools.archive_util.unpack_archive(path, extract_dir, progress_filter=self.progress_filter)
-                    except setuptools.archive_util.UnrecognizedFormat:
-                        log.error('Unable to extract the package %s. Unknown format.', path)
-                        raise zc.buildout.UserError('Package extraction error')
-                    if self.excluded_count > 0:
-                        log.info("Excluding %s file(s) matching the exclusion pattern." % self.excluded_count)
-                    base = self.calculate_base(extract_dir)
+                        try:
+                            setuptools.archive_util.unpack_archive(path, extract_dir, progress_filter=self.progress_filter)
+                        except setuptools.archive_util.UnrecognizedFormat:
+                            log.error('Unable to extract the package %s. Unknown format.', path)
+                            raise zc.buildout.UserError('Package extraction error')
+                        if self.excluded_count > 0:
+                            log.info("Excluding %s file(s) matching the exclusion pattern." % self.excluded_count)
+                        base = self.calculate_base(extract_dir)
 
-                    log.info('Extracting module package to %s' % version_dir)
+                        log.info('Extracting module package to %s' % version_dir)
 
-                    ignore_existing = self.options['ignore-existing'].strip().lower() in TRUE_VALUES
-                    for filename in os.listdir(base):
-                        dest = os.path.join(version_dir, filename)
+                        ignore_existing = self.options['ignore-existing'].strip().lower() in TRUE_VALUES
+                        for filename in os.listdir(base):
+                            dest = os.path.join(version_dir, filename)
 
-                        if os.path.exists(dest):
-                            if ignore_existing:
-                                log.info('Ignoring existing target: %s' % dest)
+                            if os.path.exists(dest):
+                                if ignore_existing:
+                                    log.info('Ignoring existing target: %s' % dest)
+                                else:
+                                    log.error('Target %s already exists. Either remove it or set '
+                                              '``ignore-existing = true`` in your buildout.cfg to ignore existing '
+                                              'files and directories.', dest)
+                                    raise zc.buildout.UserError('File or directory already exists.')
                             else:
-                                log.error('Target %s already exists. Either remove it or set '
-                                          '``ignore-existing = true`` in your buildout.cfg to ignore existing '
-                                          'files and directories.', dest)
-                                raise zc.buildout.UserError('File or directory already exists.')
-                        else:
-                            # Only add the file/directory to the list of installed
-                            # parts if it does not already exist. This way it does
-                            # not get accidentally removed when uninstalling.
-                            parts.append(dest)
+                                # Only add the file/directory to the list of installed
+                                # parts if it does not already exist. This way it does
+                                # not get accidentally removed when uninstalling.
+                                parts.append(dest)
 
-                        if os.path.islink(os.path.join(base,filename)):
-                            real_path = os.path.realpath(os.path.join(base,filename))
-                            if not os.path.exists(real_path):
-                                #os.symlink(os.path.join(version_dir,os.path.basename(real_path)), dest)
-                                os.symlink(os.path.basename(real_path), dest)
+                            if os.path.islink(os.path.join(base,filename)):
+                                real_path = os.path.realpath(os.path.join(base,filename))
+                                if not os.path.exists(real_path):
+                                    #os.symlink(os.path.join(version_dir,os.path.basename(real_path)), dest)
+                                    os.symlink(os.path.basename(real_path), dest)
+                                else:
+                                    shutil.move(os.path.join(base, filename), dest)
                             else:
                                 shutil.move(os.path.join(base, filename), dest)
-                        else:
-                            shutil.move(os.path.join(base, filename), dest)
-                finally:
-                    shutil.rmtree(extract_dir)
+                    finally:
+                        shutil.rmtree(extract_dir)
 
-        finally:
-            if is_temp:
-                os.unlink(path)
+            finally:
+                if is_temp:
+                    os.unlink(path)
 
         return parts
