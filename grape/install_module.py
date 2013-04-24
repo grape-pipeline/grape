@@ -9,6 +9,7 @@ import setuptools.archive_util
 import shutil
 import tempfile
 import zc.buildout
+import subprocess
 
 if sys.version_info[0] > 2:
     import urllib.parse as urlparse
@@ -172,11 +173,15 @@ class Recipe(object):
 
                             if os.path.islink(os.path.join(base,filename)):
                                 real_path = os.path.realpath(os.path.join(base,filename))
-                                if not os.path.exists(real_path):
-                                    #os.symlink(os.path.join(version_dir,os.path.basename(real_path)), dest)
-                                    os.symlink(os.path.basename(real_path), dest)
-                                else:
-                                    shutil.move(os.path.join(base, filename), dest)
+                                # shutils move has a problem with symlinks
+                                # probabluy for a good reason, but we need
+                                # to meve everything as is. Workaround for now
+                                # is just to performe a system move
+                                p = subprocess.Popen(["mv",
+                                                      os.path.join(base, filename),
+                                                      dest]).wait()
+                                if p != 0:
+                                    raise Exception("Failed to move symlink")
                             else:
                                 shutil.move(os.path.join(base, filename), dest)
                     finally:
