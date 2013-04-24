@@ -9,6 +9,7 @@ import setuptools.archive_util
 import shutil
 import tempfile
 import zc.buildout
+import subprocess
 
 if sys.version_info[0] > 2:
     import urllib.parse as urlparse
