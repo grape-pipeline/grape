@@ -13,6 +13,7 @@ import argparse
 import sys
 import os
 import logging
+logging.basicConfig()
 
 import grape
 from grape.buildout import Buildout
@@ -118,7 +119,5 @@ def buildout():
         buildout = Buildout(buildout_conf)
         buildout.install([])
     except GrapeError as e:
-        logger.error('Buildout error - %r', e)
-    finally:
-        buildout.cleanup()
+        logger.error('Buildout error - %r', str(e))
 

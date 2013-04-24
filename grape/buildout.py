@@ -17,8 +17,21 @@ class Buildout(Bout):
         #if not os.path.exists(buildout_conf):
         #    raise GrapeError("No buildout configuration file found!")
         #else:
-        Bout.__init__(self,config_file,[])
+        try:
+            Bout.__init__(self,config_file,[])
+        except UserError as e:
+            raise GrapeError(str(e))
         self['buildout']['installed'] = ''
+        self._type = 'tar'
+
+    def _setup_directories(self):
+        if self._type == 'egg':
+            Bout._setup_directories(self)
+
+    def install(self, install_args):
+        Bout.install(self,install_args)
+        if self._type == 'tar':
+            self.cleanup()
 
     def cleanup(self):
         """ Cleanup method to remove the directories created by buildout """
