@@ -172,11 +172,7 @@ class Recipe(object):
 
                             if os.path.islink(os.path.join(base,filename)):
                                 real_path = os.path.realpath(os.path.join(base,filename))
-                                if not os.path.exists(real_path):
-                                    #os.symlink(os.path.join(version_dir,os.path.basename(real_path)), dest)
-                                    os.symlink(os.path.basename(real_path), dest)
-                                else:
-                                    shutil.move(os.path.join(base, filename), dest)
+                                os.symlink(os.path.basename(real_path), dest)
                             else:
                                 shutil.move(os.path.join(base, filename), dest)
                     finally:
