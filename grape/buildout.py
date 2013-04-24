@@ -2,8 +2,32 @@
 """The Grape buildout module provides ways to
 access the installed modules in GRAPE_HOME
 """
-import os
+from zc.buildout import UserError
+from zc.buildout.buildout import Buildout as Bout
+from grape import GrapeError
 
+import os
+import logging
+
+class Buildout(Bout):
+    """A grape buildout class extending the zc.buildout
+    """
+
+    def __init__(self, config_file):
+        #if not os.path.exists(buildout_conf):
+        #    raise GrapeError("No buildout configuration file found!")
+        #else:
+        Bout.__init__(self,config_file,[])
+        self['buildout']['installed'] = ''
+
+    def cleanup(self):
+        """ Cleanup method to remove the directories created by buildout """
+        for name in ('bin', 'develop-eggs', 'eggs', 'parts'):
+            logger = logging.getLogger('buildout')
+            dir = self['buildout'][name+'-directory']
+            if os.path.isdir(dir):
+                logger.warn('Removing directory %r.', dir)
+                os.removedirs(dir)
 
 class Module(object):
     """A grape buildout module that can be activated in the current

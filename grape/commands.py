@@ -13,11 +13,10 @@ import argparse
 import sys
 import os
 import logging
-from zc.buildout import UserError
-from zc.buildout.buildout import Buildout
 
 import grape
-from grape import Grape, Project
+from grape.buildout import Buildout
+from grape import Grape, Project, GrapeError
 
 
 class GrapeCommand(object):
@@ -115,22 +114,11 @@ def buildout():
     logger = logging.getLogger('grape')
     buildout_conf = os.path.join(os.path.dirname(__file__), 'buildout.conf')
 
-    if not os.path.exists(buildout_conf):
-        logger.error("No buildout configuration file found!")
-    else:
-        buildout = Buildout(buildout_conf, [])
-        try:
-            buildout['buildout']['installed'] = ''
-            buildout.install([])
-        except UserError as e:
-            logger.error('Buildout error - %r', e)
-        finally:
-            clean_up(buildout)
+    try:
+        buildout = Buildout(buildout_conf)
+        buildout.install([])
+    except GrapeError as e:
+        logger.error('Buildout error - %r', e)
+    finally:
+        buildout.cleanup()
 
-def clean_up(buildout):
-    """ Cleanup method to remove the directories created by buildout """
-    for name in ('bin', 'develop-eggs', 'eggs', 'parts'):
-        logger = logging.getLogger('grape')
-        dir = buildout['buildout'][name+'-directory']
-        logger.warn('Removing directory %r.', dir)
-        os.removedirs(dir)
