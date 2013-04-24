@@ -63,7 +63,8 @@ class Dataset(object):
         # set name
         if self.secondary is not None:
             # exclude _1/_2 pair identifiers
-            self.name = re.match("^(?P<name>.*)([_\.-])(\d)\.(fastq|fq)(.gz)*?$",
+            self.name = re.match("^(?P<name>.*)([_\.-])(\d)"
+                                 "\.(fastq|fq)(.gz)*?$",
                                  os.path.basename(self.primary)).group("name")
         else:
             # single datafile name
@@ -94,7 +95,8 @@ class Dataset(object):
         """
 
         name = os.path.basename(name)
-        expr = "^(?P<name>.*)(?P<delim>[_\.-])(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
+        expr = "^(?P<name>.*)(?P<delim>[_\.-])" \
+               "(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
         match = re.match(expr, name)
         if match is not None:
             try:
@@ -193,7 +195,9 @@ class Project(object):
         for f in os.listdir(directory):
             # add fastq files in
             absname = os.path.join(directory, f)
-            if os.path.isfile(absname) and re.match(".*\.(fastq|fq)(\.gz)*?$", f):
+            is_file = os.path.isfile(absname)
+            is_fastq = re.match(".*\.(fastq|fq)(\.gz)*?$", f)
+            if is_file and is_fastq:
                 datasets.append(absname)
             elif not os.path.isfile(absname) and level == 0 or f == "fastq":
                 # scan folder
@@ -201,7 +205,6 @@ class Project(object):
                                                    level=level + 1)
                 datasets.extend(sub)
         return datasets
-
 
     @staticmethod
     def find(path=None):
