@@ -4,7 +4,7 @@ access the installed modules in GRAPE_HOME
 """
 from zc.buildout import UserError
 from zc.buildout.buildout import Buildout as Bout
-from grape import GrapeError
+from grape import GrapeError, Grape
 
 import os
 import logging
@@ -87,6 +87,9 @@ def find(name, version=None, grape_home=None):
         grape_home = Grape().home
     if name is None:
         raise AttributeError("None name not permitted")
+    if grape_home is None:
+        raise ValueError("GRAPE_HOME not defined. Please set the GRAPE_HOME"
+                         " environment variable!")
     if not os.path.exists(grape_home):
         raise ValueError("Grape home %s not found!" % (grape_home))
 

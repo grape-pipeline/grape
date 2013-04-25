@@ -68,10 +68,12 @@ class RunCommand(GrapeCommand):
         else:
             if datasets == "all":
                 # run on all datasets
-                Grape().run(project)
+                Grape().run(project, args=args)
 
     def add(self, parser):
         parser.add_argument("datasets", default="all", nargs="*")
+        parser.add_argument("-t", "--threads", default=1, dest="threads",
+                            help="Number of maxium threads per step")
 
 
 def _add_command(command, command_parser):
