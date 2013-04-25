@@ -5,6 +5,7 @@ import errno
 import re
 import json
 
+
 __version__ = "2.0-alpha.1"
 
 
@@ -19,17 +20,59 @@ class Grape(object):
     def __init__(self):
         self.home = os.getenv("GRAPE_HOME", None)
 
-    def run(self, project, datasets=None):
+    def run(self, project, datasets=None, args=None):
         """Run the pipeline for a given project. If no datasets are
         specified explicitly, run on all datasets.
 
         Parameter
         ---------
         project  - the project
-        datasets - optional datasets
+        datasets - optional datasets,
+        args     - argparse command line arguments
         """
         if datasets is None:
             datasets = project.get_datasets()
+        threads = 1
+        index = project.get_indices()[0]
+        annotation = project.get_annotations()[0]
+
+        if args is not None:
+            if "threads" in args and args.threads is not None:
+                threads = args.threads
+
+        print "Prepare runs for %d datasets" % (len(datasets))
+        import grape.pipelines
+        for dataset in datasets:
+            print "Checking pipeline run for ", dataset
+            pipeline = grape.pipelines.default_pipeline(dataset,
+                                                        index,
+                                                        annotation,
+                                                        threads=threads)
+            steps = pipeline.get_sorted_tools()
+            print "Pipeline contains %d steps" % (len(steps))
+            print "Validating pipeline configuraiton"
+            valid = True
+
+            for step in steps:
+                try:
+                    step.validate()
+                except Exception, e:
+                    print "Pipeline step %s not valid!" % (step.name)
+                    for key, value in e.validation_errors.items():
+                        print "%s\t\t%s" % (key, value)
+                    valid = False
+
+            if not valid:
+                break
+
+            print "All seems good, starting..."
+            for step in steps:
+                print "Running step: %s" % (str(step))
+                try:
+                    step.run()
+                except Exception, e:
+                    print "Execution of step %s failed : %s" % (str(step),
+                                                                str(e))
 
 
 class Dataset(object):
@@ -77,6 +120,8 @@ class Dataset(object):
             s = sorted([self.primary, self.secondary])
             self.primary = s[0]
             self.secondary = s[1]
+        self.single_end = False  # todo: add single end detection and support
+        self.quality = 33  # todo: add quality support
 
     def folder(self, name=None):
         """Resolve a folder based on datasets project folder and
@@ -117,6 +162,8 @@ class Dataset(object):
                 pass
         return None
 
+    def __repr__(self):
+        return "Dataset: %s" % (self.name)
 
 class Project(object):
     """Base class for grape projects. A project hosts all the data
@@ -171,6 +218,24 @@ class Project(object):
                 pass
             else:
                 raise GrapeError("Unable to create folder %s" % (path))
+
+    def get_indices(self):
+        """Return the absolute path to all .gem files in the genomes
+        folder of the project
+        """
+        folder = os.path.join(self.path, "genomes")
+        return [os.path.join(folder, f)
+                for f in os.listdir(folder)
+                if f.endswith(".gem")]
+
+    def get_annotations(self):
+        """Return the absolute path to all annotation files in the annotations
+        folder of the project
+        """
+        folder = os.path.join(self.path, "annotations")
+        return [os.path.join(folder, f)
+                for f in os.listdir(folder) if (f.endswith(".gtf") or
+                                                f.endswith(".gtf.gz"))]
 
     def get_datasets(self):
         """Return a list of all datasets found in this project"""
