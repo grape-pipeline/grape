@@ -92,7 +92,7 @@ class ConfigCommand(GrapeCommand):
                 project.config.set(info[0],info[1],commit=True)
             if args.remove:
                 key = args.remove
-                project.config.remove(key)
+                project.config.remove(key[0], commit=True)
 
 
 

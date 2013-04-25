@@ -189,7 +189,8 @@ class Project(object):
                is located
         """
         self.path = path
-        self.config = Config(path)
+        if self.exists():
+            self.config = Config(self.path)
 
     def initialize(self):
         """Initialize the current project.
@@ -200,6 +201,7 @@ class Project(object):
             return
         # create .grape
         self.__mkdir(".grape")
+        self.config = Config(path)
         #create project structure
         self._initialize_structure()
 
@@ -361,7 +363,7 @@ class Config(object):
             if isinstance(d, dict):
                 if not k in d.keys():
                     raise GrapeError('Key %r does not exists' % k)
-                if isinstance(d[k], dict):
+                if len(keys) > 1 and isinstance(d[k], dict):
                     d = d[k]
 
         del d[keys[-1]]
