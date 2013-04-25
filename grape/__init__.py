@@ -57,7 +57,7 @@ class Grape(object):
                 try:
                     step.validate()
                 except Exception, e:
-                    print "Pipeline step %s not valid!" % (step.name)
+                    print "Pipeline step %s not valid!" % (str(step))
                     for key, value in e.validation_errors.items():
                         print "%s\t\t%s" % (key, value)
                     valid = False
@@ -67,6 +67,10 @@ class Grape(object):
 
             print "All seems good, starting..."
             for step in steps:
+                if step.is_done():
+                    print "Skipping step: %s" % (str(step))
+                    continue
+
                 print "Running step: %s" % (str(step))
                 try:
                     step.run()
@@ -164,6 +168,7 @@ class Dataset(object):
 
     def __repr__(self):
         return "Dataset: %s" % (self.name)
+
 
 class Project(object):
     """Base class for grape projects. A project hosts all the data

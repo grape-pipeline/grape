@@ -6,6 +6,7 @@ from another.tools import BashTool, ToolException
 import grape.buildout
 import os
 
+
 class modules(object):
     """The @modueles decorator allows to decorate tool
     classes to add module dependencies
@@ -47,9 +48,9 @@ class gem(BashTool):
         "output_dir": None
     }
     outputs = {
-        "map": "${name}.map.gz",
-        "bam": "${name}.bam",
-        "bamindex": "${name}.bam.bai",
+        "map": "${output_dir}/${name}.map.gz",
+        "bam": "${output_dir}/${name}.bam",
+        "bamindex": "${output_dir}/${name}.bam.bai",
     }
     command = '''
     gemtools rna-pipeline -i ${index} \
@@ -76,6 +77,59 @@ class gem(BashTool):
             if not os.path.exists(transcript_index):
                 errs["transcript-index"] = "No transcript index found at %s" % \
                                            (transcript_index)
+        if len(errs) > 0:
+            ex = ToolException("Validation failed")
+            ex.validation_errors = errs
+            raise ex
+
+
+def flux_prepare_folders(tool, args):
+    tool.log.info("Checking output folders: %s", args['output_dir'])
+    if not os.path.exists(args['output_dir']):
+        tool.log.warn("Creating output folder: %s", args['output_dir'])
+        os.makedirs(args['output_dir'])
+
+
+@modules([("flux", "1.2.3")])
+class flux(BashTool):
+    inputs = {
+        "sortinram": True,
+        "input": None,
+        "name": None,
+        "output_dir": None
+    }
+    outputs = {
+        "map": "${name}.map.gz",
+        "bam": "${name}.bam",
+        "bamindex": "${name}.bam.bai",
+    }
+    command = '''
+    flux-capacitor ${'-r' if sortinram else ''} \
+            -i ${input}\
+            -o ${output_dir}/${name}.gtf \
+            -a ${annotation} \
+    '''
+    on_start = [flux_prepare_folders]
+
+
+    def validate(self, args):
+        """Validate gem and make sure mandatory settings are set"""
+        errs = {}
+        if args.get("name", None) is None:
+            errs["name"] = "No name specified!"
+        if args.get("annotation", None) is not None:
+            if not os.path.exists(args["annotation"]):
+                errs["annotation"] = "Annotation file not found %s" % \
+                                     (args["annotation"])
+        else:
+            errs["annotation"] = "No annotation specified!"
+        if args.get("input") is not None:
+            if not os.path.exists(args["input"]):
+                errs["input"] = "Input BAM file not found %s" % \
+                                (args["input"])
+        else:
+            errs["input"] = "No input file specified!"
+
         if len(errs) > 0:
             ex = ToolException("Validation failed")
             ex.validation_errors = errs
