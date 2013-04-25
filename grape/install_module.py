@@ -173,15 +173,7 @@ class Recipe(object):
 
                             if os.path.islink(os.path.join(base,filename)):
                                 real_path = os.path.realpath(os.path.join(base,filename))
-                                # shutils move has a problem with symlinks
-                                # probabluy for a good reason, but we need
-                                # to meve everything as is. Workaround for now
-                                # is just to performe a system move
-                                p = subprocess.Popen(["mv",
-                                                      os.path.join(base, filename),
-                                                      dest]).wait()
-                                if p != 0:
-                                    raise Exception("Failed to move symlink")
+                                os.symlink(os.path.basename(real_path), dest)
                             else:
                                 shutil.move(os.path.join(base, filename), dest)
                     finally:
