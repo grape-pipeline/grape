@@ -1,0 +1,22 @@
+{
+    "name": "test", 
+    "dataType": "RNAseq", 
+    "organism": "human", 
+    "genomes": {
+        "male": {
+            "path": "genomes/genome_AXYM.fa"
+        }, 
+        "female": {
+            "path": "genomes/genome_AXM.fa"
+        }
+    }, 
+    "quality": "offset33", 
+    "annotations": {
+        "male": {
+            "path": "annotations/anno_AXYM.gtf"
+        }, 
+        "female": {
+            "path": "annotations/anno_AXM.gtf"
+        }
+    }
+}
