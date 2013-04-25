@@ -184,6 +184,7 @@ class Project(object):
                is located
         """
         self.path = path
+        self.config = Config(self)
 
     def initialize(self):
         """Initialize the current project.
@@ -314,20 +315,50 @@ class Config(object):
         """
         self.data['name'] = 'Default project'
         self.data['quality'] = 'offset33'
-        self.data['genomes'] = {'male': '', 'female': ''}
+        self.data['genomes'] = {'male': {}, 'female': {}}
         self.data['annotations'] = {'male': '', 'female': ''}
 
-        with open(self._config_file, 'w+') as config:
-              json.dump(self.data, config, indent=4)
+        self._write_config()
 
     def _load_config(self):
         """Load the confguration information from the project config file
         """
         self.data = json.load(open(self._config_file,'r'))
 
+    def _write_config(self):
+        """Write the configuration to the config file
+        """
+        with open(self._config_file,'w+') as config:
+            json.dump(self.data, config, indent=4)
+
     def get_printable(self, tabs=4):
         """Return a the configuation information in a pretty printing layout
         """
         return json.dumps(self.data, indent=tabs)
 
+    def remove(self, key, commit=False):
+        """Remove a key-value pair form the configuration
+        """
+        if key in self.data: del self.data[key]
+
+        if commit:
+            self._write_config()
+
+    def set(self, key, value, commit=False):
+        """Set new values into the configuration
+        """
+
+        keys = key.split('.')
+
+        if len(keys)==1:
+            self.data[keys[0]] = value
+        else:
+            d = self.data
+            for k in keys:
+                if type(d[k]) == dict:
+                    d = d[k]
+            d[keys[-1]] = value
+
+        if commit:
+            self._write_config()
 
