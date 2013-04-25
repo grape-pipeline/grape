@@ -3,6 +3,7 @@
 import os
 import errno
 import re
+import json
 
 __version__ = "2.0-alpha.1"
 
@@ -221,3 +222,47 @@ class Project(object):
             if(path == "/"):
                 return None
             return Project.find(path)
+
+class Config(object):
+    """Base class for grape configuration. The configuration contains all the
+    information related to a grape project.
+    """
+
+    def __init__(self, project):
+        """Create a new configuration instance for a given project. If the
+        project already has a configuration then load the existing information
+
+        Parameter
+        --------
+        project - the project object
+        """
+        self.project = project
+        self._config_file = os.path.join(project.path, '.grape/config')
+        self.data = {}
+        if os.path.exists(self._config_file):
+            self._load_config()
+        else:
+            self._init_default_config()
+
+    def _init_default_config(self):
+        """Initialize a default configuration file for the current project
+        """
+        self.data['name'] = 'Default project'
+        self.data['quality'] = 'offset33'
+        self.data['genomes'] = {'male': '', 'female': ''}
+        self.data['annotations'] = {'male': '', 'female': ''}
+
+        with open(self._config_file, 'w+') as config:
+              json.dump(self.data, config, indent=4)
+
+    def _load_config(self):
+        """Load the confguration information from the project config file
+        """
+        self.data = json.load(open(self._config_file,'r'))
+
+    def get_printable(self, tabs=4):
+        """Return a the configuation information in a pretty printing layout
+        """
+        return json.dumps(self.data, indent=tabs)
+
+
