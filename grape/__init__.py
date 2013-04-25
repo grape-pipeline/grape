@@ -354,10 +354,29 @@ class Config(object):
     def remove(self, key, commit=False):
         """Remove a key-value pair form the configuration
         """
-        if key in self.data: del self.data[key]
+        keys = key.split('.')
+
+        d = self.data
+        for k in keys:
+            if isinstance(d, dict):
+                if not k in d.keys():
+                    raise GrapeError('Key %r does not exists' % k)
+                if isinstance(d[k], dict):
+                    d = d[k]
+
+        del d[keys[-1]]
 
         if commit:
             self._write_config()
+
+    def get(self, key):
+        keys = key.split('.')
+
+        d = self.data
+        for k in keys:
+            d = d[k]
+
+        return d
 
     def set(self, key, value, commit=False):
         """Set new values into the configuration
@@ -365,14 +384,18 @@ class Config(object):
 
         keys = key.split('.')
 
-        if len(keys)==1:
-            self.data[keys[0]] = value
-        else:
-            d = self.data
-            for k in keys:
-                if isistance(d[k], dict):
+        d = self.data
+        for k in keys:
+            if isinstance(d, dict):
+                if not k in d.keys():
+                    if keys.index(k) < len(keys)-1:
+                        d[k] = {}
+                    else:
+                        d[k] = ''
+                if isinstance(d[k], dict):
                     d = d[k]
-            d[keys[-1]] = value
+
+        d[keys[-1]] = value
 
         if commit:
             self._write_config()

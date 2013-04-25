@@ -73,7 +73,36 @@ class RunCommand(GrapeCommand):
     def add(self, parser):
         parser.add_argument("datasets", default="all", nargs="*")
         parser.add_argument("-t", "--threads", default=1, dest="threads",
-                            help="Number of maxium threads per step")
+                help="Number of maxium threads per step")
+
+class ConfigCommand(GrapeCommand):
+    name = "config"
+    description = """Get or set configuration information fr the current project"""
+
+    def run(self, args):
+        project = Project.find()
+        if project is None or not project.exists():
+            print >> sys.stderr, "No grape project found!"
+        else:
+            if args.show:
+                # print configuration
+                print project.config.get_printable()
+            if args.add:
+                info = args.add
+                project.config.set(info[0],info[1],commit=True)
+            if args.remove:
+                key = args.remove
+                project.config.remove(key)
+
+
+
+    def add(self, parser):
+        parser.add_argument('--show', action='store_true', default=False,
+                        help='List all the configuration information for a project')
+        parser.add_argument('--add', nargs=2, required=False, metavar=('key', 'value'),
+                help='Add a key/value pair information to the project configuration file')
+        parser.add_argument('--remove', nargs=1, required=False, metavar=('key'),
+                        help='Remove information to the project configuration file')
 
 
 def _add_command(command, command_parser):
@@ -101,6 +130,7 @@ def main():
     command_parsers = parser.add_subparsers()
     _add_command(InitCommand(), command_parsers)
     _add_command(RunCommand(), command_parsers)
+    _add_command(ConfigCommand(), command_parsers)
 
     args = parser.parse_args()
     args.func(args)
