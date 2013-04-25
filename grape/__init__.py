@@ -201,7 +201,7 @@ class Project(object):
             return
         # create .grape
         self.__mkdir(".grape")
-        self.config = Config(path)
+        self.config = Config(self.path)
         #create project structure
         self._initialize_structure()
 
