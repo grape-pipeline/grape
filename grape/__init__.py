@@ -184,7 +184,7 @@ class Project(object):
                is located
         """
         self.path = path
-        self.config = Config(self)
+        self.config = Config(path)
 
     def initialize(self):
         """Initialize the current project.
@@ -294,16 +294,16 @@ class Config(object):
     information related to a grape project.
     """
 
-    def __init__(self, project):
+    def __init__(self, path):
         """Create a new configuration instance for a given project. If the
         project already has a configuration then load the existing information
 
         Parameter
         --------
-        project - the project object
+        path - the path to the project
         """
-        self.project = project
-        self._config_file = os.path.join(project.path, '.grape/config')
+        self.path = path
+        self._config_file = os.path.join(path, '.grape/config')
         self.data = {}
         if os.path.exists(self._config_file):
             self._load_config()
@@ -316,20 +316,30 @@ class Config(object):
         self.data['name'] = 'Default project'
         self.data['quality'] = 'offset33'
         self.data['genomes'] = {'male': {}, 'female': {}}
-        self.data['annotations'] = {'male': '', 'female': ''}
+        self.data['annotations'] = {'male': {}, 'female': {}}
 
         self._write_config()
 
     def _load_config(self):
         """Load the confguration information from the project config file
         """
-        self.data = json.load(open(self._config_file,'r'))
+        self.data = self._convert(json.load(open(self._config_file,'r')))
 
     def _write_config(self):
         """Write the configuration to the config file
         """
         with open(self._config_file,'w+') as config:
             json.dump(self.data, config, indent=4)
+
+    def _convert(self, input):
+        if isinstance(input, dict):
+            return {self._convert(key): self._convert(value) for key, value in input.iteritems()}
+        elif isinstance(input, list):
+            return [self._convert(element) for element in input]
+        elif isinstance(input, unicode):
+            return input.encode('utf-8')
+        else:
+            return input
 
     def get_printable(self, tabs=4):
         """Return a the configuation information in a pretty printing layout
@@ -355,7 +365,7 @@ class Config(object):
         else:
             d = self.data
             for k in keys:
-                if type(d[k]) == dict:
+                if isistance(d[k], dict):
                     d = d[k]
             d[keys[-1]] = value
 
