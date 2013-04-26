@@ -62,9 +62,12 @@ class gem(BashTool):
             --name ${name}
     '''
 
-    def validate(self, args):
+    def validate(self, args, incoming=None):
         """Validate gem and make sure mandatory settings are set"""
         errs = {}
+        if incoming is None:
+            incoming = {}
+
         if args.get("name", None) is None:
             errs["name"] = "No name specified!"
         if args.get("quality", None) is None:
@@ -112,9 +115,12 @@ class flux(BashTool):
     on_start = [flux_prepare_folders]
 
 
-    def validate(self, args):
+    def validate(self, args, incoming=None):
         """Validate gem and make sure mandatory settings are set"""
         errs = {}
+        if incoming is None:
+            incoming = {}
+
         if args.get("name", None) is None:
             errs["name"] = "No name specified!"
         if args.get("annotation", None) is not None:
@@ -123,12 +129,13 @@ class flux(BashTool):
                                      (args["annotation"])
         else:
             errs["annotation"] = "No annotation specified!"
-        if args.get("input") is not None:
-            if not os.path.exists(args["input"]):
-                errs["input"] = "Input BAM file not found %s" % \
-                                (args["input"])
-        else:
-            errs["input"] = "No input file specified!"
+        if "input" not in incoming:
+            if args.get("input") is not None:
+                if not os.path.exists(args["input"]):
+                    errs["input"] = "Input BAM file not found %s" % \
+                                    (args["input"])
+            else:
+                errs["input"] = "No input file specified!"
 
         if len(errs) > 0:
             ex = ToolException("Validation failed")
