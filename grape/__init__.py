@@ -193,7 +193,7 @@ class Project(object):
         datasets = {}
         # get the files in the data folder
         for f in Project.__search_fastq_files(data_folder):
-            d = Dataset(f)
+            d = Dataset(f, project=self)
             if d.primary not in datasets:
                 datasets[d.primary] = d
 
