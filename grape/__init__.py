@@ -3,6 +3,7 @@
 import os
 import errno
 import re
+import json
 
 
 __version__ = "2.0-alpha.1"
@@ -188,6 +189,8 @@ class Project(object):
                is located
         """
         self.path = path
+        if self.exists():
+            self.config = Config(self.path)
 
     def initialize(self):
         """Initialize the current project.
@@ -198,6 +201,7 @@ class Project(object):
             return
         # create .grape
         self.__mkdir(".grape")
+        self.config = Config(self.path)
         #create project structure
         self._initialize_structure()
 
@@ -291,3 +295,110 @@ class Project(object):
             if(path == "/"):
                 return None
             return Project.find(path)
+
+class Config(object):
+    """Base class for grape configuration. The configuration contains all the
+    information related to a grape project.
+    """
+
+    def __init__(self, path):
+        """Create a new configuration instance for a given project. If the
+        project already has a configuration then load the existing information
+
+        Parameter
+        --------
+        path - the path to the project
+        """
+        self.path = path
+        self._config_file = os.path.join(path, '.grape/config')
+        self.data = {}
+        if os.path.exists(self._config_file):
+            self._load_config()
+        else:
+            self._init_default_config()
+
+    def _init_default_config(self):
+        """Initialize a default configuration file for the current project
+        """
+        self.data['name'] = 'Default project'
+        self.data['quality'] = 'offset33'
+        self.data['genomes'] = {'male': {}, 'female': {}}
+        self.data['annotations'] = {'male': {}, 'female': {}}
+
+        self._write_config()
+
+    def _load_config(self):
+        """Load the confguration information from the project config file
+        """
+        self.data = self._convert(json.load(open(self._config_file,'r')))
+
+    def _write_config(self):
+        """Write the configuration to the config file
+        """
+        with open(self._config_file,'w+') as config:
+            json.dump(self.data, config, indent=4)
+
+    def _convert(self, input):
+        if isinstance(input, dict):
+            return {self._convert(key): self._convert(value) for key, value in input.iteritems()}
+        elif isinstance(input, list):
+            return [self._convert(element) for element in input]
+        elif isinstance(input, unicode):
+            return input.encode('utf-8')
+        else:
+            return input
+
+    def get_printable(self, tabs=4):
+        """Return a the configuation information in a pretty printing layout
+        """
+        return json.dumps(self.data, indent=tabs)
+
+    def remove(self, key, commit=False):
+        """Remove a key-value pair form the configuration
+        """
+        keys = key.split('.')
+
+        d = self.data
+        for k in keys:
+            if isinstance(d, dict):
+                if not k in d.keys():
+                    raise GrapeError('Key %r does not exists' % k)
+                if len(keys) > 1 and isinstance(d[k], dict):
+                    d = d[k]
+
+        del d[keys[-1]]
+
+        if commit:
+            self._write_config()
+
+    def get(self, key):
+        keys = key.split('.')
+
+        d = self.data
+        for k in keys:
+            d = d[k]
+
+        return d
+
+    def set(self, key, value, commit=False):
+        """Set new values into the configuration
+        """
+
+        keys = key.split('.')
+
+        d = self.data
+        for k in keys:
+            if isinstance(d, dict):
+                if not k in d.keys():
+                    if keys.index(k) < len(keys)-1:
+                        d[k] = {}
+                    else:
+                        d[k] = ''
+                if isinstance(d[k], dict):
+                    d = d[k]
+
+        d[keys[-1]] = value
+
+        if commit:
+            self._write_config()
+
