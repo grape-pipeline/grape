@@ -89,7 +89,7 @@ class gem(BashTool):
 def flux_prepare_folders(tool, args):
     tool.log.info("Checking output folders: %s", args['output_dir'])
     if not os.path.exists(args['output_dir']):
-        tool.log.warn("Creating output folder: %s", args['output_dir'])
+        tool.log.info("Creating output folder: %s", args['output_dir'])
         os.makedirs(args['output_dir'])
 
 

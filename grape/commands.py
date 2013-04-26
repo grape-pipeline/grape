@@ -12,12 +12,16 @@ the parsed command line options and executes the command.
 import argparse
 import sys
 import os
+import time
+import datetime
 import logging
 logging.basicConfig()
 
 import grape
 from grape.buildout import Buildout
 from grape import Grape, Project, GrapeError
+import grape.cli as cli
+import grape.pipelines
 
 
 class GrapeCommand(object):
@@ -40,14 +44,18 @@ class InitCommand(GrapeCommand):
     def run(self, args):
         path = args.path
         if path is None:
-            print >> sys.stderr, "You have to specify a path to the project"
+            cli.error("No project path specified")
+            return False
+
         project = Project(path)
         if project.exists():
-            print >> sys.stderr, "Project exists!"
-        else:
-            print >> sys.stderr, "Initializing project"
-            project.initialize()
-            print >> sys.stderr, "Done"
+            cli.warn("Project already exists")
+            return True
+
+        cli.info("Initializing project ... ", newline=False)
+        project.initialize()
+        cli.info(cli.green("Done"))
+        return True
 
     def add(self, parser):
         parser.add_argument("path", default=os.getcwd(), nargs="?")
@@ -60,7 +68,80 @@ class RunCommand(GrapeCommand):
     def run(self, args):
         datasets = args.datasets
         if datasets is None:
-            print >> sys.stderr, "You have to specify what to run!"
+            cli.error("No datasets specified!")
+            return False
+
+        project = Project.find()
+        if project is None or not project.exists():
+            cli.error("No grape project found!")
+            return False
+
+        # get default paramters
+        pipelines = []
+        index = project.get_indices()[0]
+        annotation = project.get_annotations()[0]
+        threads = args.threads
+
+        if datasets == "all":
+            datasets = project.get_datasets()
+
+        # create default pipeline
+        for d in datasets:
+            pipeline = grape.pipelines.default_pipeline(d, index, annotation)
+            # validate the pipeline
+            if not cli.pipeline_utils.prepare_pipeline(project, pipeline):
+                return False
+            pipelines.append(pipeline)
+            # update threads and verbose levels
+            for step in pipeline.tools.values():
+                step.job.threads = threads
+                step.job.verbose = args.verbose
+
+        # all created and validated, time to run
+        for pipeline in pipelines:
+            cli.info("Starting pipeline run: %s" % pipeline)
+
+            steps = pipeline.get_sorted_tools()
+            for i, step in enumerate(steps):
+
+                skip = step.is_done()
+                state = "Running"
+                if skip:
+                    state = cli.yellow("Skipped")
+
+                s = "({0:3d}/{1}) | {2} {3:20}".format(i + 1,
+                                                       len(steps),
+                                                       state, step)
+                cli.info(s, newline=skip)
+                if not skip:
+                    start_time = time.time()
+                    try:
+                        step.run()
+                    except KeyboardInterrupt:
+                        step.cleanup(failed=True)
+                        cli.info(" : " + cli.red("CANCELED"))
+                        return False
+                    end = datetime.timedelta(seconds=int(time.time() -
+                                                         start_time))
+                    cli.info(" : " + cli.green("DONE") + " [%s]" % (end))
+        return True
+
+    def add(self, parser):
+        parser.add_argument("datasets", default="all", nargs="*")
+        parser.add_argument("-t", "--threads", default=1, dest="threads",
+                            help="Number of maxium threads per step")
+        parser.add_argument("--verbose", default=False, action="store_true",
+                            dest="verbose")
+
+
+class SubmitCommand(GrapeCommand):
+    name = "submit"
+    description = """Submit the pipeline on a set of data"""
+
+    def run(self, args):
+        datasets = args.datasets
+        if datasets is None:
+            print >> sys.stderr, "You have to specify what to submit!"
 
         project = Project.find()
         if project is None or not project.exists():
@@ -68,12 +149,13 @@ class RunCommand(GrapeCommand):
         else:
             if datasets == "all":
                 # run on all datasets
-                Grape().run(project, args=args)
+                Grape().submit(project, args=args)
 
     def add(self, parser):
         parser.add_argument("datasets", default="all", nargs="*")
         parser.add_argument("-t", "--threads", default=1, dest="threads",
-                help="Number of maxium threads per step")
+                            help="Number of maxium threads per step")
+
 
 class ConfigCommand(GrapeCommand):
     name = "config"
@@ -133,7 +215,11 @@ def main():
     _add_command(ConfigCommand(), command_parsers)
 
     args = parser.parse_args()
-    args.func(args)
+    try:
+        if not args.func(args):
+            sys.exit(1)
+    except KeyboardInterrupt:
+        pass
 
 
 def buildout():

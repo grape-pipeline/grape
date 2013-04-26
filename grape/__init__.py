@@ -20,64 +20,6 @@ class Grape(object):
     def __init__(self):
         self.home = os.getenv("GRAPE_HOME", None)
 
-    def run(self, project, datasets=None, args=None):
-        """Run the pipeline for a given project. If no datasets are
-        specified explicitly, run on all datasets.
-
-        Parameter
-        ---------
-        project  - the project
-        datasets - optional datasets,
-        args     - argparse command line arguments
-        """
-        if datasets is None:
-            datasets = project.get_datasets()
-        threads = 1
-        index = project.get_indices()[0]
-        annotation = project.get_annotations()[0]
-
-        if args is not None:
-            if "threads" in args and args.threads is not None:
-                threads = args.threads
-
-        print "Prepare runs for %d datasets" % (len(datasets))
-        import grape.pipelines
-        for dataset in datasets:
-            print "Checking pipeline run for ", dataset
-            pipeline = grape.pipelines.default_pipeline(dataset,
-                                                        index,
-                                                        annotation,
-                                                        threads=threads)
-            steps = pipeline.get_sorted_tools()
-            print "Pipeline contains %d steps" % (len(steps))
-            print "Validating pipeline configuraiton"
-            valid = True
-
-            for step in steps:
-                try:
-                    step.validate()
-                except Exception, e:
-                    print "Pipeline step %s not valid!" % (str(step))
-                    for key, value in e.validation_errors.items():
-                        print "%s\t\t%s" % (key, value)
-                    valid = False
-
-            if not valid:
-                break
-
-            print "All seems good, starting..."
-            for step in steps:
-                if step.is_done():
-                    print "Skipping step: %s" % (str(step))
-                    continue
-
-                print "Running step: %s" % (str(step))
-                try:
-                    step.run()
-                except Exception, e:
-                    print "Execution of step %s failed : %s" % (str(step),
-                                                                str(e))
-
 
 class Dataset(object):
     """A single dataset in a project
@@ -273,7 +215,7 @@ class Project(object):
             is_fastq = re.match(".*\.(fastq|fq)(\.gz)*?$", f)
             if is_file and is_fastq:
                 datasets.append(absname)
-            elif not os.path.isfile(absname) and level == 0 or f == "fastq":
+            elif not os.path.isfile(absname) and f == "fastq":
                 # scan folder
                 sub = Project.__search_fastq_files(absname,
                                                    level=level + 1)
@@ -295,6 +237,7 @@ class Project(object):
             if(path == "/"):
                 return None
             return Project.find(path)
+
 
 class Config(object):
     """Base class for grape configuration. The configuration contains all the
@@ -340,7 +283,10 @@ class Config(object):
 
     def _convert(self, input):
         if isinstance(input, dict):
-            return {self._convert(key): self._convert(value) for key, value in input.iteritems()}
+            ret = {}
+            for k, v in input.iteritems():
+                ret[self._convert(k)] = self._convert(v)
+            return ret
         elif isinstance(input, list):
             return [self._convert(element) for element in input]
         elif isinstance(input, unicode):

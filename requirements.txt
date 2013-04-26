@@ -3,3 +3,4 @@ distribute==0.6.36
 zc.buildout==2.1.0
 mako==0.8.0
 pytest==2.3.4
+clint==0.3.1
