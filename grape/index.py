@@ -1,5 +1,6 @@
 """The index module provides functionality around grape data indexing
 """
+import re
 
 class Metadata(object):
     """A class to store metadata retrieved from indices
@@ -57,20 +58,21 @@ class Index(object):
             for line in index_file:
                 self._parse_line(line)
 
-    def _parse_tags(self, str, tagsep=" ", pairsep='=', pairtrail=';'):
+    def _parse_tags(self, str, sep='=', trail=';'):
         tags = {}
-        blocks = str.split(' ')
-        for block in blocks:
-            tag = self._parse_tag(block, sep=pairsep, trail=pairtrail)
-            tags[tag[0]] = tag[1]
+        expr = '(?P<key>[^ ]+)%s(?P<value>[^%s]+)%s' % (sep,trail,trail)
+        for match in re.finditer(expr, str):
+            tags[match.group('key')] = match.group('value')
         return tags
 
     def _parse_tag(sef, str, sep='=', trail=';'):
-        pair = str.split(sep)
-        return [pair[0], pair[1][:-len(trail)]]
+        expr = '(?P<key>[^ ]+)%s(?P<value>[^%s]+)%s' % (sep,trail,trail)
+        match = re.match(expr,str)
+        return [match.group('key'), match.group('value')]
 
     def _parse_line(self, line):
-        entry = line.split('\t')
-        tags = self._parse_tags(entry[1])
+        expr = '^(?P<file>.+)\t(?P<tags>.+)$'
+        match = re.match(expr, line)
+        tags = self._parse_tags(match.group('tags'))
 
-        self.entries.append({'file': entry[0], 'metadata': Metadata(tags)})
+        self.entries.append({'file': match.group('file'), 'metadata': Metadata(tags)})
