@@ -281,26 +281,26 @@ class Config(object):
         with open(self._config_file,'w+') as config:
             json.dump(self.data, config, indent=4)
 
-    def _convert(self, input):
-        if isinstance(input, dict):
-            ret = {}
-            for k, v in input.iteritems():
-                ret[self._convert(k)] = self._convert(v)
-            return ret
-        elif isinstance(input, list):
-            return [self._convert(element) for element in input]
-        elif isinstance(input, unicode):
-            return input.encode('utf-8')
-        else:
-            return input
 
     def get_printable(self, tabs=4):
         """Return a the configuation information in a pretty printing layout
+
+        Keyword arguments:
+        ------------------
+        tabs - indent size for printing
         """
         return json.dumps(self.data, indent=tabs)
 
-    def remove(self, key, commit=False):
+    def remove(self, key, commit=False):# TODO: check empty fields when removing and remove them as well
         """Remove a key-value pair form the configuration
+
+        Arguments:
+        ----------
+        key - the key to remove from the config
+
+        Keyword arguments:
+        ------------------
+        commit - if True writes the changes to the configuration file. Default False
         """
         keys = key.split('.')
 
@@ -327,7 +327,16 @@ class Config(object):
         return d
 
     def set(self, key, value, commit=False):
-        """Set new values into the configuration
+        """Set values into the configuration for a given key
+
+        Arguments:
+        ----------
+        key   -  the key of the configuration field
+        value -  the value to add
+
+        Keyword arguments:
+        ------------------
+        commit - if True writes the changes to the configuration file. Default False
         """
 
         keys = key.split('.')
@@ -348,3 +357,21 @@ class Config(object):
         if commit:
             self._write_config()
 
+    def _convert(self, input):
+        """Convert unicode input to utf-8
+
+        Arguments:
+        ----------
+        input - the unicode input to convert
+        """
+        if isinstance(input, dict):
+            ret = {}
+            for k, v in input.iteritems():
+                ret[self._convert(k)] = self._convert(v)
+            return ret
+        elif isinstance(input, list):
+            return [self._convert(element) for element in input]
+        elif isinstance(input, unicode):
+            return input.encode('utf-8')
+        else:
+            return input
