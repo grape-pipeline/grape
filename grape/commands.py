@@ -125,7 +125,8 @@ class RunCommand(GrapeCommand):
                         if err.termination_signal == signal.SIGINT:
                             cli.info(" : " + cli.yellow("CANCELED"))
                         else:
-                            cli.info(" : " + cli.red("FAILED " + str(err.exit_value)))
+                            cli.info(" : " + cli.red("FAILED " +
+                                                     str(err.exit_value)))
                         return False
                     end = datetime.timedelta(seconds=int(time.time() -
                                                          start_time))
@@ -145,17 +146,67 @@ class SubmitCommand(GrapeCommand):
     description = """Submit the pipeline on a set of data"""
 
     def run(self, args):
+        # lazy import grape.pipelines as this will search for
+        # a grape_home and might raise an exception !
+        import grape.pipelines
         datasets = args.datasets
         if datasets is None:
-            print >> sys.stderr, "You have to specify what to submit!"
+            cli.error("No datasets specified!")
+            return False
 
         project = Project.find()
         if project is None or not project.exists():
-            print >> sys.stderr, "No grape project found!"
-        else:
-            if datasets == "all":
-                # run on all datasets
-                Grape().submit(project, args=args)
+            cli.error("No grape project found!")
+            return False
+
+        # get default paramters
+        pipelines = []
+        index = project.get_indices()[0]
+        annotation = project.get_annotations()[0]
+        threads = args.threads
+
+        if datasets == "all":
+            datasets = project.get_datasets()
+
+        # create default pipeline
+        for d in datasets:
+            pipeline = grape.pipelines.default_pipeline(d, index, annotation)
+            # validate the pipeline
+            if not cli.pipeline_utils.prepare_pipeline(project, pipeline):
+                return False
+            pipelines.append(pipeline)
+            # update threads and verbose levels
+            for step in pipeline.tools.values():
+                step.job.threads = threads
+                step.job.verbose = True
+
+        # all created and validated, time to run
+        import another.cluster
+        slurm = another.cluster.Slurm()
+        grp = Grape()
+        for pipeline in pipelines:
+            cli.info("Submitting pipeline run: %s" % pipeline)
+            steps = pipeline.get_sorted_tools()
+            for i, step in enumerate(steps):
+                skip = step.is_done()
+                if skip:
+                    state = cli.green("Skipped")
+                    jobid = ""
+                else:
+                    grp.configure_job(step)
+                    state = cli.green("Submitted")
+                    step.job.name = "GRP-%s" % (str(step))
+                    feature = slurm.submit(step,
+                                           step.get_configuration())
+                    jobid = feature.jobid
+
+                s = "({0:3d}/{1}) | {2} {3:20} {4}".format(i + 1,
+                                                           len(steps),
+                                                           state, step,
+                                                           jobid)
+                cli.info(s)
+        return True
+
 
     def add(self, parser):
         parser.add_argument("datasets", default="all", nargs="*")
@@ -218,6 +269,7 @@ def main():
     command_parsers = parser.add_subparsers()
     _add_command(InitCommand(), command_parsers)
     _add_command(RunCommand(), command_parsers)
+    _add_command(SubmitCommand(), command_parsers)
     _add_command(ConfigCommand(), command_parsers)
 
     args = parser.parse_args()
