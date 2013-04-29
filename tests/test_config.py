@@ -6,7 +6,7 @@ import pytest
 def test_config_instance():
     config = Config('test_data/project_conf')
     assert config.data['name'] == 'test'
-    assert config.data['quality'] == 'offset33'
+    assert config.data['quality'] == '33'
     assert config.data['organism'] == 'human'
     assert config.data['dataType'] == 'RNAseq'
     assert config.data['genomes'] == {'female': {'path': 'genomes/genome_AXM.fa'}, 'male': {'path': 'genomes/genome_AXYM.fa'}}
@@ -16,7 +16,7 @@ def test_default_config():
     config = Config('test_data/project_default_conf')
     assert os.path.exists('test_data/project_default_conf/.grape/config')
     assert config.data['name'] == 'Default project'
-    assert config.data['quality'] == 'offset33'
+    assert config.data['quality'] == '33'
     assert config.data['genomes'] == {'female': {}, 'male': {}}
     assert config.data['annotations'] == {'female': {}, 'male': {}}
     os.remove('test_data/project_default_conf/.grape/config')

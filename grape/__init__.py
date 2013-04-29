@@ -264,7 +264,7 @@ class Config(object):
         """Initialize a default configuration file for the current project
         """
         self.data['name'] = 'Default project'
-        self.data['quality'] = 'offset33'
+        self.data['quality'] = '33'
         self.data['genomes'] = {'male': {}, 'female': {}}
         self.data['annotations'] = {'male': {}, 'female': {}}
 
