@@ -187,7 +187,7 @@ class ConfigCommand(GrapeCommand):
     def add(self, parser):
         parser.add_argument('--show', action='store_true', default=False,
                         help='List all the configuration information for a project')
-        parser.add_argument('--add', nargs=2, required=False, metavar=('key', 'value'),
+        parser.add_argument('--set', nargs=2, required=False, metavar=('key', 'value'),
                 help='Add a key/value pair information to the project configuration file')
         parser.add_argument('--remove', nargs=1, required=False, metavar=('key'),
                         help='Remove information to the project configuration file')
