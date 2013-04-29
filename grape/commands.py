@@ -14,6 +14,7 @@ import sys
 import os
 import time
 import datetime
+import signal
 import logging
 logging.basicConfig()
 
@@ -21,7 +22,7 @@ import grape
 from grape.buildout import Buildout
 from grape import Grape, Project, GrapeError
 import grape.cli as cli
-import grape.pipelines
+from another.tools import ToolException
 
 
 class GrapeCommand(object):
@@ -66,6 +67,9 @@ class RunCommand(GrapeCommand):
     description = """Run the pipeline on a set of data"""
 
     def run(self, args):
+        # lazy import grape.pipelines as this will search for
+        # a grape_home and might raise an exception !
+        import grape.pipelines
         datasets = args.datasets
         if datasets is None:
             cli.error("No datasets specified!")
@@ -117,9 +121,11 @@ class RunCommand(GrapeCommand):
                     start_time = time.time()
                     try:
                         step.run()
-                    except KeyboardInterrupt:
-                        step.cleanup(failed=True)
-                        cli.info(" : " + cli.red("CANCELED"))
+                    except ToolException, err:
+                        if err.termination_signal == signal.SIGINT:
+                            cli.info(" : " + cli.yellow("CANCELED"))
+                        else:
+                            cli.info(" : " + cli.red("FAILED " + str(err.exit_value)))
                         return False
                     end = datetime.timedelta(seconds=int(time.time() -
                                                          start_time))
@@ -220,6 +226,13 @@ def main():
             sys.exit(1)
     except KeyboardInterrupt:
         pass
+    except ValueError, e:
+        if str(e).startswith("GRAPE_HOME not defined."):
+            cli.error("GRAPE_HOME not found. Please make sure that the"
+                      " GRAPE_HOME evironment variable is set and points"
+                      " to the grape buildout directory!")
+        else:
+            raise e
 
 
 def buildout():

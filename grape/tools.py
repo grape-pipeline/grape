@@ -102,9 +102,7 @@ class flux(BashTool):
         "output_dir": None
     }
     outputs = {
-        "map": "${name}.map.gz",
-        "bam": "${name}.bam",
-        "bamindex": "${name}.bam.bai",
+        "gtf": "${output_dir}/${name}.gtf",
     }
     command = '''
     flux-capacitor ${'-r' if sortinram else ''} \
