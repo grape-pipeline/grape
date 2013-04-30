@@ -19,6 +19,25 @@ class Grape(object):
 
     def __init__(self):
         self.home = os.getenv("GRAPE_HOME", None)
+        self._default_job_config = None
+
+    def configure_job(self, tool):
+        """Apply job configuration to this tool"""
+        if self._default_job_config is None:
+            if os.path.exists(os.path.join(self.home, "conf/jobs.json")):
+                with open(os.path.join(self.home, "conf/jobs.json")) as f:
+                    self._default_job_config = json.load(f)
+            else:
+                self._default_job_config = {}
+        if "default" in self._default_job_config:
+            self.__apply_job_config(tool, self._default_job_config["default"])
+        if tool._name in self._default_job_config:
+            self.__apply_job_config(tool, self._default_job_config[tool._name])
+
+    def __apply_job_config(self, tool, cfg):
+        for k, v in cfg.items():
+            if hasattr(tool.job, k):
+                tool.job.__setattr__(k, v)
 
 
 class Dataset(object):
