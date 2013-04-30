@@ -14,21 +14,25 @@ class modules(object):
     def __init__(self, modules):
         self.modules = modules
 
+    def _load_modules(self, mods):
+        # laod modules
+        for m in self.modules:
+            name = m[0]
+            version = None
+            if len(m) > 1:
+                version = m[1]
+            mods.append(grape.buildout.find(name, version))
+
     def __call__(self, clazz):
-        mods = []
         if self.modules is not None:
-            # laod modules
-            for m in self.modules:
-                name = m[0]
-                version = None
-                if len(m) > 1:
-                    version = m[1]
-                mods.append(grape.buildout.find(name, version))
-        if len(mods) > 0:
             # patch the run method
             old_run = clazz.run
+            clazz.modules = self.modules
+            clazz._load_modules = self._load_modules
 
             def patched(self, args):
+                mods = []
+                self._load_modules(mods)
                 for m in mods:
                     m.activate()
                 old_run(self, args)
