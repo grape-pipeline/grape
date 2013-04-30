@@ -11,45 +11,21 @@ class Metadata(object):
     passed as an argument to the contructor.
     """
 
-    metainfo = ['labExpId',   # TODO: not hardcode this information
-                'labProtocolId',
-                'dataType',
-                'age',
-                'localization',
-                'sraStudyAccession',
-                'lab',
-                'sex',
-                'cell',
-                'rnaExtract',
-                'tissue',
-                'sraSampleAccession',
-                'readType',
-                'donorId',
-                'ethnicity'
-               ]
-
-
-    def __init__(self, kwargs):
+    def __init__(self, tags, kwargs):
         """Create an instance of a Metadata class
 
         Arguments:
         ----------
         kwargs - a dictionary containing name and values of the tags
         """
-        self.file_info = {}
-
         for key in kwargs:
             if key in self.__dict__.keys():
                 raise ValueError("%r already contains %r property" % (self. __class__, key))
-            if key in Metadata.metainfo:
-                self.__dict__[key] = kwargs[key]
-            else:
-                self.file_info[key] = kwargs[key]
-
-    def getId(self):
-        """Get the key of the identifier for the metadata info
-        """
-        return self.__dict__.get('labExpId') #TODO: implement definitions file
+            if key == Index.id:
+                self.id = str(kwargs[key])
+                continue
+            if key in tags:
+                self.__dict__[key] = str(kwargs[key])
 
     def get(self, key):
         """Get the value of a tag given its key
@@ -62,7 +38,7 @@ class Metadata(object):
             raise ValueError('Key %r not found' % key)
         return self.__dict__[key]
 
-    def get_tags(self, tags=[], sep=' '):
+    def get_tags(self, tags=[], exclude=[], sep=' '):
         """Concatenate specified tags using the provided tag separator. The tag are formatted
         according to the 'index file' format
 
@@ -74,7 +50,6 @@ class Metadata(object):
                the 'index file' format.
         """
         tag_list = []
-        exclude = ['file_info']
         if not tags:
             tags = self.__dict__.keys()
         for key in tags:
@@ -97,16 +72,34 @@ class Metadata(object):
 
         """
         value = self.get(key)
+        if key == 'id':
+            key = Index.id
         return sep.join([key, str(value)])+trail
+
+    def add(self, dict):
+        """Add properties to the :class:Metadata object from a dictionary
+
+        Arguments:
+        ----------
+        dict - the dictionary conatining the key/value pairs to be added
+        """
+        for key in dict.keys():
+            if key in self.__dict__.keys():
+                raise ValueError("%r already contains %r property" % (self. __class__, key))
+            self.__dict__[key] = str(dict[key])
 
     def contains(self, key):
         """Return true if the metadata contains the specified key
+
+        Arguments:
+        ----------
+        key - the key to look for
         """
         return self.__dict__.has_key(key)
 
 
     @classmethod
-    def parse(cls, string):
+    def parse(cls, string, info=[]):
         """Parse a string of concatenated tags and converts it to a Metadata object
 
         Arguments:
@@ -114,7 +107,9 @@ class Metadata(object):
         string - the concatenated tags
         """
         tags = cls._parse_tags(string)
-        return Metadata(tags)
+        if not info:
+            info = tags.keys()
+        return Metadata(info, tags)
 
     @classmethod
     def _parse_tags(cls, str, sep='=', trail=';'):
@@ -144,9 +139,6 @@ class IndexEntry():
     and information related to the sample.
     """
 
-    types = ['fastq', 'bam', 'bai', 'gff', 'map', 'bigWig', 'bed']
-    fileinfo = []
-
     def __init__(self, metadata):
         """Create an instance of the IndexEntry class
 
@@ -155,22 +147,23 @@ class IndexEntry():
         metadata -  an instance of :class:Metadata that contains the parsed metadata
                     information
         """
-        self.views = {}
+        self.files = {}
         self.metadata = metadata
-        self.id = self.metadata.getId()
+        self.id = self.metadata.id
 
-    def add_view(self, path, type, view):
+    def add_file(self, file_info):
         """Add the path of a file related to the dataset to the class files dictionary
 
         Arguments:
         ----------
-        path - the path to te file to be added
-        type - the type of the file
-        view - the data view representing the file
+        file_info - a :class:Metadata object containing the file information
         """
-        if type not in IndexEntry.types:
-            raise ValueError('Tyoe not supported: %r' % type)
-        self.views[view] = path
+        type = file_info.type
+        if not Index.file_types:
+            Index.file_types.append(type)
+        if type not in Index.file_types:
+            raise ValueError('Type not supported: %r' % type)
+        self.files[type] = file_info
 
 class IndexType():
     """A 'enum' like class for specifying index types. An index can have the following types:
@@ -194,6 +187,32 @@ class IndexType():
 class Index(object):
     """A class to access information stored into 'index files'.
     """
+##### TODO: not hardcode this information ##############################
+    id = 'labExpId'
+    metainfo = ['labProtocolId',
+                'dataType',
+                'age',
+                'localization',
+                'sraStudyAccession',
+                'lab',
+                'sex',
+                'cell',
+                'rnaExtract',
+                'tissue',
+                'sraSampleAccession',
+                'readType',
+                'donorId',
+                'ethnicity'
+                ]
+    fileinfo = ['type',
+                'size',
+                'md5',
+                'view'
+                ]
+
+    file_types = ['fastq', 'bam', 'bai', 'gff', 'map', 'bigWig', 'bed']
+######################################################################
+
 
     def __init__(self, path, type=IndexType.DATA, entries={}):
         """Creates an instance of an Index class
@@ -233,12 +252,13 @@ class Index(object):
         if self.type == IndexType.META and file != '.' or self.type == IndexType.DATA and file == '.':
             raise ValueError('Index type %s does not support this index file' % IndexType.get(self.type))
 
-        meta = Metadata.parse(tags)
-
-        entry = self.entries.get(meta.getId(),None)
+        meta = Metadata.parse(tags, Index.metainfo)
+        entry = self.entries.get(meta.id, None)
 
         if not entry:
             entry = IndexEntry(meta)
             self.entries[entry.id] = entry
 
-        entry.add_view(file, meta.file_info.get('type'), meta.file_info.get('view'))
+        file_info = Metadata.parse(tags, Index.fileinfo)
+        file_info.add({'path': file})
+        entry.add_file(file_info)
