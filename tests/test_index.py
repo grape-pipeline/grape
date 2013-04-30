@@ -99,3 +99,18 @@ def test_index():
     assert len(i.entries) == 47
     for entry in i.entries.values():
         assert len(entry.files) in [5, 6]
+
+def test_import_tsv():
+    path = '/data/epalumbo/grape-test/test.tsv'
+    i = Index('')
+    i.initialize()
+    i.import_tsv(path)
+    assert len(i.entries.values()) == 3
+    #assert i.entries.keys() == ['1', '3', '2']
+    #for k in ['1', '2', '3']:
+    #    assert i.entries[k].id == k
+    #i.entries['1'].metadata.get_tags() == "F1=a; F2=b; ID=1;\n"
+    #i.entries['2'].metadata.get_tags() == "F1=c; F2=d; ID=2;\n"
+    #i.entries['3'].metadata.get_tags() == "F1=e; F2=f; ID=3;\n"
+
+

@@ -232,11 +232,14 @@ class Index(object):
         self.entries = entries
 
     def initialize(self):
-        """Initialize the index obect by parsing the index file
+        """Initialize the index object by parsing the index file
         """
-        with open(self.path, 'r') as index_file:
-            for line in index_file:
-                self._parse_line(line)
+        if not self.path:
+            self.entries = {}
+        else:
+            with open(self.path, 'r') as index_file:
+                for line in index_file:
+                    self._parse_line(line)
 
     def _parse_line(self, line):
         """Parse a line of the index file and append the parsed entry to the entries list.
@@ -259,6 +262,25 @@ class Index(object):
             entry = IndexEntry(meta)
             self.entries[entry.id] = entry
 
-        file_info = Metadata.parse(tags, Index.fileinfo)
-        file_info.add({'path': file})
-        entry.add_file(file_info)
+        if self.type == IndexType.DATA:
+            file_info = Metadata.parse(tags, Index.fileinfo)
+            file_info.add({'path': file})
+            entry.add_file(file_info)
+
+    def import_tsv(self, path):
+        """Import entries from a TSV file. The tsv file must have and header line with the name of the properties.
+
+        Arguments:
+        ----------
+        path - path to the tsv files to be imported
+        """
+        with open(path,'r') as tsv_file:
+            header = tsv_file.readline().rstrip().split('\t')
+            Index.id = header[0]
+            for line in tsv_file:
+                meta = Metadata(header, dict(zip(header, line.rstrip().split('\t'))))
+                entry = self.entries.get(meta.id, None)
+
+                if not entry:
+                    entry = IndexEntry(meta)
+                    self.entries[entry.id] = entry
