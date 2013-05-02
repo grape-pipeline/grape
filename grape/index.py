@@ -267,18 +267,22 @@ class Index(object):
             file_info.add({'path': file})
             entry.add_file(file_info)
 
-    def import_tsv(self, path):
+    def import_sv(self, path, sep='\t', id=''):
         """Import entries from a TSV file. The tsv file must have and header line with the name of the properties.
 
         Arguments:
         ----------
         path - path to the tsv files to be imported
         """
-        with open(path,'r') as tsv_file:
-            header = tsv_file.readline().rstrip().split('\t')
-            Index.id = header[0]
-            for line in tsv_file:
-                meta = Metadata(header, dict(zip(header, line.rstrip().split('\t'))))
+
+        with open(path,'r') as sv_file:
+            header = sv_file.readline().rstrip().split(sep)
+            if id:
+                Index.id = id
+            else:
+                Index.id = header[0]
+            for line in sv_file:
+                meta = Metadata(header, dict(zip(header, map(lambda x : x.replace(' ', '_'), line.rstrip().split(sep)))))
                 entry = self.entries.get(meta.id, None)
 
                 if not entry:
