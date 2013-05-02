@@ -116,3 +116,15 @@ def test_import_tsv():
     #i.entries['3'].metadata.get_tags() == "F1=e; F2=f; ID=3;\n"
 
 
+def test_import_csv():
+    path = 'test_data/test.csv'
+    i = Index()
+    i.initialize()
+    i.import_sv(path,sep=',')
+    assert len(i.entries.values()) == 3
+    #assert i.entries.keys() == ['1', '3', '2']
+    #for k in ['1', '2', '3']:
+    #    assert i.entries[k].id == k
+    #i.entries['1'].metadata.get_tags() == "F1=a; F2=b; ID=1;\n"
+    #i.entries['2'].metadata.get_tags() == "F1=c; F2=d; ID=2;\n"
+    #i.entries['3'].metadata.get_tags() == "F1=e; F2=f; ID=3;\n"
