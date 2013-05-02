@@ -161,8 +161,8 @@ class Dataset(object):
             self.primary = s[0]
             self.secondary = s[1]
 
-        if project:
-            self.index_entry = project.data_index.entries[self.name]
+        if self.project and self.project.has_data_index():
+            self.index_entry = self.project.data_index.entries[self.name]
         self.single_end = False  # todo: add single end detection and support
         self.quality = 33  # todo: add quality support
 
@@ -270,6 +270,11 @@ class Project(object):
         """Return true if the associated path is an initialized grape project
         """
         return os.path.exists("%s/.grape" % (self.path))
+
+    def has_data_index(self):
+        """Return true if the project has an index file
+        """
+        return os.path.exists("%s/.index" % self.path)
 
     def _initialize_structure(self):
         """Initialize the project structure"""

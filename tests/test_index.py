@@ -85,23 +85,25 @@ def test_index_entry_file():
     str = "labExpId=0001; age=50; sex=M;"
     m = Metadata.parse(str)
     e = IndexEntry(m)
-    str1 = 'labExpId=0001; type=bam; size=100; md5=af54e41; view=Alignments'
+    str1 = 'labExpId=0001; type=bam; size=100; md5=af54e41; view=Alignments; path=./file;'
     f = Metadata.parse(str1)
     assert len(e.files) == 0
     e.add_file(f)
     assert len(e.files) == 1
-    assert e.files[f.type] == f
+    assert e.files[f.type][0] == f
 
 def test_index():
-    path = '/users/rg/epalumbo/projects/BluePrint/bp_rna_dashboard_temp.crg.txt'
+    path = 'test_data/index'
     i = Index(path=path)
     i.initialize()
-    assert len(i.entries) == 47
+    assert len(i.entries) == 1
     for entry in i.entries.values():
-        assert len(entry.files) in [5, 6]
+        assert len(entry.files) == 1
+        assert len(entry.files['fastq']) == 2
+        assert entry.files['fastq'][0].path == './data/test_1.fastq.gz'
 
 def test_import_tsv():
-    path = '/data/epalumbo/grape-test/test.tsv'
+    path = 'test_data/test.tsv'
     i = Index()
     i.initialize()
     i.import_sv(path)
