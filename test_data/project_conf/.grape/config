@@ -10,7 +10,7 @@
             "path": "genomes/genome_AXM.fa"
         }
     }, 
-    "quality": "offset33", 
+    "quality": "33", 
     "annotations": {
         "male": {
             "path": "annotations/anno_AXYM.gtf"

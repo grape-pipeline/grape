@@ -4,7 +4,7 @@ import os
 import errno
 import re
 import json
-
+from grape.index import Index
 
 __version__ = "2.0-alpha.1"
 
@@ -167,6 +167,9 @@ class Dataset(object):
             s = sorted([self.primary, self.secondary])
             self.primary = s[0]
             self.secondary = s[1]
+
+        if project:
+            self.index_entry = project.data_index.entries[self.name]
         self.single_end = False  # todo: add single end detection and support
         self.quality = 33  # todo: add quality support
 
@@ -184,13 +187,20 @@ class Dataset(object):
     def get_index(self):
         """Return the default index that should be used by this dataset
         """
-        return self.project.get_indices()[0]
+        index = self.project.config.get('.'.join(['genomes', self.index_entry.metadata.sex, 'index']))
+        if not index:
+            index = self.project.get_indices()[0]
+        return index
+
 
     def get_annotation(self):
         """Return the default annotation that should be used for this
         dataset
         """
-        return self.project.get_annotations()[0]
+        annotation = self.project.config.get('.'.join(['annotations', self.index_entry.metadata.sex, 'path']))
+        if not annotation:
+            annotation = self.project.get_annotations()[0]
+        return annotation
 
     @staticmethod
     def find_secondary(name):
@@ -245,6 +255,8 @@ class Project(object):
         self.path = path
         if self.exists():
             self.config = Config(self.path)
+            self.data_index = Index()
+            self.data_index.initialize()
 
     def initialize(self):
         """Initialize the current project.
@@ -256,6 +268,8 @@ class Project(object):
         # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
+        self.data_index = Index()
+        self.data_index.initialize()
         #create project structure
         self._initialize_structure()
 
@@ -381,7 +395,7 @@ class Config(object):
         """Initialize a default configuration file for the current project
         """
         self.data['name'] = 'Default project'
-        self.data['quality'] = 'offset33'
+        self.data['quality'] = '33'
         self.data['genomes'] = {'male': {}, 'female': {}}
         self.data['annotations'] = {'male': {}, 'female': {}}
 
@@ -398,26 +412,26 @@ class Config(object):
         with open(self._config_file,'w+') as config:
             json.dump(self.data, config, indent=4)
 
-    def _convert(self, input):
-        if isinstance(input, dict):
-            ret = {}
-            for k, v in input.iteritems():
-                ret[self._convert(k)] = self._convert(v)
-            return ret
-        elif isinstance(input, list):
-            return [self._convert(element) for element in input]
-        elif isinstance(input, unicode):
-            return input.encode('utf-8')
-        else:
-            return input
 
     def get_printable(self, tabs=4):
         """Return a the configuation information in a pretty printing layout
+
+        Keyword arguments:
+        ------------------
+        tabs - indent size for printing
         """
         return json.dumps(self.data, indent=tabs)
 
-    def remove(self, key, commit=False):
+    def remove(self, key, commit=False):# TODO: check empty fields when removing and remove them as well
         """Remove a key-value pair form the configuration
+
+        Arguments:
+        ----------
+        key - the key to remove from the config
+
+        Keyword arguments:
+        ------------------
+        commit - if True writes the changes to the configuration file. Default False
         """
         keys = key.split('.')
 
@@ -444,7 +458,16 @@ class Config(object):
         return d
 
     def set(self, key, value, commit=False):
-        """Set new values into the configuration
+        """Set values into the configuration for a given key
+
+        Arguments:
+        ----------
+        key   -  the key of the configuration field
+        value -  the value to add
+
+        Keyword arguments:
+        ------------------
+        commit - if True writes the changes to the configuration file. Default False
         """
 
         keys = key.split('.')
@@ -465,3 +488,21 @@ class Config(object):
         if commit:
             self._write_config()
 
+    def _convert(self, input):
+        """Convert unicode input to utf-8
+
+        Arguments:
+        ----------
+        input - the unicode input to convert
+        """
+        if isinstance(input, dict):
+            ret = {}
+            for k, v in input.iteritems():
+                ret[self._convert(k)] = self._convert(v)
+            return ret
+        elif isinstance(input, list):
+            return [self._convert(element) for element in input]
+        elif isinstance(input, unicode):
+            return input.encode('utf-8')
+        else:
+            return input
