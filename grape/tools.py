@@ -91,6 +91,9 @@ class gem(BashTool):
 
 
 def flux_prepare_folders(tool, args):
+    """Helper function for the flux capacitor that allows to
+    check and create the output folders
+    """
     tool.log.info("Checking output folders: %s", args['output_dir'])
     if not os.path.exists(args['output_dir']):
         tool.log.info("Creating output folder: %s", args['output_dir'])

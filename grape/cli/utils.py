@@ -12,6 +12,7 @@ import grape.commands
 # we use the general grape logger
 log = logging.getLogger("grape")
 
+
 def get_project_and_datasets(args):
     """Get the current project and the selected datasets using the command
      line arguments.
@@ -24,12 +25,14 @@ def get_project_and_datasets(args):
     if project is None or not project.exists():
         raise grape.commands.CommandError("No grape project found!")
 
-    datasets = args.datasets
-    if datasets is None:
-        raise grape.commands.CommandError("No datasets specified!")
+    datasets = None
+    if "datasets" in args:
+        datasets = args.datasets
+        if datasets is None:
+            raise grape.commands.CommandError("No datasets specified!")
 
-    if datasets == "all":
-        datasets = project.get_datasets()
+        if datasets == "all":
+            datasets = project.get_datasets()
 
     return (project, datasets)
 
@@ -80,7 +83,7 @@ def _prepare_pipeline(pipeline):
         return False
 
 
-def create_pipelines(pipeline_fun, datasets, configuration):
+def create_pipelines(pipeline_fun, project, datasets, configuration):
     """Create a pipeline for each dataset using the passed pipeline_fun
     functions. The pipeline_fun function must be a function that
     takes a :py:class:`grape.Dataset` and a configuration dict
@@ -90,6 +93,8 @@ def create_pipelines(pipeline_fun, datasets, configuration):
     :type pipeline_fun: function
     :param datasets: list of datasets
     :type datasets: list
+    :param project: the grape project
+    :type project: grape.Project
     :param configuration: additional configuration dictionary
     :type configuration: dict
     :returns pipelines: list of pipelines
@@ -105,9 +110,9 @@ def create_pipelines(pipeline_fun, datasets, configuration):
             return False
         pipelines.append(pipeline)
 
-        # update job prameter
+        # update job params
         if configuration is not None:
             for step in pipeline.tools.values():
-                grp.configure_job(step, configuration)
+                grp.configure_job(step, project, d, configuration)
 
     return pipelines

@@ -23,10 +23,15 @@ class Grape(object):
         self._default_job_config = None
         self._user_job_config = None
 
-    def configure_job(self, tool, user_config=None):
+    def configure_job(self, tool, project, dataset, user_config=None):
         """Apply job configuration to this tool. The configuration
         is loaded first from the grape_home, then from the user home.
         Lastly, if specified, the user_config is applied to the job.
+
+        In addition to the job configuration, grape specific attributes are
+        set. This includes:
+
+        - the log directory where the jobs log file is stored
         """
         if self._default_job_config is None:
             self._default_job_config = self.__load_configuration("jobs.json",
@@ -47,19 +52,21 @@ class Grape(object):
         if user_config is not None:
             self.__apply_job_config(tool, user_config)
 
-        exit(1)
+        # set the log file location
+        tool.job.logdir = project.logdir()
 
 
     def __apply_job_config(self, tool, cfg):
         if cfg is None:
             return
         for k, v in cfg.items():
-            if hasattr(tool.job, k):
+            if hasattr(tool.job, k) and v is not None:
                 tool.job.__setattr__(k, v)
 
     def get_cluster(self):
         """Return the cluster instance from either global or user
-        configuration. Raises a GrapeError if no cluster is configured
+        configuration. Raises a GrapeError if no cluster is configured or the
+        cluster implementation could not be loaded.
         """
         cluster = None
         cfg = self.__load_configuration("cluster.json", use_global=False)
@@ -251,6 +258,11 @@ class Project(object):
         self.config = Config(self.path)
         #create project structure
         self._initialize_structure()
+
+    def logdir(self):
+        """Get the path to the projects log file directory"""
+        logdir_path = os.path.join(self.path, ".grape/logs")
+        return logdir_path
 
     def exists(self):
         """Return true if the associated path is an initialized grape project
