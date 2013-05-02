@@ -25,7 +25,9 @@ import grape.cli as cli
 from grape.cli import utils
 from another.tools import ToolException
 import grape.pipelines
-
+import grape.jobs.store
+from grape.jobs.store import PipelineStore
+import grape.jobs as jobs
 
 class CommandError(Exception):
     """Exception raised by command line tools. This exception
@@ -79,6 +81,7 @@ class RunCommand(GrapeCommand):
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
         pipelines = utils.create_pipelines(grape.pipelines.default_pipeline,
+                                           project,
                                            datasets, vars(args))
         if not pipelines:
             return False
@@ -116,6 +119,152 @@ class RunCommand(GrapeCommand):
                                             add_cluster_parameter=False)
 
 
+class JobsCommand(GrapeCommand):
+    name = "jobs"
+    description = """List and modify grape jobs"""
+
+    def run(self, args):
+        grp = Grape()
+        cluster = grp.get_cluster()
+
+        # list jobs
+        self._list_jobs(args, cluster)
+
+    def _get_stores(self, project, check=False, cluster=None):
+        """Iterates over all project job stores and collects
+        the data. If check is set to True and a cluster is
+        specified, the cluster jobs are listed and the states
+        are updated.
+        """
+        stores = []
+        job_states = None
+        for store in grape.jobs.store.list(project.path):
+            try:
+                store.lock()
+                data = store.get()
+                if check:
+                    changed = False
+                    # check job status
+                    for k, v in data.items():
+                        if k in ["name"]:
+                            continue
+                        if v.get("state", None) in [grape.jobs.STATE_QUEUED,
+                                                    grape.jobs.STATE_RUNNING]:
+                            if job_states is None:
+                                job_states = cluster.list()
+                            if v["id"] not in job_states:
+                                v["state"] = grape.jobs.STATE_FAILED
+                                changed = True
+                    if changed:
+                        store.save(data)
+                stores.append(data)
+            finally:
+                store.release()
+        return stores
+
+    def _list_jobs(self, args, cluster):
+        """List grape jobs
+
+        :param cluster: the cluster instance
+        :type cluster: another.cluster.Cluster
+        """
+        project, datasets = utils.get_project_and_datasets(args)
+
+        stores = self._get_stores(project, check=args.check, cluster=cluster)
+
+        if args.verbose:
+            self._list_verbose(stores)
+            return True
+
+        names = []
+        states = []
+        bars = []
+        for data in stores:
+            raw_states = []
+            for k, v in data.items():
+                if k not in ["name"]:
+                    raw_states.append(v["state"])
+
+            # print overview
+            counts = {}
+            def _count(k):
+                counts[k] = counts.get(k, 0) + 1
+            map(_count, raw_states)
+
+            pipeline_state = cli.green(grape.jobs.STATE_DONE)
+            if counts.get(grape.jobs.STATE_FAILED, 0) > 0:
+                pipeline_state = cli.red(grape.jobs.STATE_FAILED)
+            if counts.get(grape.jobs.STATE_RUNNING, 0) > 0:
+                pipeline_state = cli.blue(grape.jobs.STATE_RUNNING)
+            if counts.get(grape.jobs.STATE_QUEUED, 0) > 0:
+                pipeline_state = cli.yellow(grape.jobs.STATE_QUEUED)
+
+            BAR_TEMPLATE = '[%s%s] %i/%i'
+            bar = None
+            count = len(raw_states)
+            width = 32
+            i = counts.get(grape.jobs.STATE_DONE, 0)
+            x = int(width * i / count)
+            bar = BAR_TEMPLATE % (
+                '#' * x,
+                ' ' * (width - x),
+                i,
+                count
+            )
+            names.append(data["name"])
+            states.append(pipeline_state),
+            bars.append(bar)
+
+        max_names = max(map(len, names)) + 2
+        max_state = max(map(len, states)) + 2
+        for i, name in enumerate(names):
+            cli.info(cli.columns(
+                [name, max_names],
+                [states[i], max_state],
+                [bars[i], None]))
+
+
+
+    def _list_verbose(self, stores):
+        for data in stores:
+            names = []
+            states = []
+            ids = []
+            for k, v in data.items():
+                if k not in ["name"]:
+                    names.append(k)
+                    ids.append(str(v.get("id", "")))
+                    s = v.get("state", "")
+                    if s == grape.jobs.STATE_QUEUED:
+                        states.append(cli.yellow(s))
+                    elif s == grape.jobs.STATE_RUNNING:
+                        states.append(cli.blue(s))
+                    elif s == grape.jobs.STATE_DONE:
+                        states.append(cli.green(s))
+                    else:
+                        states.append(cli.red(s))
+
+            max_names = max(map(len, names)) + 2
+            max_ids = max(map(len, ids)) + 2
+            cli.info("Pipeline: " + data["name"])
+            for i, name in enumerate(names):
+                cli.info(cli.columns(
+                    [name, max_names],
+                    [ids[i], max_ids],
+                    [states[i], None]))
+
+
+    def add(self, parser):
+        parser.add_argument("--check", default=False, action="store_true",
+                            dest="check", help="Check the jobs status by "
+                                               "querying the cluster")
+        parser.add_argument("-v", "--verbose", default=False,
+                            action="store_true",
+                            dest="verbose", help="Print job details")
+        pass
+        #parser.add_argument("datasets", default="all", nargs="*")
+
+
 class SubmitCommand(GrapeCommand):
     name = "submit"
     description = """Submit the pipeline on a set of data"""
@@ -124,7 +273,10 @@ class SubmitCommand(GrapeCommand):
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
         pipelines = utils.create_pipelines(grape.pipelines.default_pipeline,
-                                           datasets, vars(args))
+                                           project,
+                                           datasets,
+                                           vars(args))
+
         if not pipelines:
             return False
 
@@ -134,6 +286,8 @@ class SubmitCommand(GrapeCommand):
 
         for pipeline in pipelines:
             cli.info("Submitting pipeline run: %s" % pipeline)
+            store = PipelineStore(project.path, pipeline.name)
+
             steps = pipeline.get_sorted_tools()
             for i, step in enumerate(steps):
                 skip = step.is_done()
@@ -141,12 +295,27 @@ class SubmitCommand(GrapeCommand):
                     state = cli.yellow("Skipped")
                     jobid = ""
                 else:
-                    grp.configure_job(step)
                     state = cli.green("Submitted")
                     step.job.name = "GRP-%s" % (str(step))
+                    grape.jobs.store.prepare_tool(step._tool, project.path,
+                                                  pipeline.name)
+
+                    # we need to explicitly lock the store here as the
+                    # job is already on the cluster and we need to make
+                    # sure the cluster jobs does not updated the entry before
+                    # we actually set it
+                    store.lock()
                     feature = cluster.submit(step,
                                              step.get_configuration())
                     jobid = feature.jobid
+                    store_entry = {
+                        "id": jobid,
+                        "stderr": feature.stderr,
+                        "stdout": feature.stdout,
+                        "state": jobs.STATE_QUEUED
+                    }
+                    store.set(str(step), store_entry)
+                    store.release()
 
                 s = "({0:3d}/{1}) | {2} {3:20} {4}".format(i + 1,
                                                            len(steps),
@@ -160,7 +329,6 @@ class SubmitCommand(GrapeCommand):
         parser.add_argument("datasets", default="all", nargs="*")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=True)
-
 
 
 class ConfigCommand(GrapeCommand):
@@ -220,6 +388,7 @@ def main():
     _add_command(RunCommand(), command_parsers)
     _add_command(SubmitCommand(), command_parsers)
     _add_command(ConfigCommand(), command_parsers)
+    _add_command(JobsCommand(), command_parsers)
 
     args = parser.parse_args()
     try:

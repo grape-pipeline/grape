@@ -3,7 +3,7 @@
 
 import sys
 
-from clint.textui import puts, colored
+from clint.textui import puts, colored, columns
 from clint.textui.colored import *
 
 
