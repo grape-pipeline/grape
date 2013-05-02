@@ -333,33 +333,71 @@ class SubmitCommand(GrapeCommand):
 
 class ConfigCommand(GrapeCommand):
     name = "config"
-    description = """Get or set configuration information fr the current project"""
+    description = """Get or set configuration information for the current project"""
 
     def run(self, args):
         project = Project.find()
-        if project is None or not project.exists():
-            print >> sys.stderr, "No grape project found!"
-        else:
-            if args.show:
-                # print configuration
-                print project.config.get_printable()
-            if args.set:
-                info = args.set
-                project.config.set(info[0],info[1],commit=True)
-            if args.remove:
-                key = args.remove
-                project.config.remove(key[0], commit=True)
+        if not project or not project.exists():
+            cli.error("No grape project found")
+            return False
+
+        if args.show:
+            # print configuration
+            print project.config.get_printable()
+            return True
+        if args.set:
+            info = args.set
+            project.config.set(info[0],info[1],commit=True)
+            return True
+        if args.remove:
+            key = args.remove
+            project.config.remove(key[0], commit=True)
+            return True
+
+        print project.config.get_printable()
+        return True
+
+    def add(self, parser):
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--show', action='store_true', default=False,
+                        help='List all the configuration information for a project')
+        group.add_argument('--set', nargs=2, required=False, metavar=('key', 'value'),
+                help='Add a key/value pair information to the project configuration file')
+        group.add_argument('--remove', nargs=1, required=False, metavar=('key'),
+                        help='Remove information to the project configuration file')
+
+class IndexCommand(GrapeCommand):
+    name = 'index'
+    description = """Load or import dataset information from/to index files """
+
+    def run(self, args):
+        project = Project.find()
+        if not project or not project.exists():
+            cli.error("No grape project found")
+            return False
+
+        if args.import_sv:
+            path = args.import_sv
+            project.data_index.import_sv(path)
+        if args.load:
+            path = args.load
+            project.data_index.path = path
+            project.data_index.initialize()
+        if args.export:
+            cli.info('Not implemented yet')
+            pass
+
 
 
 
     def add(self, parser):
-        parser.add_argument('--show', action='store_true', default=False,
-                        help='List all the configuration information for a project')
-        parser.add_argument('--set', nargs=2, required=False, metavar=('key', 'value'),
-                help='Add a key/value pair information to the project configuration file')
-        parser.add_argument('--remove', nargs=1, required=False, metavar=('key'),
-                        help='Remove information to the project configuration file')
-
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--import_sv', required=False, metavar=('sv_file'),
+                            help='Import dataset information from a separated value file into the project')
+        group.add_argument('--load', nargs=1, required=False, metavar=('index_file'),
+                            help='Load an existing index file into the project')
+        group.add_argument('--export', action='store_true', required=False, default=False,
+                            help='Export the project index to a standalone index format')
 
 def _add_command(command, command_parser):
     """Add a command instance to the set of command parsers
@@ -389,6 +427,7 @@ def main():
     _add_command(SubmitCommand(), command_parsers)
     _add_command(ConfigCommand(), command_parsers)
     _add_command(JobsCommand(), command_parsers)
+    _add_command(IndexCommand(), command_parsers)
 
     args = parser.parse_args()
     try:

@@ -53,6 +53,8 @@ class Metadata(object):
         tag_list = []
         if not tags:
             tags = self.__dict__.keys()
+        if IndexDefinition.id in exclude:
+            exclude.append('id')
         for key in tags:
             if key in exclude:
                 continue
@@ -169,6 +171,22 @@ class IndexEntry():
         self.files[type].append(file_info)
         self.files[type]=sorted(self.files[type], key=lambda file: file.path)
 
+    def export(self, absolute=False, types=[]):
+        """Convert an index entry object to its string representation in index file format
+        """
+        out = []
+        if not types:
+            types = self.files.keys()
+        for type in types:
+            for file in self.files[type]:
+                path = file.path
+                if absolute:
+                    path = os.path.abspath(path)
+                tags = ' '.join([self.metadata.get_tags(),file.get_tags(exclude=['path',IndexDefinition.id])])
+                out.append('\t'.join([path, tags]))
+        return out
+
+
 class IndexType(object):
     """A 'enum' like class for specifying index types. An index can have the following types:
 
@@ -244,13 +262,17 @@ class Index(object):
         if not self.path:
             self.path = IndexDefinition.default_path
 
-    def initialize(self):
+    def initialize(self, path=None):
         """Initialize the index object by parsing the index file
         """
-        if not os.path.exists(self.path):
+        if not path and not os.path.exists(self.path):
             self.entries = {}
         else:
-            with open(self.path, 'r') as index_file:
+            if path:
+                file = path
+            else:
+                file = self.path
+            with open(file, 'r') as index_file:
                 for line in index_file:
                     self._parse_line(line)
 
@@ -301,3 +323,11 @@ class Index(object):
                 if not entry:
                     entry = IndexEntry(meta)
                     self.entries[entry.id] = entry
+
+    def save(self):
+        """Save changes made to the index structure loaded in memory to the index file
+        """
+        with open(self.path,'w+') as out:
+            for entry in self.entries.values():
+                out.writelines('\n'.join(entry.export()))
+
