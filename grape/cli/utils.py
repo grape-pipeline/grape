@@ -104,10 +104,8 @@ def create_pipelines(pipeline_fun, datasets, configuration):
         if not _prepare_pipeline(pipeline):
             return False
         pipelines.append(pipeline)
-
         # update job prameter
         if configuration is not None:
             for step in pipeline.tools.values():
                 grp.configure_job(step, configuration)
-
     return pipelines

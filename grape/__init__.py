@@ -4,7 +4,7 @@ import os
 import errno
 import re
 import json
-
+from grape.index import Index
 
 __version__ = "2.0-alpha.1"
 
@@ -160,6 +160,9 @@ class Dataset(object):
             s = sorted([self.primary, self.secondary])
             self.primary = s[0]
             self.secondary = s[1]
+
+        if project:
+            self.index_entry = project.data_index.entries[self.name]
         self.single_end = False  # todo: add single end detection and support
         self.quality = 33  # todo: add quality support
 
@@ -177,13 +180,20 @@ class Dataset(object):
     def get_index(self):
         """Return the default index that should be used by this dataset
         """
-        return self.project.get_indices()[0]
+        index = self.project.config.get('.'.join(['genomes', self.index_entry.metadata.sex, 'index']))
+        if not index:
+            index = self.project.get_indices()[0]
+        return index
+
 
     def get_annotation(self):
         """Return the default annotation that should be used for this
         dataset
         """
-        return self.project.get_annotations()[0]
+        annotation = self.project.config.get('.'.join(['annotations', self.index_entry.metadata.sex, 'path']))
+        if not annotation:
+            annotation = self.project.get_annotations()[0]
+        return annotation
 
     @staticmethod
     def find_secondary(name):
@@ -238,6 +248,8 @@ class Project(object):
         self.path = path
         if self.exists():
             self.config = Config(self.path)
+            self.data_index = Index()
+            self.data_index.initialize()
 
     def initialize(self):
         """Initialize the current project.
@@ -249,6 +261,8 @@ class Project(object):
         # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
+        self.data_index = Index()
+        self.data_index.initialize()
         #create project structure
         self._initialize_structure()
 

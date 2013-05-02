@@ -94,7 +94,7 @@ def test_index_entry_file():
 
 def test_index():
     path = '/users/rg/epalumbo/projects/BluePrint/bp_rna_dashboard_temp.crg.txt'
-    i = Index(path)
+    i = Index(path=path)
     i.initialize()
     assert len(i.entries) == 47
     for entry in i.entries.values():
@@ -102,9 +102,9 @@ def test_index():
 
 def test_import_tsv():
     path = '/data/epalumbo/grape-test/test.tsv'
-    i = Index('')
+    i = Index()
     i.initialize()
-    i.import_tsv(path)
+    i.import_sv(path)
     assert len(i.entries.values()) == 3
     #assert i.entries.keys() == ['1', '3', '2']
     #for k in ['1', '2', '3']:

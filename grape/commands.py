@@ -175,8 +175,8 @@ class ConfigCommand(GrapeCommand):
             if args.show:
                 # print configuration
                 print project.config.get_printable()
-            if args.add:
-                info = args.add
+            if args.set:
+                info = args.set
                 project.config.set(info[0],info[1],commit=True)
             if args.remove:
                 key = args.remove

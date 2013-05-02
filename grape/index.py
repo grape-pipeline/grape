@@ -1,6 +1,7 @@
 """The index module provides functionality around grape data indexing
 """
 import re
+import os
 
 
 class Metadata(object):
@@ -21,7 +22,7 @@ class Metadata(object):
         for key in kwargs:
             if key in self.__dict__.keys():
                 raise ValueError("%r already contains %r property" % (self. __class__, key))
-            if key == Index.id:
+            if key == IndexDefinition.id:
                 self.id = str(kwargs[key])
                 continue
             if key in tags:
@@ -73,7 +74,7 @@ class Metadata(object):
         """
         value = self.get(key)
         if key == 'id':
-            key = Index.id
+            key = IndexDefinition.id
         return sep.join([key, str(value)])+trail
 
     def add(self, dict):
@@ -159,13 +160,16 @@ class IndexEntry():
         file_info - a :class:Metadata object containing the file information
         """
         type = file_info.type
-        if not Index.file_types:
-            Index.file_types.append(type)
-        if type not in Index.file_types:
+        if not IndexDefinition.file_types:
+            IndexDefinition.file_types.append(type)
+        if type not in IndexDefinition.file_types:
             raise ValueError('Type not supported: %r' % type)
-        self.files[type] = file_info
+        if not self.files.get(type, None):
+            self.files[type] = []
+        self.files[type].append(file_info)
+        self.files[type]=sorted(self.files[type], key=lambda file: file.path)
 
-class IndexType():
+class IndexType(object):
     """A 'enum' like class for specifying index types. An index can have the following types:
 
     META - the index only stores metadata for the given datasets but no file information
@@ -183,9 +187,8 @@ class IndexType():
             cls.DATA: 'DATA'
         }.get(str, None)
 
-
-class Index(object):
-    """A class to access information stored into 'index files'.
+class IndexDefinition(object):
+    """A class to specify the index meta information
     """
 ##### TODO: not hardcode this information ##############################
     id = 'labExpId'
@@ -211,10 +214,16 @@ class Index(object):
                 ]
 
     file_types = ['fastq', 'bam', 'bai', 'gff', 'map', 'bigWig', 'bed']
+
+    default_path = '.index'
 ######################################################################
 
 
-    def __init__(self, path, type=IndexType.DATA, entries={}):
+class Index(object):
+    """A class to access information stored into 'index files'.
+    """
+
+    def __init__(self, path=None, type=IndexType.DATA, entries={}):
         """Creates an instance of an Index class
 
         Arguments:
@@ -226,15 +235,19 @@ class Index(object):
         type    -  a :class:IndexType type. Default is DATA
         entries -  a list containing all the entries as dictionaries. Default empty list.
         """
+
         self.path = path
         self.type = type
 
         self.entries = entries
 
+        if not self.path:
+            self.path = IndexDefinition.default_path
+
     def initialize(self):
         """Initialize the index object by parsing the index file
         """
-        if not self.path:
+        if not os.path.exists(self.path):
             self.entries = {}
         else:
             with open(self.path, 'r') as index_file:
@@ -253,9 +266,9 @@ class Index(object):
         file = match.group('file')
         tags = match.group('tags')
         if self.type == IndexType.META and file != '.' or self.type == IndexType.DATA and file == '.':
-            raise ValueError('Index type %s does not support this index file' % IndexType.get(self.type))
+            raise ValueError('Index type %s not valid for this index file' % IndexType.get(self.type))
 
-        meta = Metadata.parse(tags, Index.metainfo)
+        meta = Metadata.parse(tags, IndexDefinition.metainfo)
         entry = self.entries.get(meta.id, None)
 
         if not entry:
@@ -263,24 +276,24 @@ class Index(object):
             self.entries[entry.id] = entry
 
         if self.type == IndexType.DATA:
-            file_info = Metadata.parse(tags, Index.fileinfo)
+            file_info = Metadata.parse(tags, IndexDefinition.fileinfo)
             file_info.add({'path': file})
             entry.add_file(file_info)
 
     def import_sv(self, path, sep='\t', id=''):
-        """Import entries from a TSV file. The tsv file must have and header line with the name of the properties.
+        """Import entries from a SV file. The sv file must have an header line with the name of the properties.
 
         Arguments:
         ----------
-        path - path to the tsv files to be imported
+        path - path to the sv files to be imported
         """
 
         with open(path,'r') as sv_file:
             header = sv_file.readline().rstrip().split(sep)
             if id:
-                Index.id = id
+                IndexDefinition.id = id
             else:
-                Index.id = header[0]
+                IndexDefinition.id = header[0]
             for line in sv_file:
                 meta = Metadata(header, dict(zip(header, map(lambda x : x.replace(' ', '_'), line.rstrip().split(sep)))))
                 entry = self.entries.get(meta.id, None)
