@@ -18,26 +18,101 @@ class Grape(object):
     """Grape main class to run and submit pipelines"""
 
     def __init__(self):
+        """"""
         self.home = os.getenv("GRAPE_HOME", None)
         self._default_job_config = None
+        self._user_job_config = None
 
-    def configure_job(self, tool):
-        """Apply job configuration to this tool"""
+    def configure_job(self, tool, user_config=None):
+        """Apply job configuration to this tool. The configuration
+        is loaded first from the grape_home, then from the user home.
+        Lastly, if specified, the user_config is applied to the job.
+        """
         if self._default_job_config is None:
-            if os.path.exists(os.path.join(self.home, "conf/jobs.json")):
-                with open(os.path.join(self.home, "conf/jobs.json")) as f:
-                    self._default_job_config = json.load(f)
-            else:
-                self._default_job_config = {}
-        if "default" in self._default_job_config:
-            self.__apply_job_config(tool, self._default_job_config["default"])
-        if tool._name in self._default_job_config:
-            self.__apply_job_config(tool, self._default_job_config[tool._name])
+            self._default_job_config = self.__load_configuration("jobs.json",
+                                                                 use_global=True)
+        if self._user_job_config is None:
+            self._user_job_config = self.__load_configuration("jobs.json",
+                                                                 use_global=False)
+
+        self.__apply_job_config(tool, self._default_job_config.get("default",
+                                                                   None))
+        self.__apply_job_config(tool, self._default_job_config.get(tool._name,
+                                                                   None))
+        self.__apply_job_config(tool, self._user_job_config.get("default",
+                                                                   None))
+        self.__apply_job_config(tool, self._user_job_config.get(tool._name,
+                                                                   None))
+
+        if user_config is not None:
+            self.__apply_job_config(tool, user_config)
+
+        exit(1)
+
 
     def __apply_job_config(self, tool, cfg):
+        if cfg is None:
+            return
         for k, v in cfg.items():
             if hasattr(tool.job, k):
                 tool.job.__setattr__(k, v)
+
+    def get_cluster(self):
+        """Return the cluster instance from either global or user
+        configuration. Raises a GrapeError if no cluster is configured
+        """
+        cluster = None
+        cfg = self.__load_configuration("cluster.json", use_global=False)
+        if len(cfg) == 0:
+            cfg = self.__load_configuration("cluster.json", use_global=True)
+        if len(cfg) == 0:
+            raise GrapeError("No cluster configuration found!")
+
+        class_name = cfg.get("class", None)
+        if class_name is None:
+            raise GrapeError("No cluster class specified!")
+        del cfg["class"]
+        # load the class
+
+        try:
+            components = class_name.split('.')
+            module_name = ".".join(components[:-1])
+            mod = __import__(module_name)
+            for m in components[1:]:
+                mod = getattr(mod, m)
+            cluster = mod(**cfg)
+        except Exception, e:
+            raise GrapeError("Error while loading cluster implementation: "
+                             "%s" % (str(e)))
+        return cluster
+
+    def __load_configuration(self, name, use_global=True):
+        """Load a configuration file and return its content as a dictionary.
+        If use_global is True, this searches for the file in the grape_home
+        conf directory, otherwise it checks for the users .grape folder.
+
+        An empty dict is returned if the requested configuration file does not
+        exist.
+
+        :param name: the name of the configuration file relative to the conf
+            directory.
+        :param use_global: set to False to search users $HOME/.grape folder
+        """
+        base = os.path.join(self.home, "conf")
+        if not use_global:
+            base = os.path.join(os.path.expanduser("~"), ".grape")
+
+        conf_file = os.path.join(base, name)
+        if not os.path.exists(conf_file):
+            return {}
+
+        with open(conf_file, "r") as f:
+            ret = json.load(f)
+            res = {}
+            for k, v in ret.items():
+                if v is not None and v != "":
+                    res[k] = v
+            return res
 
 
 class Dataset(object):
@@ -98,6 +173,17 @@ class Dataset(object):
             return self.data_folder
         else:
             return os.path.join(self.data_folder, name)
+
+    def get_index(self):
+        """Return the default index that should be used by this dataset
+        """
+        return self.project.get_indices()[0]
+
+    def get_annotation(self):
+        """Return the default annotation that should be used for this
+        dataset
+        """
+        return self.project.get_annotations()[0]
 
     @staticmethod
     def find_secondary(name):

@@ -6,8 +6,6 @@ import sys
 from clint.textui import puts, colored
 from clint.textui.colored import *
 
-from .pipeline_utils import *
-
 
 def error(msg, newline=True):
     """Print an error message"""
