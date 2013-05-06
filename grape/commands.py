@@ -15,8 +15,6 @@ import os
 import time
 import datetime
 import signal
-import logging
-logging.basicConfig()
 
 import grape
 from grape.buildout import Buildout
@@ -376,28 +374,32 @@ class IndexCommand(GrapeCommand):
             cli.error("No grape project found")
             return False
 
-        if args.import_sv:
-            path = args.import_sv
-            project.data_index.import_sv(path)
         if args.load:
             path = args.load
-            project.data_index.path = path
-            project.data_index.initialize()
+            ext = os.path.splitext(path)[1][1:]
+            if ext == 'tsv':
+                project.data_index.import_sv(path)
+            else:
+                if ext == 'csv':
+                    project.data_index.import_sv(path, sep=',')
+                else:
+                    project.data_index.initialize(path=path, fields=args.fields)
+            return True
         if args.export:
-            cli.info('Not implemented yet')
-            pass
-
-
+            if args.fields:
+                cli.error("Invalid argument")
+            out = args.export
+            project.data_index.export(out)
+            return True
 
 
     def add(self, parser):
         group = parser.add_mutually_exclusive_group()
-        group.add_argument('--import_sv', required=False, metavar=('sv_file'),
-                            help='Import dataset information from a separated value file into the project')
-        group.add_argument('--load', nargs=1, required=False, metavar=('index_file'),
-                            help='Load an existing index file into the project')
-        group.add_argument('--export', action='store_true', required=False, default=False,
+        group.add_argument('--import', dest='load', required=False, metavar=('index_file'),
+                            help='Load an existing index file into the project. Several format are supported and the format is automatically guessed')
+        group.add_argument('--export', nargs='?', type=argparse.FileType('w'), const=sys.stdout,
                             help='Export the project index to a standalone index format')
+        parser.add_argument('--custom-fields', dest='fields', nargs='+', help='Get a list of custom field to add to the index')
 
 def _add_command(command, command_parser):
     """Add a command instance to the set of command parsers
@@ -456,12 +458,12 @@ def buildout():
 
     args = parser.parse_args()
 
-    logger = logging.getLogger('grape')
     buildout_conf = os.path.join(os.path.dirname(__file__), 'buildout.conf')
 
     try:
         buildout = Buildout(buildout_conf)
         buildout.install([])
     except GrapeError as e:
-        logger.error('Buildout error - %r', str(e))
+        cli.error('Buildout error - %r', str(e))
+        sys.exit(1)
 

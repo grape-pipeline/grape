@@ -1,0 +1,12 @@
+{
+    "annotations": {
+        "male": {}, 
+        "female": {}
+    }, 
+    "quality": "33", 
+    "name": "Default project", 
+    "genomes": {
+        "male": {}, 
+        "female": {}
+    }
+}

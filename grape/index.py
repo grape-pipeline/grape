@@ -2,7 +2,9 @@
 """
 import re
 import os
-
+import json
+import sys
+import grape.utils
 
 class Metadata(object):
     """A class to store metadata retrieved from indices
@@ -18,13 +20,11 @@ class Metadata(object):
         Arguments:
         ----------
         kwargs - a dictionary containing name and values of the tags
+        tags - a list of supported tags
         """
         for key in kwargs:
             if key in self.__dict__.keys():
                 raise ValueError("%r already contains %r property" % (self. __class__, key))
-            if key == IndexDefinition.id:
-                self.id = str(kwargs[key])
-                continue
             if key in tags:
                 self.__dict__[key] = str(kwargs[key])
 
@@ -53,8 +53,6 @@ class Metadata(object):
         tag_list = []
         if not tags:
             tags = self.__dict__.keys()
-        if IndexDefinition.id in exclude:
-            exclude.append('id')
         for key in tags:
             if key in exclude:
                 continue
@@ -75,8 +73,6 @@ class Metadata(object):
 
         """
         value = self.get(key)
-        if key == 'id':
-            key = IndexDefinition.id
         return sep.join([key, str(value)])+trail
 
     def add(self, dict):
@@ -142,7 +138,7 @@ class IndexEntry():
     and information related to the sample.
     """
 
-    def __init__(self, metadata):
+    def __init__(self, metadata, index_meta):
         """Create an instance of the IndexEntry class
 
         Arguments:
@@ -152,7 +148,8 @@ class IndexEntry():
         """
         self.files = {}
         self.metadata = metadata
-        self.id = self.metadata.id
+        self.index_meta = index_meta
+        self.id = metadata.get(index_meta['id'])
 
     def add_file(self, file_info):
         """Add the path of a file related to the dataset to the class files dictionary
@@ -162,9 +159,9 @@ class IndexEntry():
         file_info - a :class:Metadata object containing the file information
         """
         type = file_info.type
-        if not IndexDefinition.file_types:
-            IndexDefinition.file_types.append(type)
-        if type not in IndexDefinition.file_types:
+        if not self.index_meta['file_types']:
+            self.index_meta['file_types'].append(type)
+        if type not in self.index_meta['file_types']:
             raise ValueError('Type not supported: %r' % type)
         if not self.files.get(type, None):
             self.files[type] = []
@@ -182,7 +179,7 @@ class IndexEntry():
                 path = file.path
                 if absolute:
                     path = os.path.abspath(path)
-                tags = ' '.join([self.metadata.get_tags(),file.get_tags(exclude=['path',IndexDefinition.id])])
+                tags = ' '.join([self.metadata.get_tags(),file.get_tags(exclude=['path',self.index_meta['id']])])
                 out.append('\t'.join([path, tags]))
         return out
 
@@ -208,9 +205,12 @@ class IndexType(object):
 class IndexDefinition(object):
     """A class to specify the index meta information
     """
+
+    data = {}
+
 ##### TODO: not hardcode this information ##############################
-    id = 'labExpId'
-    metainfo = ['labProtocolId',
+    data['id'] = 'labExpId'
+    data['metainfo'] = ['labProtocolId',
                 'dataType',
                 'age',
                 'localization',
@@ -225,23 +225,26 @@ class IndexDefinition(object):
                 'donorId',
                 'ethnicity'
                 ]
-    fileinfo = ['type',
+    data['fileinfo'] = ['type',
                 'size',
                 'md5',
                 'view'
                 ]
 
-    file_types = ['fastq', 'bam', 'bai', 'gff', 'map', 'bigWig', 'bed']
+    data['file_types'] = ['fastq', 'bam', 'bai', 'gff', 'map', 'bigWig', 'bed']
 
-    default_path = '.index'
+    data['default_path'] = '.index'
 ######################################################################
 
+    @classmethod
+    def dump(cls, tabs=2):
+        return json.dumps(cls.data, indent=tabs)
 
 class Index(object):
     """A class to access information stored into 'index files'.
     """
 
-    def __init__(self, path=None, type=IndexType.DATA, entries={}):
+    def __init__(self, project, type=IndexType.DATA, entries={}, meta={}):
         """Creates an instance of an Index class
 
         Arguments:
@@ -254,27 +257,43 @@ class Index(object):
         entries -  a list containing all the entries as dictionaries. Default empty list.
         """
 
-        self.path = path
+        self.project = project
         self.type = type
-
         self.entries = entries
+        self.meta = meta
 
-        if not self.path:
-            self.path = IndexDefinition.default_path
+        if project and project.has_metainf():
+            self.__load_meta()
 
-    def initialize(self, path=None):
+
+    def __load_meta(self):
+        meta_file = self.project.metainf()
+        with open(meta_file, 'r') as meta:
+            self.meta = grape.utils.uni_convert(json.load(meta))
+
+    def __export_meta(self, tabs=2):
+        meta_file = self.project.metainf()
+        with open(meta_file,'w+') as meta:
+            json.dump(self.meta, meta, indent=tabs)
+
+    def initialize(self, path=None, fields=None, clear=False):
         """Initialize the index object by parsing the index file
         """
-        if not path and not os.path.exists(self.path):
+        if clear:
             self.entries = {}
-        else:
-            if path:
-                file = path
-            else:
-                file = self.path
-            with open(file, 'r') as index_file:
+            self.meta = {}
+        if not self.entries:
+            if not path and self.project:
+                path = self.project.indexfile()
+            if fields:
+                self.meta['metainfo'].extend(fields)
+            if not path or not os.path.exists(path):
+                return False
+            with open(path, 'r') as index_file:
                 for line in index_file:
                     self._parse_line(line)
+            if path:
+                self.export()
 
     def _parse_line(self, line):
         """Parse a line of the index file and append the parsed entry to the entries list.
@@ -290,15 +309,15 @@ class Index(object):
         if self.type == IndexType.META and file != '.' or self.type == IndexType.DATA and file == '.':
             raise ValueError('Index type %s not valid for this index file' % IndexType.get(self.type))
 
-        meta = Metadata.parse(tags, IndexDefinition.metainfo)
-        entry = self.entries.get(meta.id, None)
+        meta = Metadata.parse(tags, self.meta['metainfo']+[self.meta['id']])
+        entry = self.entries.get(meta.get(self.meta['id']), None)
 
         if not entry:
-            entry = IndexEntry(meta)
+            entry = IndexEntry(meta, self.meta)
             self.entries[entry.id] = entry
 
         if self.type == IndexType.DATA:
-            file_info = Metadata.parse(tags, IndexDefinition.fileinfo)
+            file_info = Metadata.parse(tags, self.meta['fileinfo'])
             file_info.add({'path': file})
             entry.add_file(file_info)
 
@@ -312,22 +331,31 @@ class Index(object):
 
         with open(path,'r') as sv_file:
             header = sv_file.readline().rstrip().split(sep)
+            print header
+            if not self.meta:
+                self.meta['metainfo'] = header
             if id:
-                IndexDefinition.id = id
+                self.meta['id'] = id
             else:
-                IndexDefinition.id = header[0]
+                self.meta['id'] = header[0]
             for line in sv_file:
                 meta = Metadata(header, dict(zip(header, map(lambda x : x.replace(' ', '_'), line.rstrip().split(sep)))))
-                entry = self.entries.get(meta.id, None)
+                entry = self.entries.get(meta.get(self.meta['id']), None)
 
                 if not entry:
-                    entry = IndexEntry(meta)
+                    entry = IndexEntry(meta, self.meta)
                     self.entries[entry.id] = entry
+            self.export()
 
-    def save(self):
+    def export(self, out=None):
         """Save changes made to the index structure loaded in memory to the index file
         """
-        with open(self.path,'w+') as out:
-            for entry in self.entries.values():
-                out.writelines('\n'.join(entry.export()))
+        if not out:
+            if self.project:
+                out = open(self.project.indexfile(),'w+')
+            else:
+                out = sys.stdout
+        for entry in self.entries.values():
+            out.writelines('\n'.join(entry.export()))
+        out.writelines('\n')
 

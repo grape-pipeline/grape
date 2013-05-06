@@ -1,3 +1,4 @@
+from grape import Project
 from grape.index import Metadata, IndexEntry, Index
 
 import os
@@ -10,8 +11,8 @@ def test_metadata_instance():
     m = Metadata(info, d)
     assert len(m.__dict__.keys()) == 3
     with pytest.raises(AttributeError):
-        m.labExpId
-    assert m.id == "0001"
+        m.id
+    assert m.labExpId == "0001"
     assert m.sex == "M"
     assert m.age == "50"
 
@@ -20,8 +21,8 @@ def test_metadata_parse():
     m = Metadata.parse(str)
     assert len(m.__dict__.keys()) == 3
     with pytest.raises(AttributeError):
-        m.labExpId
-    assert m.id == m.id
+        m.id
+    assert m.labExpId == '0001'
     assert m.sex == "M"
     assert m.age == "50"
 
@@ -30,8 +31,8 @@ def test_metadata_parse_info():
     m = Metadata.parse(str, info)
     assert len(m.__dict__.keys()) == 3
     with pytest.raises(AttributeError):
-        m.labExpId
-    assert m.id == "0001"
+        m.id
+    assert m.labExpId == "0001"
     assert m.sex == "M"
     assert m.age == "50"
     with pytest.raises(AttributeError):
@@ -45,8 +46,9 @@ def test_metadata_get():
         m.get('name')
 
 def test_metadata_tags():
-    str = "age=50; labExpId=0001; sex=M;"
+    str = "labExpId=0001; age=50; sex=M;"
     m = Metadata.parse(str)
+    print m.get_tags()
     assert m.get_tags() == str
 
 def test_metadata_add_one():
@@ -77,14 +79,14 @@ def test_metadata_contains():
 def test_index_entry_instance():
     str = "labExpId=0001; age=50; sex=M;"
     m = Metadata.parse(str)
-    e = IndexEntry(m)
-    assert e.id == m.id
+    e = IndexEntry(m, {'metainfo': ['labExpId', 'age', 'sex'], 'id': 'labExpId'})
+    assert e.id == m.labExpId
     assert e.metadata == m
 
 def test_index_entry_file():
     str = "labExpId=0001; age=50; sex=M;"
     m = Metadata.parse(str)
-    e = IndexEntry(m)
+    e = IndexEntry(m, {'metainfo': ['labExpId', 'age', 'sex'], 'fileinfo': ['type', 'md5', 'size', 'view'], 'file_types': ['bam'], 'id': 'labExpId'})
     str1 = 'labExpId=0001; type=bam; size=100; md5=af54e41; view=Alignments; path=./file;'
     f = Metadata.parse(str1)
     assert len(e.files) == 0
@@ -93,9 +95,8 @@ def test_index_entry_file():
     assert e.files[f.type][0] == f
 
 def test_index():
-    path = 'test_data/index'
-    i = Index(path=path)
-    i.initialize()
+    p = Project('test_data/project_index')
+    i = p.data_index
     assert len(i.entries) == 1
     for entry in i.entries.values():
         assert len(entry.files) == 1
@@ -104,8 +105,8 @@ def test_index():
 
 def test_import_tsv():
     path = 'test_data/test.tsv'
-    i = Index()
-    i.initialize()
+    i = Index(None)
+    i.initialize(clear=True)
     i.import_sv(path)
     assert len(i.entries.values()) == 3
     #assert i.entries.keys() == ['1', '3', '2']
@@ -118,8 +119,8 @@ def test_import_tsv():
 
 def test_import_csv():
     path = 'test_data/test.csv'
-    i = Index()
-    i.initialize()
+    i = Index(None)
+    i.initialize(clear=True)
     i.import_sv(path,sep=',')
     assert len(i.entries.values()) == 3
     #assert i.entries.keys() == ['1', '3', '2']

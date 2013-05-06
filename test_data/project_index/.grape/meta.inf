@@ -1,0 +1,36 @@
+{
+  "default_path": ".index", 
+  "fileinfo": [
+    "type", 
+    "size", 
+    "md5", 
+    "view"
+  ], 
+  "file_types": [
+    "fastq", 
+    "bam", 
+    "bai", 
+    "gff", 
+    "map", 
+    "bigWig", 
+    "bed"
+  ], 
+  "id": "labExpId", 
+  "metainfo": [
+    "labProtocolId", 
+    "dataType", 
+    "age", 
+    "localization", 
+    "sraStudyAccession", 
+    "lab", 
+    "sex", 
+    "cell", 
+    "rnaExtract", 
+    "tissue", 
+    "sraSampleAccession", 
+    "readType", 
+    "donorId", 
+    "ethnicity",
+    "quality"
+  ]
+}

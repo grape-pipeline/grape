@@ -4,6 +4,7 @@ import os
 import errno
 import re
 import json
+import grape.utils
 from grape.index import Index
 
 __version__ = "2.0-alpha.1"
@@ -255,7 +256,7 @@ class Project(object):
         self.path = path
         if self.exists():
             self.config = Config(self.path)
-            self.data_index = Index()
+            self.data_index = Index(self)
             self.data_index.initialize()
 
     def initialize(self):
@@ -268,7 +269,7 @@ class Project(object):
         # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
-        self.data_index = Index()
+        self.data_index = Index(self)
         self.data_index.initialize()
         #create project structure
         self._initialize_structure()
@@ -283,10 +284,28 @@ class Project(object):
         """
         return os.path.exists("%s/.grape" % (self.path))
 
+    def metainf(self):
+        """Return the path to the meta.inf file describing the meta information for the project
+        """
+        metafile = os.path.join(self.path, '.grape/meta.inf')
+        return metafile
+
+
+    def indexfile(self):
+        """Return the path to the index file for this project
+        """
+        indexfile = os.path.join(self.path,'.index')
+        return indexfile
+
     def has_data_index(self):
         """Return true if the project has an index file
         """
         return os.path.exists("%s/.index" % self.path)
+
+    def has_metainf(self):
+        """Return true if the meta.inf file exists
+        """
+        return os.path.exists("%s/.grape/meta.inf" % self.path)
 
     def _initialize_structure(self):
         """Initialize the project structure"""
@@ -366,8 +385,10 @@ class Project(object):
         if path is None:
             path = os.getcwd()
 
-        if Project(path).exists():
-            return Project(path)
+        p = Project(path)
+
+        if p.exists():
+            return p
         else:
             path = os.path.dirname(path)
             if(path == "/"):
@@ -409,13 +430,13 @@ class Config(object):
     def _load_config(self):
         """Load the confguration information from the project config file
         """
-        self.data = self._convert(json.load(open(self._config_file,'r')))
+        self.data = grape.utils.uni_convert(json.load(open(self._config_file,'r')))
 
-    def _write_config(self):
+    def _write_config(self, tabs=4):
         """Write the configuration to the config file
         """
         with open(self._config_file,'w+') as config:
-            json.dump(self.data, config, indent=4)
+            json.dump(self.data, config, indent=tabs)
 
 
     def get_printable(self, tabs=4):
@@ -493,21 +514,3 @@ class Config(object):
         if commit:
             self._write_config()
 
-    def _convert(self, input):
-        """Convert unicode input to utf-8
-
-        Arguments:
-        ----------
-        input - the unicode input to convert
-        """
-        if isinstance(input, dict):
-            ret = {}
-            for k, v in input.iteritems():
-                ret[self._convert(k)] = self._convert(v)
-            return ret
-        elif isinstance(input, list):
-            return [self._convert(element) for element in input]
-        elif isinstance(input, unicode):
-            return input.encode('utf-8')
-        else:
-            return input
