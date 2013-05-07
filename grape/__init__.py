@@ -290,7 +290,6 @@ class Project(object):
         metafile = os.path.join(self.path, '.grape/meta.inf')
         return metafile
 
-
     def indexfile(self):
         """Return the path to the index file for this project
         """
