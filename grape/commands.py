@@ -189,11 +189,13 @@ class JobsCommand(GrapeCommand):
                 counts[k] = counts.get(k, 0) + 1
             map(_count, raw_states)
 
+            print counts
+
             pipeline_state = cli.green(grape.jobs.STATE_DONE)
             if counts.get(grape.jobs.STATE_FAILED, 0) > 0:
                 pipeline_state = cli.red(grape.jobs.STATE_FAILED)
             if counts.get(grape.jobs.STATE_RUNNING, 0) > 0:
-                pipeline_state = cli.blue(grape.jobs.STATE_RUNNING)
+                pipeline_state = cli.white(grape.jobs.STATE_RUNNING)
             if counts.get(grape.jobs.STATE_QUEUED, 0) > 0:
                 pipeline_state = cli.yellow(grape.jobs.STATE_QUEUED)
 
@@ -236,7 +238,7 @@ class JobsCommand(GrapeCommand):
                     if s == grape.jobs.STATE_QUEUED:
                         states.append(cli.yellow(s))
                     elif s == grape.jobs.STATE_RUNNING:
-                        states.append(cli.blue(s))
+                        states.append(cli.white(s))
                     elif s == grape.jobs.STATE_DONE:
                         states.append(cli.green(s))
                     else:
