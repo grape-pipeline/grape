@@ -14,7 +14,7 @@ class Metadata(object):
     passed as an argument to the contructor.
     """
 
-    def __init__(self, tags, kwargs):
+    def __init__(self, kwargs):
         """Create an instance of a Metadata class
 
         Arguments:
@@ -22,22 +22,8 @@ class Metadata(object):
         kwargs - a dictionary containing name and values of the tags
         tags - a list of supported tags
         """
-        for key in kwargs:
-            if key in self.__dict__.keys():
-                raise ValueError("%r already contains %r property" % (self. __class__, key))
-            if key in tags:
-                self.__dict__[key] = str(kwargs[key])
-
-    def get(self, key):
-        """Get the value of a tag given its key
-
-        Arguments:
-        -----------
-        key - the key of the tag
-        """
-        if not key in self.__dict__.keys():
-            raise ValueError('Key %r not found' % key)
-        return self.__dict__[key]
+        for k,v in kwargs.items():
+            self.__setattr__(k,v)
 
     def get_tags(self, tags=[], exclude=[], sep=' '):
         """Concatenate specified tags using the provided tag separator. The tag are formatted
@@ -75,27 +61,14 @@ class Metadata(object):
         value = self.get(key)
         return sep.join([key, str(value)])+trail
 
-    def add(self, dict):
-        """Add properties to the :class:Metadata object from a dictionary
+    def extend(self, dict):
+        for k,v in dict.items():
+            self.__setattr__(k,v)
 
-        Arguments:
-        ----------
-        dict - the dictionary conatining the key/value pairs to be added
-        """
-        for key in dict.keys():
-            if key in self.__dict__.keys():
-                raise ValueError("%r already contains %r property" % (self. __class__, key))
-            self.__dict__[key] = str(dict[key])
-
-    def contains(self, key):
-        """Return true if the metadata contains the specified key
-
-        Arguments:
-        ----------
-        key - the key to look for
-        """
-        return self.__dict__.has_key(key)
-
+    #def __setattr__(self, name, value):
+    #    if name in self.__dict__:
+    #        raise ValueError("%r already contains %r property" % (self. __class__, key))
+    #    self.__dict__[name] = str(value)
 
     @classmethod
     def parse(cls, string, info=[]):
