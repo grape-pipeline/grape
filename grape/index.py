@@ -58,7 +58,7 @@ class Metadata(object):
         trail -  trailing character of the tag. Default ';'.
 
         """
-        value = self.get(key)
+        value = self.__getattribute__(key)
         return sep.join([key, str(value)])+trail
 
     def extend(self, dict):
@@ -103,7 +103,7 @@ class Metadata(object):
         return tags
 
 
-class IndexEntry():
+class Dataset(object):
     """A class that represent dataset entry in the index file.
 
     Each entry is identified by the dataset name (eg. labExpId) and has metadata
@@ -111,7 +111,7 @@ class IndexEntry():
     and information related to the sample.
     """
 
-    def __init__(self, metadata, index_meta):
+    def __init__(self, metadata, id_key):
         """Create an instance of the IndexEntry class
 
         Arguments:
@@ -119,10 +119,11 @@ class IndexEntry():
         metadata -  an instance of :class:Metadata that contains the parsed metadata
                     information
         """
-        self.files = {}
         self.metadata = metadata
-        self.index_meta = index_meta
-        self.id = metadata.get(index_meta['id'])
+        self.tag_id = id_key
+        self.id = self.metadata.__getattribute__(self.tag_id)
+        self.single_end = self._get_single_end()  # todo: add single end detection and support
+        self.quality = self._get_quality()  # todo: add quality support
 
     def add_file(self, file_info):
         """Add the path of a file related to the dataset to the class files dictionary
@@ -132,29 +133,126 @@ class IndexEntry():
         file_info - a :class:Metadata object containing the file information
         """
         type = file_info.type
-        if not self.index_meta['file_types']:
-            self.index_meta['file_types'].append(type)
-        if type not in self.index_meta['file_types']:
-            raise ValueError('Type not supported: %r' % type)
-        if not self.files.get(type, None):
-            self.files[type] = []
-        self.files[type].append(file_info)
-        self.files[type]=sorted(self.files[type], key=lambda file: file.path)
+        if not hasattr(self, type):
+            self.__setattr__(type, [])
+        self.__getattribute__(type).append(file_info)
+        self.__setattr__(type, sorted(self.__getattribute__(type), key=lambda file: file.path))
+        if type == 'fastq':
+            self._get_fastq()
 
     def export(self, absolute=False, types=[]):
         """Convert an index entry object to its string representation in index file format
         """
         out = []
         if not types:
-            types = self.files.keys()
+            types = [x for x in self.__dict__ if x not in ['id', 'metadata', 'primary', 'secondary', 'type_folders', 'data_folder', 'tag_id', 'quality', 'single_end']]
         for type in types:
-            for file in self.files[type]:
+            for file in self.__getattribute__(type):
                 path = file.path
                 if absolute:
                     path = os.path.abspath(path)
-                tags = ' '.join([self.metadata.get_tags(),file.get_tags(exclude=['path',self.index_meta['id']])])
+                tags = ' '.join([self.metadata.get_tags(),file.get_tags(exclude=['path', self.tag_id])])
                 out.append('\t'.join([path, tags]))
         return out
+
+    def folder(self, name=None):
+        """Resolve a folder based on datasets project folder and
+        if type_folders. If type folders is True, this always resolves
+        to the data folder. Otherwise, if name is specified, it resolves
+        to the named folder under this datasets data folder.
+        """
+        if not self.type_folders or name is None:
+            return self.data_folder
+        else:
+            return os.path.join(self.data_folder, name)
+
+    def get_index(self):
+        """Return the default index that should be used by this dataset
+        """
+        index = self.project.config.get('.'.join(['genomes', self.index_entry.metadata.sex, 'index']))
+        if not index:
+            index = self.project.get_indices()[0]
+        return index
+
+
+    def get_annotation(self):
+        """Return the default annotation that should be used for this
+        dataset
+        """
+        annotation = self.project.config.get('.'.join(['annotations', self.index_entry.metadata.sex, 'path']))
+        if not annotation:
+            annotation = self.project.get_annotations()[0]
+        return annotation
+
+    @staticmethod
+    def find_secondary(name):
+        """Find secondary dataset file and return the basename of
+        that file or return None
+        """
+
+        name = os.path.basename(name)
+        expr = "^(?P<name>.*)(?P<delim>[_\.-])" \
+               "(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
+        match = re.match(expr, name)
+        if match is not None:
+            try:
+                id = int(match.group("id"))
+                if id < 2:
+                    id += 1
+                else:
+                    id -= 1
+                compr = match.group("compression")
+                if compr is None:
+                    compr = ""
+                return "%s%s%d.%s%s" % (match.group("name"),
+                                        match.group("delim"),
+                                        id, match.group("type"),
+                                        compr)
+            except Exception:
+                pass
+        return None
+
+    def _get_fastq(self, sort_by_name=True):
+        self.primary = os.path.abspath(self.fastq[0].path)
+        self.secondary = None
+        self.type_folders = False
+        self.data_folder = os.path.dirname(self.primary)
+        # check for type folders
+        if os.path.split(self.data_folder)[1] == "fastq":
+            self.type_folders = True
+            self.data_folder = os.path.split(self.data_folder)[0]
+
+        #detect secondary
+        directory = os.path.dirname(self.primary)
+        self.secondary = Dataset.find_secondary(self.primary)
+        if self.secondary is not None:
+            self.secondary = "%s/%s" % (directory, self.secondary)
+
+        # set name
+        #if self.secondary is not None:
+        #    # exclude _1/_2 pair identifiers
+        #    self.name = re.match("^(?P<name>.*)([_\.-])(\d)"
+        #                         "\.(fastq|fq)(.gz)*?$",
+        #                         os.path.basename(self.primary)).group("name")
+        #else:
+        #    # single datafile name
+        #    self.name = re.match("^(?P<name>.*)\.(fastq|fq)(.gz)*?$",
+        #                         os.path.basename(self.primary)).group("name")
+
+        # sort primary and secondary
+        if sort_by_name and self.secondary is not None:
+            s = sorted([self.primary, self.secondary])
+            self.primary = s[0]
+            self.secondary = s[1]
+
+    def _get_single_end(self):
+        return self.metadata.readType.find('2x') == -1
+
+    def _get_quality(self):
+        return self.metadata.quality
+
+    def __repr__(self):
+        return "Dataset: %s" % (self.id)
 
 
 class IndexType(object):
