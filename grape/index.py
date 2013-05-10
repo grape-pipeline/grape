@@ -79,9 +79,7 @@ class Metadata(object):
         string - the concatenated tags
         """
         tags = cls._parse_tags(string)
-        if not info:
-            info = tags.keys()
-        return Metadata(info, tags)
+        return Metadata(tags)
 
     @classmethod
     def _parse_tags(cls, str, sep='=', trail=';'):
@@ -111,7 +109,7 @@ class Dataset(object):
     and information related to the sample.
     """
 
-    def __init__(self, metadata, id_key):
+    def __init__(self, metadata, id_key='labExpId'):
         """Create an instance of the IndexEntry class
 
         Arguments:
@@ -119,20 +117,23 @@ class Dataset(object):
         metadata -  an instance of :class:Metadata that contains the parsed metadata
                     information
         """
-        self.metadata = metadata
+        self.metadata = Metadata({})
+        for k,v in vars(metadata).items():
+            if k not in ['type', 'view', 'md5', 'size', 'path']:
+                self.metadata.__setattr__(k, v)
         self.tag_id = id_key
-        self.id = self.metadata.__getattribute__(self.tag_id)
-        self.single_end = self._get_single_end()  # todo: add single end detection and support
-        self.quality = self._get_quality()  # todo: add quality support
 
-    def add_file(self, file_info):
+    def add_file(self, path, meta):
         """Add the path of a file related to the dataset to the class files dictionary
 
-        Arguments:
-        ----------
         file_info - a :class:Metadata object containing the file information
         """
+        file_info = Metadata({})
+        for k,v in vars(meta).items():
+            if k in ['type', 'view', 'md5', 'size', 'path']:
+                file_info.__setattr__(k, v)
         type = file_info.type
+        file_info.path = path
         if not hasattr(self, type):
             self.__setattr__(type, [])
         self.__getattribute__(type).append(file_info)
@@ -145,7 +146,7 @@ class Dataset(object):
         """
         out = []
         if not types:
-            types = [x for x in self.__dict__ if x not in ['id', 'metadata', 'primary', 'secondary', 'type_folders', 'data_folder', 'tag_id', 'quality', 'single_end']]
+            types = [x for x in self.__dict__ if x not in ['metadata', 'type_folders', 'data_folder', 'tag_id']]
         for type in types:
             for file in self.__getattribute__(type):
                 path = file.path
@@ -213,8 +214,8 @@ class Dataset(object):
         return None
 
     def _get_fastq(self, sort_by_name=True):
-        self.primary = os.path.abspath(self.fastq[0].path)
-        self.secondary = None
+        #self.primary = os.path.abspath(self.fastq[0].path)
+        #self.secondary = None
         self.type_folders = False
         self.data_folder = os.path.dirname(self.primary)
         # check for type folders
@@ -224,9 +225,9 @@ class Dataset(object):
 
         #detect secondary
         directory = os.path.dirname(self.primary)
-        self.secondary = Dataset.find_secondary(self.primary)
-        if self.secondary is not None:
-            self.secondary = "%s/%s" % (directory, self.secondary)
+        #self.secondary = Dataset.find_secondary(self.primary)
+        #if self.secondary is not None:
+        #    self.secondary = "%s/%s" % (directory, self.secondary)
 
         # set name
         #if self.secondary is not None:
@@ -240,10 +241,10 @@ class Dataset(object):
         #                         os.path.basename(self.primary)).group("name")
 
         # sort primary and secondary
-        if sort_by_name and self.secondary is not None:
-            s = sorted([self.primary, self.secondary])
-            self.primary = s[0]
-            self.secondary = s[1]
+        if sort_by_name and len(self.fastq) > 1:
+            s = sorted([self.fastq[0], self.fastq[1]], key = lambda x: x.path)
+            self.fastq[0] = s[0]
+            self.fastq[1] = s[1]
 
     def _get_single_end(self):
         return self.metadata.readType.find('2x') == -1
@@ -251,27 +252,22 @@ class Dataset(object):
     def _get_quality(self):
         return self.metadata.quality
 
+    def __getattr__(self, name):
+        #if name is 'id':
+        #    return self.metadata.__getattribute__(self.tag_id)
+        if hasattr(self.metadata, name):
+            return self.metadata.__getattribute__(name)
+        if name is 'id': return self.metadata.__getattribute__(self.tag_id)
+        if name is 'primary': return self.fastq[0].path if hasattr(self,'fastq') and len(self.fastq) > 0 else None
+        if name is 'secondary': return self.fastq[1].path if hasattr(self,'fastq') and len(self.fastq) > 1 else None
+        if name is 'single_end': return self.metadata.readType.find('2x') == -1 if hasattr(self.metadata, 'readType') else False
+        #if hasattr(self.metadata, name):
+        #    return self.metadata.__getattribute__(name)
+        raise AttributeError('%r object has no attribute %r' % (self.__class__.__name__,name))
+
     def __repr__(self):
         return "Dataset: %s" % (self.id)
 
-
-class IndexType(object):
-    """A 'enum' like class for specifying index types. An index can have the following types:
-
-    META - the index only stores metadata for the given datasets but no file information
-    DATA - the index stores metadata, a file path and additional information related to the file
-    """
-    META = 0
-    DATA = 1
-
-    @classmethod
-    def get(cls, str):
-        return {
-            'META': cls.META,
-            'DATA': cls.DATA,
-            cls.META: 'META',
-            cls.DATA: 'DATA'
-        }.get(str, None)
 
 class IndexDefinition(object):
     """A class to specify the index meta information
@@ -315,82 +311,57 @@ class Index(object):
     """A class to access information stored into 'index files'.
     """
 
-    def __init__(self, project, type=IndexType.DATA, entries={}, meta={}):
+    def __init__(self, path, datasets={}):
         """Creates an instance of an Index class
 
-        Arguments:
-        ----------
         path - path of the index file
 
         Keyword arguments:
-        ------------------
-        type    -  a :class:IndexType type. Default is DATA
         entries -  a list containing all the entries as dictionaries. Default empty list.
         """
 
-        self.project = project
-        self.type = type
-        self.entries = entries
-        self.meta = meta
+        self.path = path
+        self.datasets = datasets
 
-        if project and project.has_metainf():
-            self.__load_meta()
+        if not self.datasets:
+            indices = path
+            if not isinstance(indices, list):
+                indices = [indices]
+            for index in indices:
+                self._load(index)
 
+    def _load(self, path, clear=False):
+        """Add datasets to the index object by parsing an index file
 
-    def __load_meta(self):
-        meta_file = self.project.metainf()
-        with open(meta_file, 'r') as meta:
-            self.meta = grape.utils.uni_convert(json.load(meta))
+        path -- path of the index file
 
-    def __export_meta(self, tabs=2):
-        meta_file = self.project.metainf()
-        with open(meta_file,'w+') as meta:
-            json.dump(self.meta, meta, indent=tabs)
-
-    def initialize(self, path=None, fields=None, clear=False):
-        """Initialize the index object by parsing the index file
+        Keyword arguments:
+        clear -- specify if index clean up is required before loadng (default False)
         """
         if clear:
-            self.entries = {}
-            self.meta = {}
-        if not self.entries:
-            if not path and self.project:
-                path = self.project.indexfile()
-            if fields:
-                self.meta['metainfo'].extend(fields)
-            if not path or not os.path.exists(path):
-                return False
-            with open(path, 'r') as index_file:
-                for line in index_file:
-                    self._parse_line(line)
-            if path:
-                self.export()
+            self.datasets = {}
+        with open(os.path.abspath(path), 'r') as index_file:
+            for line in index_file:
+                self._parse_line(line)
 
     def _parse_line(self, line):
         """Parse a line of the index file and append the parsed entry to the entries list.
 
-        Arguments:
-        ----------
         line - the line to be parsed
         """
         expr = '^(?P<file>.+)\t(?P<tags>.+)$'
         match = re.match(expr, line)
         file = match.group('file')
         tags = match.group('tags')
-        if self.type == IndexType.META and file != '.' or self.type == IndexType.DATA and file == '.':
-            raise ValueError('Index type %s not valid for this index file' % IndexType.get(self.type))
 
-        meta = Metadata.parse(tags, self.meta['metainfo']+[self.meta['id']])
-        entry = self.entries.get(meta.get(self.meta['id']), None)
+        meta = Metadata.parse(tags)
+        dataset = self.datasets.get(meta.labExpId, None)
 
-        if not entry:
-            entry = IndexEntry(meta, self.meta)
-            self.entries[entry.id] = entry
+        if not dataset:
+            dataset = Dataset(meta)
+            self.datasets[dataset.id] = dataset
 
-        if self.type == IndexType.DATA:
-            file_info = Metadata.parse(tags, self.meta['fileinfo'])
-            file_info.add({'path': file})
-            entry.add_file(file_info)
+        dataset.add_file(file, meta)
 
     def import_sv(self, path, sep='\t', id=''):
         """Import entries from a SV file. The sv file must have an header line with the name of the properties.
