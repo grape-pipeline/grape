@@ -3,7 +3,7 @@
 # Test grape Datasets
 #
 
-from grape import Dataset
+from grape.index import Metadata,Dataset
 
 
 def test_secondary_matching():
@@ -18,27 +18,33 @@ def test_secondary_matching():
 
 
 def test_dataset_construction_typed_folder():
-    d = Dataset("/data/fastq/test_1.fq")
+    m = Metadata({'labExpId': 'test', 'type':'fastq', 'path':'/data/fastq/test_1.fq'})
+    d = Dataset(m)
     assert d.primary == "/data/fastq/test_1.fq"
-    assert d.secondary == "/data/fastq/test_2.fq"
+    #assert d.secondary == "/data/fastq/test_2.fq"
+    assert d.secondary == None
     assert d.data_folder == "/data", d.data_folder
-    assert d.name == "test"
+    assert d.id == "test"
     assert d.folder("mappings") == "/data/mappings"
 
 
 def test_dataset_construction_untyped_folder():
-    d = Dataset("/data/test_1.fq")
+    m = Metadata({'labExpId': 'test', 'type':'fastq', 'path':'/data/test_1.fq'})
+    d = Dataset(m)
     assert d.primary == "/data/test_1.fq"
-    assert d.secondary == "/data/test_2.fq"
+    #assert d.secondary == "/data/test_2.fq"
+    assert d.secondary == None
     assert d.data_folder == "/data", d.data_folder
-    assert d.name == "test"
+    assert d.id == "test"
     assert d.folder("mappings") == "/data"
 
 
 def test_dataset_construction_sorted_by_file():
-    d = Dataset("/data/test_2.fq")
+    m = Metadata({'labExpId': 'test', 'type':'fastq', 'path':'/data/test_1.fq'})
+    d = Dataset(m)
     assert d.primary == "/data/test_1.fq"
-    assert d.secondary == "/data/test_2.fq"
+    #assert d.secondary == "/data/test_2.fq"
+    assert d.secondary == None
     assert d.data_folder == "/data", d.data_folder
-    assert d.name == "test"
+    assert d.id == "test"
     assert d.folder("mappings") == "/data"

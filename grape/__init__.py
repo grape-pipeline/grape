@@ -5,7 +5,7 @@ import errno
 import re
 import json
 import grape.utils
-from grape.index import Index
+from grape.index import *
 
 __version__ = "2.0-alpha.1"
 
@@ -144,8 +144,7 @@ class Project(object):
         self.path = path
         if self.exists():
             self.config = Config(self.path)
-            self.data_index = Index(self)
-            self.data_index.initialize()
+            self.index = Index(os.path.join(self.path,'.index'))
 
     def initialize(self):
         """Initialize the current project.
@@ -161,6 +160,34 @@ class Project(object):
         self.data_index.initialize()
         #create project structure
         self._initialize_structure()
+
+    def import_data(self, file, sep='\t', id='', path=''):
+        """Import entries from a SV file. The sv file must have an header line with the name of the properties.
+
+        Arguments:
+        ----------
+        path - path to the sv files to be imported
+        """
+        with open(file,'r') as sv_file:
+            header = sv_file.readline().rstrip().split(sep)
+            if not id:
+                id = 'labExpId'
+            if not path:
+                path = 'path'
+
+            for line in sv_file:
+                meta = Metadata(dict(zip(header, map(lambda x : x.replace(' ', '_'), line.rstrip().split(sep)))))
+                dataset = self.index.datasets.get(meta.__getattribute__(id), None)
+
+                # create symlink in project data folder and replace path in index file
+                symlink = self._make_symlink(meta.__getattribute__(path))
+                meta.__setattr__(path, symlink)
+
+                if not dataset:
+                    dataset = Dataset(meta, id_key=id, path_key=path)
+                    self.index.datasets[dataset.id] = dataset
+                else:
+                    dataset.add_file(meta.__getattribute__(path), meta)
 
     def logdir(self):
         """Get the path to the projects log file directory"""
@@ -210,6 +237,21 @@ class Project(object):
                 pass
             else:
                 raise GrapeError("Unable to create folder %s" % (path))
+
+    def _make_symlink(self, src_path):
+        file_name = os.path.basename(src_path)
+        dir_name = os.path.basename(os.path.dirname(src_path))
+
+        dst_path = os.path.join('.','data')
+
+        if dir_name == 'fastq':
+            dst_path = os.path.join(dst_path, dir_name)
+        dst_path = os.path.join(dst_path, file_name)
+
+        if not os.path.exists(dst_path):
+            os.symlink(src_path, dst_path)
+
+        return dst_path
 
     def get_indices(self):
         """Return the absolute path to all .gem files in the genomes

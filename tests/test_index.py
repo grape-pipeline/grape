@@ -1,5 +1,5 @@
 from grape import Project
-from grape.index import Metadata, IndexEntry, Index
+from grape.index import Metadata, IDataset, Index
 
 import os
 import pytest
@@ -79,14 +79,14 @@ def test_metadata_contains():
 def test_index_entry_instance():
     str = "labExpId=0001; age=50; sex=M;"
     m = Metadata.parse(str)
-    e = IndexEntry(m, {'metainfo': ['labExpId', 'age', 'sex'], 'id': 'labExpId'})
+    e = Dataset(m, {'metainfo': ['labExpId', 'age', 'sex'], 'id': 'labExpId'})
     assert e.id == m.labExpId
     assert e.metadata == m
 
 def test_index_entry_file():
     str = "labExpId=0001; age=50; sex=M;"
     m = Metadata.parse(str)
-    e = IndexEntry(m, {'metainfo': ['labExpId', 'age', 'sex'], 'fileinfo': ['type', 'md5', 'size', 'view'], 'file_types': ['bam'], 'id': 'labExpId'})
+    e = Dataset(m, {'metainfo': ['labExpId', 'age', 'sex'], 'fileinfo': ['type', 'md5', 'size', 'view'], 'file_types': ['bam'], 'id': 'labExpId'})
     str1 = 'labExpId=0001; type=bam; size=100; md5=af54e41; view=Alignments; path=./file;'
     f = Metadata.parse(str1)
     assert len(e.files) == 0

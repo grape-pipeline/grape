@@ -109,7 +109,7 @@ class Dataset(object):
     and information related to the sample.
     """
 
-    def __init__(self, metadata, id_key='labExpId'):
+    def __init__(self, metadata, id_key='labExpId', path_key='path'):
         """Create an instance of the IndexEntry class
 
         Arguments:
@@ -122,6 +122,8 @@ class Dataset(object):
             if k not in ['type', 'view', 'md5', 'size', 'path']:
                 self.metadata.__setattr__(k, v)
         self.tag_id = id_key
+        if hasattr(metadata, path_key):
+            self.add_file(metadata.__getattribute__(path_key), metadata)
 
     def add_file(self, path, meta):
         """Add the path of a file related to the dataset to the class files dictionary
@@ -311,7 +313,7 @@ class Index(object):
     """A class to access information stored into 'index files'.
     """
 
-    def __init__(self, path, datasets={}):
+    def __init__(self, path, datasets={}, clear=False):
         """Creates an instance of an Index class
 
         path - path of the index file
@@ -328,7 +330,8 @@ class Index(object):
             if not isinstance(indices, list):
                 indices = [indices]
             for index in indices:
-                self._load(index)
+                if os.path.exists(index):
+                    self._load(index, clear)
 
     def _load(self, path, clear=False):
         """Add datasets to the index object by parsing an index file
@@ -363,41 +366,12 @@ class Index(object):
 
         dataset.add_file(file, meta)
 
-    def import_sv(self, path, sep='\t', id=''):
-        """Import entries from a SV file. The sv file must have an header line with the name of the properties.
-
-        Arguments:
-        ----------
-        path - path to the sv files to be imported
-        """
-
-        with open(path,'r') as sv_file:
-            header = sv_file.readline().rstrip().split(sep)
-            print header
-            if not self.meta:
-                self.meta['metainfo'] = header
-            if id:
-                self.meta['id'] = id
-            else:
-                self.meta['id'] = header[0]
-            for line in sv_file:
-                meta = Metadata(header, dict(zip(header, map(lambda x : x.replace(' ', '_'), line.rstrip().split(sep)))))
-                entry = self.entries.get(meta.get(self.meta['id']), None)
-
-                if not entry:
-                    entry = IndexEntry(meta, self.meta)
-                    self.entries[entry.id] = entry
-            self.export()
-
-    def export(self, out=None):
+    def export(self, out=None, absolute=False):
         """Save changes made to the index structure loaded in memory to the index file
         """
         if not out:
-            if self.project:
-                out = open(self.project.indexfile(),'w+')
-            else:
-                out = sys.stdout
-        for entry in self.entries.values():
-            out.writelines('\n'.join(entry.export()))
-        out.writelines('\n')
+            out = sys.stdout
+        for dataset in self.datasets.values():
+            out.writelines('\n'.join(dataset.export(absolute=absolute)))
+            out.writelines('\n')
 
