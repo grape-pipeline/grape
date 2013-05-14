@@ -5,6 +5,7 @@ import os
 import json
 import sys
 import grape.utils
+from lockfile import LockFile
 
 class Metadata(object):
     """A class to store metadata retrieved from indices
@@ -324,6 +325,7 @@ class Index(object):
 
         self.path = path
         self.datasets = datasets
+        self._lock = None
 
         if not self.datasets:
             indices = path
@@ -331,9 +333,9 @@ class Index(object):
                 indices = [indices]
             for index in indices:
                 if os.path.exists(index):
-                    self._load(index, clear)
+                    self.load(index, clear)
 
-    def _load(self, path, clear=False):
+    def load(self, path, clear=False):
         """Add datasets to the index object by parsing an index file
 
         path -- path of the index file
@@ -346,6 +348,13 @@ class Index(object):
         with open(os.path.abspath(path), 'r') as index_file:
             for line in index_file:
                 self._parse_line(line)
+
+    def save(self):
+        """Save changes to the index file
+        """
+        with open(self.path,'w+') as index:
+           self.export(out=index)
+
 
     def _parse_line(self, line):
         """Parse a line of the index file and append the parsed entry to the entries list.
@@ -366,6 +375,14 @@ class Index(object):
 
         dataset.add_file(file, meta)
 
+    def add(self, id, path, file_info):
+        meta = Metadata(file_info)
+        dataset = self.datasets.get(id, None)
+        if not dataset:
+            raise ValueError("Dataset %r not found" % id)
+        dataset.add_file(path, meta)
+
+
     def export(self, out=None, absolute=False):
         """Save changes made to the index structure loaded in memory to the index file
         """
@@ -374,4 +391,57 @@ class Index(object):
         for dataset in self.datasets.values():
             out.writelines('\n'.join(dataset.export(absolute=absolute)))
             out.writelines('\n')
+
+    def lock(self):
+        """Lock the index"""
+        if self._lock is not None:
+            return False
+
+        base = os.path.dirname(self.path)
+        if not os.path.exists(base):
+            os.makedirs(base)
+
+        self._lock = LockFile(self.storage)
+        try:
+            self._lock.acquire()
+            return True
+        except Exception, e:
+            raise StoreException("Locking index file failed: %s" % str(e))
+
+    def release(self):
+        if self._lock is None:
+            return False
+        self._lock.release()
+        self._lock = None
+        return True
+
+class _OnSuccessListener(object):
+    def __init__(self, project, id):
+        self.project = project
+        self.id = id
+
+    def __call__(self, tool, args):
+        index = self.project.index
+        try:
+            index.lock()
+            for k,v in tool.ouputs.items():
+                info = {'type': k, 'md5': grape.utils.md5sum(v)}
+                index.add(self.id, v, info)
+            index.save()
+        finally:
+            index.release()
+
+def prepare_tool(tool, project, id):
+    """Add listeners to the tool to ensure that it updates the job store
+    during execution.
+
+    :param tool: the tool instance
+    :type tool: another.tools.Tool
+    :param project: the project
+    :type project: grape.Project
+    :param name: the run name used to identify the job store
+    :type name: string
+    """
+    tool.on_success.append(_OnSuccessListener(project, id))
+
 

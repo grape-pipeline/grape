@@ -156,12 +156,11 @@ class Project(object):
         # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
-        self.data_index = Index(self)
-        self.data_index.initialize()
+        self.index = Index(os.path.join(self.path,'.index') )
         #create project structure
         self._initialize_structure()
 
-    def import_data(self, file, sep='\t', id='', path=''):
+    def import_data(self, file, sep='\t', id='labExpId', path='path'):
         """Import entries from a SV file. The sv file must have an header line with the name of the properties.
 
         Arguments:
@@ -170,24 +169,21 @@ class Project(object):
         """
         with open(file,'r') as sv_file:
             header = sv_file.readline().rstrip().split(sep)
-            if not id:
-                id = 'labExpId'
-            if not path:
-                path = 'path'
+            header = map(lambda x: {id:'labExpId', path:'path'}.get(x, x), header)
 
             for line in sv_file:
                 meta = Metadata(dict(zip(header, map(lambda x : x.replace(' ', '_'), line.rstrip().split(sep)))))
-                dataset = self.index.datasets.get(meta.__getattribute__(id), None)
+                dataset = self.index.datasets.get(meta.labExpId, None)
 
                 # create symlink in project data folder and replace path in index file
-                symlink = self._make_symlink(meta.__getattribute__(path))
-                meta.__setattr__(path, symlink)
+                symlink = self._make_symlink(meta.path)
+                meta.path = symlink
 
                 if not dataset:
-                    dataset = Dataset(meta, id_key=id, path_key=path)
+                    dataset = Dataset(meta)
                     self.index.datasets[dataset.id] = dataset
                 else:
-                    dataset.add_file(meta.__getattribute__(path), meta)
+                    dataset.add_file(meta.path, meta)
 
     def logdir(self):
         """Get the path to the projects log file directory"""

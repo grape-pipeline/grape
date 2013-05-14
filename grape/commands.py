@@ -98,6 +98,7 @@ class RunCommand(GrapeCommand):
                                                        state, step)
                 cli.info(s, newline=skip)
                 if not skip:
+                    grape.index.prepare_tool(step._tool, project.path, pipeline.name)
                     start_time = time.time()
                     try:
                         step.run()
@@ -299,6 +300,8 @@ class SubmitCommand(GrapeCommand):
                     step.job.name = "GRP-%s" % (str(step))
                     grape.jobs.store.prepare_tool(step._tool, project.path,
                                                   pipeline.name)
+                    grape.index.prepare_tools(step._tool, project.path,
+                                                pipeline.name)
 
                     # we need to explicitly lock the store here as the
                     # job is already on the cluster and we need to make
@@ -366,9 +369,10 @@ class ConfigCommand(GrapeCommand):
         group.add_argument('--remove', nargs=1, required=False, metavar=('key'),
                         help='Remove information to the project configuration file')
 
-class IndexCommand(GrapeCommand):
-    name = 'index'
-    description = """Load or import dataset information from/to index files """
+class ImportCommand(GrapeCommand):
+    name = 'import'
+    description = """Import dataset form ana external location to the current project
+                     The supported format for importing are tsv, csv and IndexFile """
 
     def run(self, args):
         project = Project.find()
@@ -376,32 +380,43 @@ class IndexCommand(GrapeCommand):
             cli.error("No grape project found")
             return False
 
-        if args.load:
-            path = args.load
-            ext = os.path.splitext(path)[1][1:]
-            if ext == 'tsv':
-                project.data_index.import_sv(path)
-            else:
-                if ext == 'csv':
-                    project.data_index.import_sv(path, sep=',')
-                else:
-                    project.data_index.initialize(path=path, fields=args.fields)
-            return True
-        if args.export:
-            if args.fields:
-                cli.error("Invalid argument")
-            out = args.export
-            project.data_index.export(out)
+        type = args.type
+        file = args.input
+
+        if type == 'index':
+            project.index.load(file)
+        else:
+            project.import_data(file, sep=grape.utils.separator(type), id=args.id_key, path=args.path_key)
+        project.index.save()
+
+    def add(self, parser):
+        parser.add_argument('type', choices=['tsv', 'csv', 'index'], help="specifies the type of metadata file")
+        parser.add_argument('-i', '--input', required=True, metavar='<input_file>', help="path to the metadata file")
+        parser.add_argument('--id_key', default='labExpId', metavar='<id_key>')
+        parser.add_argument('--path_key', default='path', metavar='<path_key>')
+
+
+class ExportCommand(GrapeCommand):
+    name = 'export'
+    description = """Export dataset information to index files """
+
+    def run(self, args):
+        project = Project.find()
+        if not project or not project.exists():
+            cli.error("No grape project found")
+            return False
+        if args.output:
+            #if args.fields:
+            #    cli.error("Invalid argument")
+            out = args.output
+            project.index.export(out)
             return True
 
 
     def add(self, parser):
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument('--import', dest='load', required=False, metavar=('index_file'),
-                            help='Load an existing index file into the project. Several format are supported and the format is automatically guessed')
-        group.add_argument('--export', nargs='?', type=argparse.FileType('w'), const=sys.stdout,
+        parser.add_argument('-o', '--output', nargs='?', type=argparse.FileType('w'), default=sys.stdout,
                             help='Export the project index to a standalone index format')
-        parser.add_argument('--custom-fields', dest='fields', nargs='+', help='Get a list of custom field to add to the index')
+        #parser.add_argument('--custom-fields', dest='fields', nargs='+', help='Get a list of custom field to add to the index')
 
 def _add_command(command, command_parser):
     """Add a command instance to the set of command parsers
@@ -431,7 +446,8 @@ def main():
     _add_command(SubmitCommand(), command_parsers)
     _add_command(ConfigCommand(), command_parsers)
     _add_command(JobsCommand(), command_parsers)
-    _add_command(IndexCommand(), command_parsers)
+    _add_command(ImportCommand(), command_parsers)
+    _add_command(ExportCommand(), command_parsers)
 
     args = parser.parse_args()
     try:
