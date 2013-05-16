@@ -26,8 +26,3 @@ def md5sum(filename, n_blocks=128):
             md5.update(chunk)
     return md5.hexdigest()
 
-def separator(file_type):
-    return {'csv':',',
-            'tsv':'\t'
-            }.get(file_type, None)
-
