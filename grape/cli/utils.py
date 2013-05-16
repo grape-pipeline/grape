@@ -30,9 +30,9 @@ def get_project_and_datasets(args):
         datasets = args.datasets
         if datasets is None:
             raise grape.commands.CommandError("No datasets specified!")
-
-        if datasets == "all":
-            datasets = project.get_datasets()
+        if datasets == ['all']:
+            datasets = []
+        datasets = project.get_datasets(query_list=datasets)
 
     return (project, datasets)
 
@@ -103,7 +103,7 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
     pipelines = []
     grp = grape.Grape()
     for d in datasets:
-        pipeline = pipeline_fun(d, configuration)
+        pipeline = pipeline_fun(d, project.config)
 
         # validate the pipeline
         if not _prepare_pipeline(pipeline):
