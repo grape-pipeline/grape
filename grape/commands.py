@@ -371,8 +371,7 @@ class ConfigCommand(GrapeCommand):
 
 class ImportCommand(GrapeCommand):
     name = 'import'
-    description = """Import dataset form ana external location to the current project
-                     The supported format for importing are tsv, csv and IndexFile """
+    description = """Import dataset information to the current project from an external csv/tsv file."""
 
     def run(self, args):
         project = Project.find()
@@ -455,7 +454,7 @@ def main():
     _add_command(ConfigCommand(), command_parsers)
     _add_command(JobsCommand(), command_parsers)
     _add_command(ImportCommand(), command_parsers)
-    _add_command(ExportCommand(), command_parsers)
+    #_add_command(ExportCommand(), command_parsers)
 
     args = parser.parse_args()
     try:
