@@ -24,7 +24,7 @@ class Metadata(object):
         tags - a list of supported tags
         """
         for k,v in kwargs.items():
-            self.__setattr__(k,v)
+            self.__setattr__(k,str(v))
 
     def get_tags(self, tags=[], exclude=[], sep=' '):
         """Concatenate specified tags using the provided tag separator. The tag are formatted
