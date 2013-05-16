@@ -160,30 +160,43 @@ class Project(object):
         #create project structure
         self._initialize_structure()
 
-    def import_data(self, file, sep='\t', id='labExpId', path='path'):
+    def import_data(self, file, sep=None, id='labExpId', path='path'):
         """Import entries from a SV file. The sv file must have an header line with the name of the properties.
 
         Arguments:
         ----------
         path - path to the sv files to be imported
         """
-        with open(file,'r') as sv_file:
-            header = sv_file.readline().rstrip().split(sep)
-            header = map(lambda x: {id:'labExpId', path:'path'}.get(x, x), header)
+        import csv
 
-            for line in sv_file:
-                meta = Metadata(dict(zip(header, map(lambda x : x.replace(' ', '_'), line.rstrip().split(sep)))))
-                dataset = self.index.datasets.get(meta.labExpId, None)
+        if not csv.Sniffer().has_header(file.readline()):
+            raise ValueError('Metadata file must have a header')
 
-                # create symlink in project data folder and replace path in index file
-                symlink = self._make_symlink(meta.path)
-                meta.path = symlink
+        file.seek(0)
 
-                if not dataset:
-                    dataset = Dataset(meta)
-                    self.index.datasets[dataset.id] = dataset
-                else:
-                    dataset.add_file(meta.path, meta)
+        dialect = None
+        if sep is None:
+            dialect = csv.Sniffer().sniff(file.readline(), delimiters=[',','\t'])
+
+        file.seek(0)
+
+        reader = csv.DictReader(file, dialect=dialect)
+        reader.fieldnames = [{id:'labExpId', path:'path'}.get(x, x) for x in reader.fieldnames]
+
+
+        for line in reader:
+            meta = Metadata(line)
+            dataset = self.index.datasets.get(meta.labExpId, None)
+
+            # create symlink in project data folder and replace path in index file
+            symlink = self._make_symlink(meta.path)
+            meta.path = symlink
+
+            if not dataset:
+                dataset = Dataset(meta)
+                self.index.datasets[dataset.id] = dataset
+            else:
+                dataset.add_file(meta.path, meta)
 
     def logdir(self):
         """Get the path to the projects log file directory"""
@@ -267,13 +280,13 @@ class Project(object):
                 for f in os.listdir(folder) if (f.endswith(".gtf") or
                                                 f.endswith(".gtf.gz"))]
 
-    def get_datasets(self):
+    def get_datasets(self, query_list=[]):
         """Return a list of all datasets found in this project"""
-        data_folder = os.path.join(self.path, "data")
         datasets = {}
         # get the files in the data folder
-        for f in Project.__search_fastq_files(data_folder):
-            d = Dataset(f, project=self)
+        for k,d in self.index.datasets.items():
+            if query_list and not k in query_list:
+                continue
             if d.primary not in datasets:
                 datasets[d.primary] = d
 
