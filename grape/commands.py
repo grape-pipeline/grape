@@ -98,7 +98,7 @@ class RunCommand(GrapeCommand):
                                                        state, step)
                 cli.info(s, newline=skip)
                 if not skip:
-                    grape.index.prepare_tool(step._tool, project.path, pipeline.name)
+                    grape.index.prepare_tool(step._tool, project, pipeline)
                     start_time = time.time()
                     try:
                         step.run()
@@ -113,7 +113,7 @@ class RunCommand(GrapeCommand):
         return True
 
     def add(self, parser):
-        parser.add_argument("datasets", default="all", nargs="*")
+        parser.add_argument("datasets", default=["all"], nargs="*")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False)
 
@@ -329,7 +329,7 @@ class SubmitCommand(GrapeCommand):
 
 
     def add(self, parser):
-        parser.add_argument("datasets", default="all", nargs="*")
+        parser.add_argument("datasets", default=["all"], nargs="*")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=True)
 
@@ -380,20 +380,27 @@ class ImportCommand(GrapeCommand):
             cli.error("No grape project found")
             return False
 
-        type = args.type
         file = args.input
+        if file is sys.stdin:
+            import tempfile
+            t = tempfile.TemporaryFile('r+w')
+            for line in file:
+                t.write(line)
+            t.seek(0)
+            file = t
+            print file.name
 
         if type == 'index':
             project.index.load(file)
         else:
-            project.import_data(file, sep=grape.utils.separator(type), id=args.id_key, path=args.path_key)
+            project.import_data(file, id=args.id_key, path=args.path_key)
         project.index.save()
 
     def add(self, parser):
-        parser.add_argument('type', choices=['tsv', 'csv', 'index'], help="specifies the type of metadata file")
-        parser.add_argument('-i', '--input', required=True, metavar='<input_file>', help="path to the metadata file")
-        parser.add_argument('--id_key', default='labExpId', metavar='<id_key>')
-        parser.add_argument('--path_key', default='path', metavar='<path_key>')
+        parser.add_argument('input', nargs='?', type=argparse.FileType('r'), const=sys.stdin, default=sys.stdin,
+                            metavar='<input_file>', help="path to the metadata file")
+        parser.add_argument('--id-key', dest='id_key', default='labExpId', metavar='<id_key>')
+        parser.add_argument('--path-key', dest='path_key', default='path', metavar='<path_key>')
 
 
 class ExportCommand(GrapeCommand):
@@ -408,14 +415,15 @@ class ExportCommand(GrapeCommand):
         if args.output:
             #if args.fields:
             #    cli.error("Invalid argument")
+            signal.signal(signal.SIGPIPE, signal.SIG_DFL)
             out = args.output
-            project.index.export(out)
+            project.index.export(out, absolute=True)
             return True
 
 
     def add(self, parser):
         parser.add_argument('-o', '--output', nargs='?', type=argparse.FileType('w'), default=sys.stdout,
-                            help='Export the project index to a standalone index format')
+                            metavar='<output_file>', help='Export the project index to a standalone index format')
         #parser.add_argument('--custom-fields', dest='fields', nargs='+', help='Get a list of custom field to add to the index')
 
 def _add_command(command, command_parser):
