@@ -139,8 +139,14 @@ class Dataset(object):
         file_info.path = path
         if not hasattr(self, type):
             self.__setattr__(type, [])
-        self.__getattribute__(type).append(file_info)
-        self.__setattr__(type, sorted(self.__getattribute__(type), key=lambda file: file.path))
+        if not path in [x.path for x in self.__getattribute__(type)]:
+            self.__getattribute__(type).append(file_info)
+            self.__setattr__(type, sorted(self.__getattribute__(type), key=lambda file: file.path))
+        else:
+            flist = [x for x in self.__getattribute__(type) if x.path == path]
+            if len(flist) > 1:
+                raise ValueError('Duplicate index entry for %r' % path)
+            self.__getattribute__(type)[self.__getattribute__(type).index(flist[0])] = file_info
         if type == 'fastq':
             self._get_fastq()
 
@@ -170,23 +176,17 @@ class Dataset(object):
         else:
             return os.path.join(self.data_folder, name)
 
-    def get_index(self):
+    def get_index(self, config):
         """Return the default index that should be used by this dataset
         """
-        index = self.project.config.get('.'.join(['genomes', self.index_entry.metadata.sex, 'index']))
-        if not index:
-            index = self.project.get_indices()[0]
-        return index
+        return config.get('.'.join(['genomes', self.sex, 'index']))
 
 
-    def get_annotation(self):
+    def get_annotation(self, config):
         """Return the default annotation that should be used for this
         dataset
         """
-        annotation = self.project.config.get('.'.join(['annotations', self.index_entry.metadata.sex, 'path']))
-        if not annotation:
-            annotation = self.project.get_annotations()[0]
-        return annotation
+        return config.get('.'.join(['annotations', self.sex, 'path']))
 
     @staticmethod
     def find_secondary(name):
@@ -389,8 +389,9 @@ class Index(object):
         if not out:
             out = sys.stdout
         for dataset in self.datasets.values():
-            out.writelines('\n'.join(dataset.export(absolute=absolute)))
-            out.writelines('\n')
+            for line in dataset.export(absolute=absolute):
+                out.write('%s%s' % (line, os.linesep))
+
 
     def lock(self):
         """Lock the index"""
@@ -401,7 +402,7 @@ class Index(object):
         if not os.path.exists(base):
             os.makedirs(base)
 
-        self._lock = LockFile(self.storage)
+        self._lock = LockFile(self.path)
         try:
             self._lock.acquire()
             return True
@@ -416,22 +417,27 @@ class Index(object):
         return True
 
 class _OnSuccessListener(object):
-    def __init__(self, project, id):
+    def __init__(self, project, pipeline):
         self.project = project
-        self.id = id
+        self.pipeline = pipeline
 
     def __call__(self, tool, args):
         index = self.project.index
         try:
             index.lock()
-            for k,v in tool.ouputs.items():
-                info = {'type': k, 'md5': grape.utils.md5sum(v)}
-                index.add(self.id, v, info)
+            conf = self.pipeline.get_configuration(self.pipeline.tools[tool.name])
+            for k in tool.__dict__['outputs']:
+                v = conf[k]
+                if os.path.exists(v):
+                    info = {'type': k, 'md5': grape.utils.md5sum(v)}
+                    if conf.has_key('view'):
+                        info['view'] = conf['view']
+                    index.add(conf['name'], v, info)
             index.save()
         finally:
             index.release()
 
-def prepare_tool(tool, project, id):
+def prepare_tool(tool, project, pipeline):
     """Add listeners to the tool to ensure that it updates the job store
     during execution.
 
@@ -442,6 +448,6 @@ def prepare_tool(tool, project, id):
     :param name: the run name used to identify the job store
     :type name: string
     """
-    tool.on_success.append(_OnSuccessListener(project, id))
+    tool.on_success.append(_OnSuccessListener(project, pipeline))
 
 
