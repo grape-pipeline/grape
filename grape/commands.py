@@ -70,6 +70,58 @@ class InitCommand(GrapeCommand):
     def add(self, parser):
         parser.add_argument("path", default=os.getcwd(), nargs="?")
 
+class SetupCommand(GrapeCommand):
+    name = "setup"
+    description = """Pre-processing steps to provide all the pipeline requirements"""
+
+    def run(self, args):
+        # get the project and the selected datasets
+        project, datasets = utils.get_project_and_datasets(args)
+        pipelines = []
+        grp = grape.Grape()
+        pipeline = grape.pipelines.pre_pipeline(project.config)
+        # update job params
+        for step in pipeline.tools.values():
+            grp.configure_job(step, project, None, vars(args))
+
+
+        # validate the pipeline
+        if not utils._prepare_pipeline(pipeline):
+            raise ValueError('Cannot prepare pipeline')
+        pipelines.append(pipeline)
+        if not pipelines:
+            raise ValueError('No pipelines found')
+
+        # all created and validated, time to run
+        for pipeline in pipelines:
+            cli.info("Setting up %s" % pipeline)
+            steps = pipeline.get_sorted_tools()
+            for i, step in enumerate(steps):
+                skip = step.is_done()
+                state = "Running"
+                if skip:
+                    state = cli.yellow("Skipped")
+                s = "({0:3d}/{1}) | {2} {3:20}".format(i + 1,
+                                                       len(steps),
+                                                       state, step)
+                cli.info(s, newline=skip)
+                if not skip:
+                    start_time = time.time()
+                    try:
+                        step.run()
+                    except ToolException, err:
+                        if err.termination_signal == signal.SIGINT:
+                            cli.info(" : " + cli.yellow("CANCELED"))
+                        else:
+                            cli.info(" : " + cli.red("FAILED " + str(err.exit_value)))
+                        return False
+                    end = datetime.timedelta(seconds=int(time.time() - start_time))
+                    cli.info(" : " + cli.green("DONE") + " [%s]" % end)
+        return True
+
+    def add(self, parser):
+        utils.add_default_job_configuration(parser,
+                                            add_cluster_parameter=False)
 
 class RunCommand(GrapeCommand):
     name = "run"
@@ -451,6 +503,7 @@ def main():
     _add_command(JobsCommand(), command_parsers)
     _add_command(ImportCommand(), command_parsers)
     #_add_command(ExportCommand(), command_parsers)
+    _add_command(SetupCommand(), command_parsers)
 
     args = parser.parse_args()
     try:
