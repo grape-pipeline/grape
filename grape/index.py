@@ -258,12 +258,13 @@ class Dataset(object):
     def __getattr__(self, name):
         #if name is 'id':
         #    return self.metadata.__getattribute__(self.tag_id)
-        if hasattr(self.metadata, name):
-            return self.metadata.__getattribute__(name)
-        if name is 'id': return self.metadata.__getattribute__(self.tag_id)
-        if name is 'primary': return self.fastq[0].path if hasattr(self,'fastq') and len(self.fastq) > 0 else None
-        if name is 'secondary': return self.fastq[1].path if hasattr(self,'fastq') and len(self.fastq) > 1 else None
-        if name is 'single_end': return self.metadata.readType.find('2x') == -1 if hasattr(self.metadata, 'readType') else False
+        if name not in ['metadata']:
+            if hasattr(self.metadata, name):
+                return self.metadata.__getattribute__(name)
+            if name is 'id': return self.metadata.__getattribute__(self.tag_id)
+            if name is 'primary': return self.fastq[0].path if hasattr(self,'fastq') and len(self.fastq) > 0 else None
+            if name is 'secondary': return self.fastq[1].path if hasattr(self,'fastq') and len(self.fastq) > 1 else None
+            if name is 'single_end': return self.metadata.readType.find('2x') == -1 if hasattr(self.metadata, 'readType') else False
         #if hasattr(self.metadata, name):
         #    return self.metadata.__getattribute__(name)
         raise AttributeError('%r object has no attribute %r' % (self.__class__.__name__,name))
@@ -417,27 +418,26 @@ class Index(object):
         return True
 
 class _OnSuccessListener(object):
-    def __init__(self, project, pipeline):
+    def __init__(self, project, config):
         self.project = project
-        self.pipeline = pipeline
-
+        self.config = config
     def __call__(self, tool, args):
         index = self.project.index
         try:
             index.lock()
             conf = self.pipeline.get_configuration(self.pipeline.tools[tool.name])
             for k in tool.__dict__['outputs']:
-                v = conf[k]
+                v = config[k]
                 if os.path.exists(v):
                     info = {'type': k, 'md5': grape.utils.md5sum(v)}
-                    if conf.has_key('view'):
-                        info['view'] = conf['view']
-                    index.add(conf['name'], v, info)
+                    if config.has_key('view'):
+                        info['view'] = config['view']
+                    index.add(config['name'], v, info)
             index.save()
         finally:
             index.release()
 
-def prepare_tool(tool, project, pipeline):
+def prepare_tool(tool, project, config):
     """Add listeners to the tool to ensure that it updates the job store
     during execution.
 
@@ -448,6 +448,5 @@ def prepare_tool(tool, project, pipeline):
     :param name: the run name used to identify the job store
     :type name: string
     """
-    tool.on_success.append(_OnSuccessListener(project, pipeline))
-
+    tool.on_success.append(_OnSuccessListener(project, config))
 
