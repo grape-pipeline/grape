@@ -418,6 +418,8 @@ class Config(object):
 
         d = self.data
         for k in keys:
+            if not d.has_key(k):
+                return None
             d = d[k]
 
         return d
