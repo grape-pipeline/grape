@@ -3,7 +3,40 @@
 
 from another.pipelines import Pipeline
 import grape.tools as tools
+import os
 
+def pre_pipeline(config=None):
+    """Create the grape default preprocessing pipeline. You can
+    override defaults from the configuration dictionary.
+
+    :param config: additional configuration that overrides the defaults
+    :type config: dict
+    """
+    if config is None:
+        config = {}
+
+    genome = config.get("genome")
+    annotation = config.get("annotation")
+
+    if genome is None:
+        genome = dataset.get_index(config)
+    if annotation is None:
+        annotation = dataset.get_annotation(config)
+
+    pipeline = Pipeline(name="Default Pipeline")
+    gem_index = pipeline.add(tools.gem_index())
+    gem_index.input = genome
+    gem_index.output_dir = os.path.dirname(genome)
+    gem_index.name = os.path.basename(genome)
+    gem_index.hash = True
+
+    gem_t_index = pipeline.add(tools.gem_t_index())
+    gem_t_index.index = gem_index.gem
+    gem_t_index.annotation = annotation
+    gem_t_index.name = os.path.basename(annotation)
+    gem_t_index.output_dir = os.path.dirname(annotation)
+    gem_t_index.max_length = 150
+    return pipeline
 
 def default_pipeline(dataset, config=None):
     """Create the grape default pipeline for the given dataset. You can
