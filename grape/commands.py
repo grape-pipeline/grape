@@ -98,7 +98,7 @@ class RunCommand(GrapeCommand):
                                                        state, step)
                 cli.info(s, newline=skip)
                 if not skip:
-                    grape.index.prepare_tool(step._tool, project, pipeline)
+                    grape.index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
                     start_time = time.time()
                     try:
                         step.run()
@@ -189,8 +189,6 @@ class JobsCommand(GrapeCommand):
             def _count(k):
                 counts[k] = counts.get(k, 0) + 1
             map(_count, raw_states)
-
-            print counts
 
             pipeline_state = cli.green(grape.jobs.STATE_DONE)
             if counts.get(grape.jobs.STATE_FAILED, 0) > 0:
@@ -298,9 +296,9 @@ class SubmitCommand(GrapeCommand):
                 else:
                     state = cli.green("Submitted")
                     step.job.name = "GRP-%s" % (str(step))
+                    grape.index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
                     grape.jobs.store.prepare_tool(step._tool, project.path,
                                                   pipeline.name)
-                    grape.index.prepare_tool(step._tool, project, pipeline)
 
                     # we need to explicitly lock the store here as the
                     # job is already on the cluster and we need to make
@@ -386,7 +384,6 @@ class ImportCommand(GrapeCommand):
                 t.write(line)
             t.seek(0)
             file = t
-            print file.name
 
         if type == 'index':
             project.index.load(file)
