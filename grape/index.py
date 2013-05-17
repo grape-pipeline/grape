@@ -177,11 +177,15 @@ class Dataset(object):
         else:
             return os.path.join(self.data_folder, name)
 
+    def get_genome(self, config):
+        """Return the default index that should be used by this dataset
+        """
+        return config.get('.'.join(['genomes', self.sex, 'path']))
+
     def get_index(self, config):
         """Return the default index that should be used by this dataset
         """
         return config.get('.'.join(['genomes', self.sex, 'index']))
-
 
     def get_annotation(self, config):
         """Return the default annotation that should be used for this
@@ -420,20 +424,22 @@ class Index(object):
 
 class _OnSuccessListener(object):
     def __init__(self, project_path, config):
-        self.project = grape.Project(project_path)
+        self.project = grape.Project.find()
         self.config = config
     def __call__(self, tool, args):
         index = self.project.index
         try:
             index.lock()
             for k in tool.__dict__['outputs']:
-                v = config[k]
+                v = self.config[k]
                 if os.path.exists(v):
                     info = {'type': k, 'md5': grape.utils.md5sum(v)}
-                    if config.has_key('view'):
-                        info['view'] = config['view']
-                    index.add(config['name'], v, info)
+                    if self.config.has_key('view'):
+                        info['view'] = self.config['view']
+                    index.add(self.config['name'], v, info)
             index.save()
+        except Exception, e:
+            print e
         finally:
             index.release()
 
