@@ -44,6 +44,5 @@ def test_set_new():
 def test_remove():
     config = Config('test_data/project_default_conf')
     config.remove('name')
-    with pytest.raises(KeyError):
-        config.get('name')
+    assert config.get('name') is None
     os.remove('test_data/project_default_conf/.grape/config')
