@@ -300,7 +300,7 @@ class SubmitCommand(GrapeCommand):
                     step.job.name = "GRP-%s" % (str(step))
                     grape.jobs.store.prepare_tool(step._tool, project.path,
                                                   pipeline.name)
-                    grape.index.prepare_tools(step._tool, project, pipeline)
+                    grape.index.prepare_tool(step._tool, project, pipeline)
 
                     # we need to explicitly lock the store here as the
                     # job is already on the cluster and we need to make
