@@ -423,11 +423,12 @@ class Index(object):
         return True
 
 class _OnSuccessListener(object):
-    def __init__(self, project_path, config):
-        self.project = grape.Project.find()
+    def __init__(self, project, config):
+        self.project = project
         self.config = config
     def __call__(self, tool, args):
-        index = self.project.index
+        project = grape.Project(self.project)
+        index = project.index
         try:
             index.lock()
             for k in tool.__dict__['outputs']:
@@ -438,12 +439,10 @@ class _OnSuccessListener(object):
                         info['view'] = self.config['view']
                     index.add(self.config['name'], v, info)
             index.save()
-        except Exception, e:
-            print e
         finally:
             index.release()
 
-def prepare_tool(tool, project_path, config):
+def prepare_tool(tool, project, config):
     """Add listeners to the tool to ensure that it updates the job store
     during execution.
 
@@ -454,5 +453,5 @@ def prepare_tool(tool, project_path, config):
     :param name: the run name used to identify the job store
     :type name: string
     """
-    tool.on_success.append(_OnSuccessListener(project_path, config))
+    tool.on_success.append(_OnSuccessListener(project, config))
 
