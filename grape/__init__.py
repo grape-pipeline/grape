@@ -146,6 +146,7 @@ class Project(object):
             self.config = Config(self.path)
             self.index = Index(os.path.join(self.path,'.index'))
 
+
     def initialize(self):
         """Initialize the current project.
         The initialization happens only if no .grape folder is found in the
@@ -156,7 +157,7 @@ class Project(object):
         # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
-        self.index = Index(os.path.join(self.path,'.index') )
+        self.index = Index(os.path.join(self.path,'.index'))
         #create project structure
         self._initialize_structure()
 
