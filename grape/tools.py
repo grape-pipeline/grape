@@ -39,6 +39,74 @@ class modules(object):
             clazz.run = patched
         return clazz
 
+@modules([("gemtools", "1.6.1")])
+class gem_index(BashTool):
+    inputs = {
+        "input": None,
+        "name": None,
+        "output_dir": None,
+        "hash": None
+    }
+    outputs = {
+        "gem": "${output_dir}/${name}.gem",
+    }
+    command = '''
+    gemtools index -i ${input} \
+            -o ${output_dir}/${name}.gem \
+            -t ${job.threads} \
+            ${'--no-hash' if not hash else ''}
+    '''
+
+    def validate(self, args, incoming=None):
+        """Validate gem_index and make sure mandatory settings are set"""
+        errs = {}
+        if incoming is None:
+            incoming = {}
+
+        if args.get("input", None) is None:
+            errs["input"] = "No input genome file specified!"
+        if len(errs) > 0:
+            ex = ToolException("Validation failed")
+            ex.validation_errors = errs
+            raise ex
+
+@modules([("gemtools", "1.6.1")])
+class gem_t_index(BashTool):
+    inputs = {
+        "index": None,
+        "annotation": None,
+        "name": None,
+        "output_dir": None,
+        "max_length": None
+    }
+    outputs = {
+        "gem": "${output_dir}/${name}.junctions.gem",
+        "keys": "${output_dir}/${name}.junctions.keys"
+    }
+    command = '''
+    gemtools t-index -i ${index} \
+            -a ${annotation} \
+            -m ${max_length} \
+            -t ${job.threads} \
+            -o ${output_dir}/${name}
+    '''
+
+    def validate(self, args, incoming=None):
+        """Validate gem_t_index and make sure mandatory settings are set"""
+        errs = {}
+        if incoming is None:
+            incoming = {}
+
+        if args.get("index", None) is None:
+            errs["input"] = "No input genome file specified!"
+        if args.get("annotation", None) is None:
+            errs["annotation"] = "No input annotation file specified!"
+
+
+        if len(errs) > 0:
+            ex = ToolException("Validation failed")
+            ex.validation_errors = errs
+            raise ex
 
 @modules([("gemtools", "1.6.1")])
 class gem(BashTool):
