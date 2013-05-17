@@ -19,7 +19,7 @@ def pre_pipeline(config=None):
     annotation = config.get("annotation")
 
     if genome is None:
-        genome = dataset.get_index(config)
+        genome = dataset.get_genome(config)
     if annotation is None:
         annotation = dataset.get_annotation(config)
 
@@ -50,11 +50,15 @@ def default_pipeline(dataset, config=None):
     if config is None:
         config = {}
 
-    index = config.get("genome")
+    index = config.get("index")
     annotation = config.get("annotation")
     quality = config.get("quality")
 
     if index is None:
+        genome = config.get("genome")
+        index = '%s%s' % (genome,'.gem')
+
+    if index == 'None.gem':
         index = dataset.get_index(config)
     if annotation is None:
         annotation = dataset.get_annotation(config)
