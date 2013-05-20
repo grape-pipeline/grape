@@ -72,7 +72,7 @@ class InitCommand(GrapeCommand):
 
 class SetupCommand(GrapeCommand):
     name = "setup"
-    description = """Pre-processing steps to provide all the pipeline requirements"""
+    description = """Run the pre-processing steps needed to prepare the pipeline for the execution"""
 
     def run(self, args):
         # get the project and the selected datasets
