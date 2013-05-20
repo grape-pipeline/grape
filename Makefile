@@ -6,5 +6,6 @@ devel:
 	python setup.py develop
 
 test:
-	@echo "Running pytest..."
+	@echo -n "Running pytest"
 	@py.test -q tests
+	@echo "All tests ran successfully";fi

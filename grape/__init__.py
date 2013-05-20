@@ -450,7 +450,10 @@ class Config(object):
                 if isinstance(d[k], dict):
                     d = d[k]
 
-        d[keys[-1]] = value
+        values = value.split(',')
+        if len(values) == 1:
+            values = values[0]
+        d[keys[-1]] = values
 
         if commit:
             self._write_config()
