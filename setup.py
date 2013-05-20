@@ -7,7 +7,7 @@ import grape
 setup(
     name='Grape',
     version=grape.__version__,
-    description='The Grape RNASeq pipeline verison 2',
+    description='The Grape RNASeq pipeline version 2',
     author='Emilio Palumbo, Thasso Griebel',
     url='https://grape-pipeline.org/',
     license="GNU General Public License (GPL)",
