@@ -383,7 +383,7 @@ class SubmitCommand(GrapeCommand):
                     jobid = ""
                 else:
                     state = cli.green("Submitted")
-                    step.job.name = "SET-GRP-%s" % (str(step))
+                    step.job.name = "GRP-%s" % (str(step))
                     grape.index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
                     grape.jobs.store.prepare_tool(step._tool, project.path,
                                                   pipeline.name)
