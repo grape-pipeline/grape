@@ -4,7 +4,7 @@
 #
 from another.pipelines import Pipeline
 import grape.tools as tools
-from another.tools import ToolException
+from another.tools import ToolException, ValidationException
 
 import pytest
 
@@ -28,7 +28,7 @@ def test_gem_validation_no_name():
     p = Pipeline()
     gem = p.add(tools.gem())
 
-    with pytest.raises(ToolException) as err:
+    with pytest.raises(ValidationException) as err:
         gem.validate()
     ex = err.value
     assert ex.validation_errors["name"] == "No name specified!"
@@ -38,7 +38,7 @@ def test_gem_validation_no_quality():
     p = Pipeline()
     gem = p.add(tools.gem())
 
-    with pytest.raises(ToolException) as err:
+    with pytest.raises(ValidationException) as err:
         gem.validate()
     ex = err.value
     assert ex.validation_errors["quality"] == "No quality offset specified!"
@@ -49,7 +49,7 @@ def test_gem_validation_no_transcript_index():
     gem = p.add(tools.gem())
     gem.annotation = "/data/annotations/annotation.gtf"
 
-    with pytest.raises(ToolException) as err:
+    with pytest.raises(ValidationException) as err:
         gem.validate()
     ex = err.value
     assert ex.validation_errors["transcript-index"] == "No transcript index found at /data/annotations/annotation.gtf.junctions.gem"

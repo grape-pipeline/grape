@@ -2,7 +2,7 @@
 """Grape basic tools and utilities
 and manage modules
 """
-from another.tools import BashTool, ToolException
+from another.tools import BashTool, ToolException, ValidationException
 import grape.buildout
 import os
 
@@ -66,8 +66,7 @@ class gem_index(BashTool):
         if args.get("input", None) is None:
             errs["input"] = "No input genome file specified!"
         if len(errs) > 0:
-            ex = ToolException("Validation failed")
-            ex.validation_errors = errs
+            ex = ValidationException(errs)
             raise ex
 
 @modules([("gemtools", "1.6.1")])
@@ -104,8 +103,7 @@ class gem_t_index(BashTool):
 
 
         if len(errs) > 0:
-            ex = ToolException("Validation failed")
-            ex.validation_errors = errs
+            ex = ValidationException(errs)
             raise ex
 
 @modules([("gemtools", "1.6.1")])
@@ -153,8 +151,7 @@ class gem(BashTool):
                 errs["transcript-index"] = "No transcript index found at %s" % \
                                            (transcript_index)
         if len(errs) > 0:
-            ex = ToolException("Validation failed")
-            ex.validation_errors = errs
+            ex = ValidationException(errs)
             raise ex
 
 
@@ -211,6 +208,5 @@ class flux(BashTool):
                 errs["input"] = "No input file specified!"
 
         if len(errs) > 0:
-            ex = ToolException("Validation failed")
-            ex.validation_errors = errs
+            ex = ValidationException(errs)
             raise ex
