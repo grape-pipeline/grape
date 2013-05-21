@@ -361,8 +361,8 @@ class Config(object):
         """
         self.data['name'] = 'Default project'
         self.data['quality'] = '33'
-        self.data['genomes'] = {'male': {}, 'female': {}}
-        self.data['annotations'] = {'male': {}, 'female': {}}
+        self.data['genome'] = ''
+        self.data['annotation'] = ''
 
         self._write_config()
 
