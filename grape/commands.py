@@ -108,7 +108,7 @@ class SetupCommand(GrapeCommand):
                 if args.submit:
                     if not skip:
                         state = cli.green("Submitted")
-                        step.job.name = "GRP-%s" % (str(step))
+                        step.job.name = "GRP-SET-%s" % (str(step))
                         grape.jobs.store.prepare_tool(step._tool, project.path,
                                                       pipeline.name)
 
