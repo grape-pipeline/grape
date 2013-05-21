@@ -8,4 +8,4 @@ devel:
 test:
 	@echo -n "Running pytest"
 	@py.test -q tests
-	@echo "All tests ran successfully";fi
+	@echo "All tests ran successfully"

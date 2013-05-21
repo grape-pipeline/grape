@@ -31,7 +31,7 @@ def test_gem_validation_no_name():
     with pytest.raises(ValidationException) as err:
         gem.validate()
     ex = err.value
-    assert ex.validation_errors["name"] == "No name specified!"
+    assert ex.errors["name"] == "No name specified!"
 
 
 def test_gem_validation_no_quality():
@@ -41,7 +41,7 @@ def test_gem_validation_no_quality():
     with pytest.raises(ValidationException) as err:
         gem.validate()
     ex = err.value
-    assert ex.validation_errors["quality"] == "No quality offset specified!"
+    assert ex.errors["quality"] == "No quality offset specified!"
 
 
 def test_gem_validation_no_transcript_index():
@@ -52,4 +52,4 @@ def test_gem_validation_no_transcript_index():
     with pytest.raises(ValidationException) as err:
         gem.validate()
     ex = err.value
-    assert ex.validation_errors["transcript-index"] == "No transcript index found at /data/annotations/annotation.gtf.junctions.gem"
+    assert ex.errors["transcript-index"] == "No transcript index found at /data/annotations/annotation.gtf.junctions.gem"
