@@ -91,35 +91,71 @@ class SetupCommand(GrapeCommand):
         pipelines.append(pipeline)
         if not pipelines:
             raise ValueError('No pipelines found')
-
+        if args.submit:
+            cluster = Grape().get_cluster()
         # all created and validated, time to run
         for pipeline in pipelines:
             cli.info("Setting up %s" % pipeline)
+            if args.submit:
+                store = PipelineStore(project.path, pipeline.name)
             steps = pipeline.get_sorted_tools()
             for i, step in enumerate(steps):
                 skip = step.is_done()
                 state = "Running"
                 if skip:
                     state = cli.yellow("Skipped")
-                s = "({0:3d}/{1}) | {2} {3:20}".format(i + 1,
+                    jobid = ""
+                if args.submit:
+                    if not skip:
+                        state = cli.green("Submitted")
+                        step.job.name = "GRP-%s" % (str(step))
+                        grape.jobs.store.prepare_tool(step._tool, project.path,
+                                                      pipeline.name)
+
+                        # we need to explicitly lock the store here as the
+                        # job is already on the cluster and we need to make
+                        # sure the cluster jobs does not updated the entry before
+                        # we actually set it
+                        store.lock()
+                        feature = cluster.submit(step,
+                                                 step.get_configuration())
+                        jobid = feature.jobid
+                        store_entry = {
+                            "id": jobid,
+                            "stderr": feature.stderr,
+                            "stdout": feature.stdout,
+                            "state": jobs.STATE_QUEUED
+                        }
+                        store.set(str(step), store_entry)
+                        store.release()
+
+                    s = "({0:3d}/{1}) | {2} {3:20} {4}".format(i + 1,
+                                                           len(steps),
+                                                           state, step,
+                                                           jobid)
+                    cli.info(s)
+                else:
+                    s = "({0:3d}/{1}) | {2} {3:20}".format(i + 1,
                                                        len(steps),
                                                        state, step)
-                cli.info(s, newline=skip)
-                if not skip:
-                    start_time = time.time()
-                    try:
-                        step.run()
-                    except ToolException, err:
-                        if err.termination_signal == signal.SIGINT:
-                            cli.info(" : " + cli.yellow("CANCELED"))
-                        else:
-                            cli.info(" : " + cli.red("FAILED " + str(err.exit_value)))
-                        return False
-                    end = datetime.timedelta(seconds=int(time.time() - start_time))
-                    cli.info(" : " + cli.green("DONE") + " [%s]" % end)
+                    cli.info(s, newline=skip)
+                    if not skip:
+                        start_time = time.time()
+                        try:
+                            step.run()
+                        except ToolException, err:
+                            if err.termination_signal == signal.SIGINT:
+                                cli.info(" : " + cli.yellow("CANCELED"))
+                            else:
+                                cli.info(" : " + cli.red("FAILED " + str(err.exit_value)))
+                            return False
+                        end = datetime.timedelta(seconds=int(time.time() - start_time))
+                        cli.info(" : " + cli.green("DONE") + " [%s]" % end)
         return True
 
     def add(self, parser):
+        parser.add_argument('--submit', action='store_true', default=False,
+                            help='Run the setup steps in a HPC cluster environment - requires a working cluster configuration')
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False)
 
