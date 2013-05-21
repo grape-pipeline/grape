@@ -23,7 +23,7 @@ def pre_pipeline(config=None):
     if annotation is None:
         annotation = dataset.get_annotation(config)
 
-    pipeline = Pipeline(name="Default Pipeline")
+    pipeline = Pipeline(name="Default Pipeline Setup")
     gem_index = pipeline.add(tools.gem_index())
     gem_index.input = genome
     gem_index.output_dir = os.path.dirname(genome)
