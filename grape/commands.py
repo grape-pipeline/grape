@@ -21,7 +21,7 @@ from grape.buildout import Buildout
 from grape import Grape, Project, GrapeError
 import grape.cli as cli
 from grape.cli import utils
-from another.tools import ToolException
+from jip.tools import ToolException
 import grape.pipelines
 import grape.jobs.store
 from grape.jobs.store import PipelineStore
@@ -253,7 +253,7 @@ class JobsCommand(GrapeCommand):
         """List grape jobs
 
         :param cluster: the cluster instance
-        :type cluster: another.cluster.Cluster
+        :type cluster: jip.cluster.Cluster
         """
         project, datasets = utils.get_project_and_datasets(args)
 

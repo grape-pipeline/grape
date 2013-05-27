@@ -1,7 +1,7 @@
 #!/usr/bin/env
 """Grape default pipeline are defined in this module"""
 
-from another.pipelines import Pipeline
+from jip.pipelines import Pipeline
 import grape.tools as tools
 import os
 

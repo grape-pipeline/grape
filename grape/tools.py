@@ -2,7 +2,7 @@
 """Grape basic tools and utilities
 and manage modules
 """
-from another.tools import BashTool, ToolException, ValidationException
+from jip.tools import Tool, ToolException, ValidationException
 import grape.buildout
 import os
 
@@ -40,7 +40,7 @@ class modules(object):
         return clazz
 
 @modules([("gemtools", "1.6.1")])
-class gem_index(BashTool):
+class gem_index(Tool):
     inputs = {
         "input": None,
         "name": None,
@@ -70,7 +70,7 @@ class gem_index(BashTool):
             raise ex
 
 @modules([("gemtools", "1.6.1")])
-class gem_t_index(BashTool):
+class gem_t_index(Tool):
     inputs = {
         "index": None,
         "annotation": None,
@@ -107,7 +107,7 @@ class gem_t_index(BashTool):
             raise ex
 
 @modules([("gemtools", "1.6.1")])
-class gem(BashTool):
+class gem(Tool):
     inputs = {
         "index": None,
         "annotation": None,
@@ -166,7 +166,7 @@ def flux_prepare_folders(tool, args):
 
 
 @modules([("flux", "1.2.3")])
-class flux(BashTool):
+class flux(Tool):
     inputs = {
         "sortinram": True,
         "input": None,

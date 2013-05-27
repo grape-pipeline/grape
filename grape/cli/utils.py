@@ -4,7 +4,7 @@ import logging
 
 from clint.textui import colored, puts, columns
 
-from another.pipelines import PipelineException
+from jip.pipelines import PipelineException
 from grape import Project
 import grape.commands
 

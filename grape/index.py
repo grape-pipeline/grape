@@ -447,7 +447,7 @@ def prepare_tool(tool, project, config):
     during execution.
 
     :param tool: the tool instance
-    :type tool: another.tools.Tool
+    :type tool: jip.tools.Tool
     :param project: the project
     :type project: grape.Project
     :param name: the run name used to identify the job store
