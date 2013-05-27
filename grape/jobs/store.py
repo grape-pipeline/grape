@@ -1,8 +1,6 @@
 """The grape job store module
 """
 import os
-import json
-from lockfile import LockFile
 import grape.jobs
 
 
@@ -36,6 +34,7 @@ class PipelineStore(object):
         self.save(data)
 
     def get(self):
+        import json
         if not os.path.exists(self.storage):
             return {"name": self.name}
         else:
@@ -43,6 +42,7 @@ class PipelineStore(object):
                 return json.load(f)
 
     def save(self, data):
+        import json
         with open(self.storage, "w") as f:
             return json.dump(data, f, indent=2)
 
@@ -50,6 +50,8 @@ class PipelineStore(object):
         """Lock the store"""
         if self._lock is not None:
             return False
+
+        from lockfile import LockFile
 
         base = os.path.dirname(self.storage)
         if not os.path.exists(base):

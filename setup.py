@@ -26,7 +26,11 @@ analysys.
         'Programming Language :: Python',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
     ],
-    install_requires=["argparse", "zc.buildout"],
+    install_requires=["argparse==1.2.1",
+                      "zc.buildout==2.1.0",
+                      "mako==0.8.0",
+                      "clint==0.3.1",
+                      "lockfile==0.9.1"],
     entry_points={
         'console_scripts': [
             'grape = grape.commands:main',

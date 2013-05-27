@@ -9,23 +9,26 @@ options to the given argpaser parser and the run() method that takes
 the parsed command line options and executes the command.
 
 """
-#import argparse
+
 
 import sys
 import os
 import signal
+import argparse
 
 #
 # import grape
 #
-# from .grape import Grape, Project, GrapeError
+from .grape import Grape, Project, GrapeError
+
 from . import cli
-# from .cli import utils
+from . import jobs
+from .cli import utils
+from .jobs.store import PipelineStore
 from jip.tools import ToolException
 
-# #
-# from .jobs.store import PipelineStore
-# from . import jobs
+
+
 
 class CommandError(Exception):
     """Exception raised by command line tools. This exception
@@ -528,7 +531,7 @@ def _add_command(command, command_parser):
 def main():
     """The grape main method that is triggered by the `grape` command
     line tool"""
-    return
+
     from . import __version__
     parser = argparse.ArgumentParser(prog="grape")
     parser.add_argument('-v', '--version', action='version',

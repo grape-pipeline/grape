@@ -1,16 +1,8 @@
 """Grape command line utilities
 """
-import logging
-
 from clint.textui import colored, puts, columns
-
 from jip.pipelines import PipelineException
-
 import grape.commands
-
-
-# we use the general grape logger
-log = logging.getLogger("grape")
 
 
 def get_project_and_datasets(args):
@@ -71,6 +63,8 @@ def _prepare_pipeline(pipeline):
     """Validate the pipeline and prints
     the validation errors in case there are any.
     """
+    import logging
+    log = logging.getLogger("grape")
     log.info("Preparing pipeline: %s", pipeline)
     try:
         pipeline.validate()

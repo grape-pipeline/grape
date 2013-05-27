@@ -1,5 +1,3 @@
-import hashlib
-
 def uni_convert(input):
     """Convert unicode input to utf-8
 
@@ -20,6 +18,7 @@ def uni_convert(input):
         return input
 
 def md5sum(filename, n_blocks=128):
+    import hashlib
     md5 = hashlib.md5()
     with open(filename,'rb') as f:
         for chunk in iter(lambda: f.read(n_blocks*md5.block_size), b''):

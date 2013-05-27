@@ -6,7 +6,7 @@ import json
 import sys
 
 from . import utils
-from lockfile import LockFile
+
 
 class Metadata(object):
     """A class to store metadata retrieved from indices
@@ -403,6 +403,8 @@ class Index(object):
         """Lock the index"""
         if self._lock is not None:
             return False
+
+        from lockfile import LockFile
 
         base = os.path.dirname(self.path)
         if not os.path.exists(base):
