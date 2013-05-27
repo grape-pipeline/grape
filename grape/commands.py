@@ -9,23 +9,23 @@ options to the given argpaser parser and the run() method that takes
 the parsed command line options and executes the command.
 
 """
-import argparse
+#import argparse
+
 import sys
 import os
-import time
-import datetime
 import signal
 
-import grape
-from grape.buildout import Buildout
-from grape import Grape, Project, GrapeError
-import grape.cli as cli
-from grape.cli import utils
+#
+# import grape
+#
+# from .grape import Grape, Project, GrapeError
+from . import cli
+# from .cli import utils
 from jip.tools import ToolException
-import grape.pipelines
-import grape.jobs.store
-from grape.jobs.store import PipelineStore
-import grape.jobs as jobs
+
+# #
+# from .jobs.store import PipelineStore
+# from . import jobs
 
 class CommandError(Exception):
     """Exception raised by command line tools. This exception
@@ -75,6 +75,7 @@ class SetupCommand(GrapeCommand):
     description = """Run the pre-processing steps needed to prepare the pipeline for the execution"""
 
     def run(self, args):
+        import time, datetime
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
         pipelines = []
@@ -164,6 +165,7 @@ class RunCommand(GrapeCommand):
     description = """Run the pipeline on a set of data"""
 
     def run(self, args):
+        import time, datetime
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
         pipelines = utils.create_pipelines(grape.pipelines.default_pipeline,
@@ -526,9 +528,11 @@ def _add_command(command, command_parser):
 def main():
     """The grape main method that is triggered by the `grape` command
     line tool"""
+    return
+    from . import __version__
     parser = argparse.ArgumentParser(prog="grape")
     parser.add_argument('-v', '--version', action='version',
-                        version='grape %s' % (grape.__version__))
+                        version='grape %s' % (__version__))
     # add commands
     command_parsers = parser.add_subparsers()
     _add_command(InitCommand(), command_parsers)
@@ -561,9 +565,11 @@ def main():
 
 def buildout():
     """The grape buildout"""
+    from .buildout import Buildout
+    from . import __version__
     parser = argparse.ArgumentParser(prog="grape-buildout")
     parser.add_argument('-v', '--version', action='version',
-                        version='grape %s' % (grape.__version__))
+                        version='grape %s' % (__version__))
 
     args = parser.parse_args()
 

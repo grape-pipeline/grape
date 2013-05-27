@@ -4,7 +4,7 @@ access the installed modules in GRAPE_HOME
 """
 from zc.buildout import UserError
 from zc.buildout.buildout import Buildout as Bout
-from grape import GrapeError, Grape
+from .grape import GrapeError, Grape
 
 import os
 import logging

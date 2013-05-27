@@ -4,8 +4,8 @@ import re
 import os
 import json
 import sys
-import grape
-import grape.utils
+
+from . import utils
 from lockfile import LockFile
 
 class Metadata(object):
@@ -427,7 +427,11 @@ class _OnSuccessListener(object):
         self.project = project
         self.config = config
     def __call__(self, tool, args):
-        project = grape.Project(self.project)
+        # grape.grape has an import grape.index.* so we
+        # import implicitly here to avoid circular dependencies
+        from grape.grape import Project
+
+        project = Project(self.project)
         index = project.index
         try:
             index.lock()

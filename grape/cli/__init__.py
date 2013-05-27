@@ -4,7 +4,7 @@
 import sys
 
 from clint.textui import puts, colored, columns
-from clint.textui.colored import *
+#from clint.textui.colored import *
 
 
 def error(msg, newline=True):

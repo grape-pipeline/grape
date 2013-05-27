@@ -5,7 +5,7 @@ import logging
 from clint.textui import colored, puts, columns
 
 from jip.pipelines import PipelineException
-from grape import Project
+
 import grape.commands
 
 
@@ -21,6 +21,8 @@ def get_project_and_datasets(args):
      :returns (project, datasets): tuple with the project and the selected
          datasets
     """
+    from grape.grape import Project
+
     project = Project.find()
     if project is None or not project.exists():
         raise grape.commands.CommandError("No grape project found!")
