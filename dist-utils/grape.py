@@ -1,0 +1,18 @@
+#!/usr/bin/python
+import sys
+import os
+import site
+
+# hack the python path
+__gt_cwd__dir = os.path.split(os.path.split(os.path.abspath(__file__))[0])[0]
+__gt_py_version = sys.version_info
+site.addsitedir("%s/lib/python%d.%d/site-packages" % (__gt_cwd__dir, __gt_py_version[0], __gt_py_version[1]))
+
+# EASY-INSTALL-ENTRY-SCRIPT: 'Grape==2.0-alpha.1','console_scripts','grape'
+__requires__ = 'Grape==2.0-alpha.1'
+from pkg_resources import load_entry_point
+
+if __name__ == '__main__':
+    sys.exit(
+        load_entry_point('Grape==2.0-alpha.1', 'console_scripts', 'grape')()
+    )
