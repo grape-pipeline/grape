@@ -16,13 +16,12 @@ import os
 import signal
 import argparse
 
-#
-# import grape
-#
-from .grape import Grape, Project, GrapeError
 
 from . import cli
 from . import jobs
+from . import index
+from . import pipelines as _pipelines
+from .grape import Grape, Project, GrapeError
 from .cli import utils
 from .jobs.store import PipelineStore
 from jip.tools import ToolException
@@ -82,8 +81,8 @@ class SetupCommand(GrapeCommand):
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
         pipelines = []
-        grp = grape.Grape()
-        pipeline = grape.pipelines.pre_pipeline(project.config)
+        grp = Grape()
+        pipeline = _pipelines.pre_pipeline(project.config)
         # update job params
         for step in pipeline.tools.values():
             grp.configure_job(step, project, None, vars(args))
@@ -113,7 +112,7 @@ class SetupCommand(GrapeCommand):
                     if not skip:
                         state = cli.green("Submitted")
                         step.job.name = "GRP-SET-%s" % (str(step))
-                        grape.jobs.store.prepare_tool(step._tool, project.path,
+                        jobs.store.prepare_tool(step._tool, project.path,
                                                       pipeline.name)
 
                         # we need to explicitly lock the store here as the
@@ -171,7 +170,7 @@ class RunCommand(GrapeCommand):
         import time, datetime
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
-        pipelines = utils.create_pipelines(grape.pipelines.default_pipeline,
+        pipelines = utils.create_pipelines(_pipelines.default_pipeline,
                                            project,
                                            datasets, vars(args))
         if not pipelines:
@@ -191,7 +190,7 @@ class RunCommand(GrapeCommand):
                                                        state, step)
                 cli.info(s, newline=skip)
                 if not skip:
-                    grape.index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
+                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
                     start_time = time.time()
                     try:
                         step.run()
@@ -230,7 +229,7 @@ class JobsCommand(GrapeCommand):
         """
         stores = []
         job_states = None
-        for store in grape.jobs.store.list(project.path):
+        for store in jobs.store.list(project.path):
             try:
                 store.lock()
                 data = store.get()
@@ -240,12 +239,12 @@ class JobsCommand(GrapeCommand):
                     for k, v in data.items():
                         if k in ["name"]:
                             continue
-                        if v.get("state", None) in [grape.jobs.STATE_QUEUED,
-                                                    grape.jobs.STATE_RUNNING]:
+                        if v.get("state", None) in [jobs.STATE_QUEUED,
+                                                    jobs.STATE_RUNNING]:
                             if job_states is None:
                                 job_states = cluster.list()
                             if v["id"] not in job_states:
-                                v["state"] = grape.jobs.STATE_FAILED
+                                v["state"] = jobs.STATE_FAILED
                                 changed = True
                     if changed:
                         store.save(data)
@@ -283,19 +282,19 @@ class JobsCommand(GrapeCommand):
                 counts[k] = counts.get(k, 0) + 1
             map(_count, raw_states)
 
-            pipeline_state = cli.green(grape.jobs.STATE_DONE)
-            if counts.get(grape.jobs.STATE_FAILED, 0) > 0:
-                pipeline_state = cli.red(grape.jobs.STATE_FAILED)
-            if counts.get(grape.jobs.STATE_RUNNING, 0) > 0:
-                pipeline_state = cli.white(grape.jobs.STATE_RUNNING)
-            if counts.get(grape.jobs.STATE_QUEUED, 0) > 0:
-                pipeline_state = cli.yellow(grape.jobs.STATE_QUEUED)
+            pipeline_state = cli.green(jobs.STATE_DONE)
+            if counts.get(jobs.STATE_FAILED, 0) > 0:
+                pipeline_state = cli.red(jobs.STATE_FAILED)
+            if counts.get(jobs.STATE_RUNNING, 0) > 0:
+                pipeline_state = cli.white(jobs.STATE_RUNNING)
+            if counts.get(jobs.STATE_QUEUED, 0) > 0:
+                pipeline_state = cli.yellow(jobs.STATE_QUEUED)
 
             BAR_TEMPLATE = '[%s%s] %i/%i'
             bar = None
             count = len(raw_states)
             width = 32
-            i = counts.get(grape.jobs.STATE_DONE, 0)
+            i = counts.get(jobs.STATE_DONE, 0)
             x = int(width * i / count)
             bar = BAR_TEMPLATE % (
                 '#' * x,
@@ -327,11 +326,11 @@ class JobsCommand(GrapeCommand):
                     names.append(k)
                     ids.append(str(v.get("id", "")))
                     s = v.get("state", "")
-                    if s == grape.jobs.STATE_QUEUED:
+                    if s == jobs.STATE_QUEUED:
                         states.append(cli.yellow(s))
-                    elif s == grape.jobs.STATE_RUNNING:
+                    elif s == jobs.STATE_RUNNING:
                         states.append(cli.white(s))
-                    elif s == grape.jobs.STATE_DONE:
+                    elif s == jobs.STATE_DONE:
                         states.append(cli.green(s))
                     else:
                         states.append(cli.red(s))
@@ -364,7 +363,7 @@ class SubmitCommand(GrapeCommand):
     def run(self, args):
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
-        pipelines = utils.create_pipelines(grape.pipelines.default_pipeline,
+        pipelines = utils.create_pipelines(_pipelines.default_pipeline,
                                            project,
                                            datasets,
                                            vars(args))
@@ -389,8 +388,8 @@ class SubmitCommand(GrapeCommand):
                 else:
                     state = cli.green("Submitted")
                     step.job.name = "GRP-%s" % (str(step))
-                    grape.index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
-                    grape.jobs.store.prepare_tool(step._tool, project.path,
+                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
+                    jobs.store.prepare_tool(step._tool, project.path,
                                                   pipeline.name)
 
                     # we need to explicitly lock the store here as the

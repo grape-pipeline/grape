@@ -10,4 +10,4 @@ site.addsitedir("%s/lib/python%d.%d/site-packages" % (__gt_cwd__dir, __gt_py_ver
 
 if __name__ == '__main__':
     import grape.commands
-    grape.commands.main()
+    grape.commands.buildout()

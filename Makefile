@@ -25,7 +25,8 @@ bundle:
 	. $(BUNDLE_ENV27)/bin/activate; pip install lib/jip --install-option="--prefix=$(BUNDLE_DIR)"
 	. $(BUNDLE_ENV27)/bin/activate; python setup.py install --old-and-unmanageable --prefix=$(BUNDLE_DIR)
 	@rm $(BUNDLE_DIR)/*.rst $(BUNDLE_DIR)/bin/buildout $(BUNDLE_DIR)/bin/mako-render # remove some artifacts created during installation
-
+	@cp dist-utils/grape.py $(BUNDLE_DIR)/bin/grape
+	@cp dist-utils/grape-buildout.py $(BUNDLE_DIR)/bin/grape-buildout
 clean:
 	@rm -rf bundle/
 	@rm -rf build/
