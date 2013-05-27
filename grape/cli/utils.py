@@ -4,7 +4,7 @@ import logging
 
 from clint.textui import colored, puts, columns
 
-from another.pipelines import PipelineException
+from jip.pipelines import PipelineException
 from grape import Project
 import grape.commands
 
@@ -87,7 +87,7 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
     """Create a pipeline for each dataset using the passed pipeline_fun
     functions. The pipeline_fun function must be a function that
     takes a :py:class:`grape.Dataset` and a configuration dict
-    and return a :py:class:another.pipelines.Pipeline.
+    and return a :py:class:jip.pipelines.Pipeline.
 
     :param pipeline_fun: the pipeline creation function
     :type pipeline_fun: function

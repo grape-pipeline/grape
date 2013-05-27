@@ -14,8 +14,8 @@ setup(
     long_description='''Grape 2.0 provides an extensive pipeline for RNASeq
 analysys.
 ''',
-    packages=['grape'],
     platforms=['lx64'],
+    packages=['grape', 'grape.cli', 'grape.jobs'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -26,7 +26,7 @@ analysys.
         'Programming Language :: Python',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
     ],
-    install_requires=["argparse"],
+    install_requires=["argparse", "zc.buildout"],
     entry_points={
         'console_scripts': [
             'grape = grape.commands:main',
