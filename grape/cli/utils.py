@@ -96,8 +96,9 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
     :returns pipelines: list of pipelines
     :rtype pipelines: list
     """
+    from grape.grape import Grape
     pipelines = []
-    grp = grape.Grape()
+    grp = Grape()
     for d in datasets:
         pipeline = pipeline_fun(d, project.config)
 

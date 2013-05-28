@@ -260,6 +260,7 @@ class Project(object):
         self.__mkdir("annotations")
         self.__mkdir("genomes")
         self.__mkdir("data")
+        self.__mkdir("data/fastq")
 
     def __mkdir(self, name):
         """Helper class to mimik mkdir -p """
@@ -318,7 +319,7 @@ class Project(object):
         return [d for k, d in datasets.items()]
 
     @staticmethod
-    def __search_fastq_files(directory, level=0):
+    def search_fastq_files(directory, level=0):
         """Search the given directory for fastq files and return them"""
         if directory is None or not os.path.exists(directory):
             return []
@@ -335,7 +336,7 @@ class Project(object):
                 datasets.append(absname)
             elif not os.path.isfile(absname) and f == "fastq":
                 # scan folder
-                sub = Project.__search_fastq_files(absname,
+                sub = Project.search_fastq_files(absname,
                                                    level=level + 1)
                 datasets.extend(sub)
         return datasets

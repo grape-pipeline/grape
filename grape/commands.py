@@ -67,6 +67,16 @@ class InitCommand(GrapeCommand):
         cli.info("Initializing project ... ", newline=False)
         project.initialize(init_structure=not args.empty)
         cli.info(cli.green("Done"))
+
+        if args.quality is not None or args.name is not None:
+            cli.info("Writing project configuration ... ", newline=False)
+            if args.quality:
+                project.config.set("quality", args.quality)
+            if args.name:
+                project.config.set("name", args.name)
+            project.config._write_config()
+            cli.info(cli.green("Done"))
+
         return True
 
     def add(self, parser):
@@ -74,6 +84,9 @@ class InitCommand(GrapeCommand):
                             help="Path to the project folder. Defaults to current directory")
         parser.add_argument("--empty", dest="empty", default=False, action="store_true",
                             help="Do not create default folder structure")
+        parser.add_argument("--quality", dest="quality", help="Set the default quality "
+                                                              "offset for the project")
+        parser.add_argument("--name", dest="name", help="Set the projects name")
 
 
 class SetupCommand(GrapeCommand):
@@ -583,6 +596,69 @@ class ListToolsCommand(GrapeCommand):
         parser.add_argument('--show-config', dest='show_config', default=False, action="store_true")
 
 
+class ListDataCommand(GrapeCommand):
+    name = "list"
+    description = """List project's datasets"""
+
+    def run(self, args):
+        (project, datasets) = utils.get_project_and_datasets(args)
+        if datasets is None:
+            datasets = []
+        cli.puts("Project: %s" % (project.config.get("name")))
+        cli.puts("%d datasets registered in project" % len(datasets))
+        return True
+
+    def add(self, parser):
+        pass
+
+
+class ScanCommand(GrapeCommand):
+    name = 'scan'
+    description = """Scan current project for new datasets"""
+
+    def run(self, args):
+        import re
+
+        project = Project.find()
+        if not project or not project.exists():
+            cli.error("No grape project found")
+            return False
+        cli.info("Scanning data/fastq folder ... ", newline=False)
+        fastqs = sorted(Project.search_fastq_files(os.path.join(project.path, "data/fastq")))
+
+        # collect groups
+        groups = {}
+        scanned = []
+        for fastq in fastqs:
+            name = os.path.basename(fastq)
+            match = re.match("^(?P<name>.*)(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)?$", name)
+            if match is not None:
+                try:
+                    id = int(match.group("id"))
+                    nm = match.group("name")
+                    d = groups.get(nm, [])
+                    d.append(fastq)
+                    scanned.append(fastq)
+                except Exception, e:
+                    pass
+
+        # add all groups
+        id = args.id
+        counter = 0
+        for group in groups:
+            project.index.add()
+
+
+    def add(self, parser):
+        parser.add_argument('--quality', dest='quality', metavar='<quality>', help="Quality offset assigned to new data sets")
+        parser.add_argument('--sex', dest='sex', metavar='<sex>', help="Sex value assigned to new datasets")
+        parser.add_argument('--id', dest='id', metavar='<id>', help="Experiment id assigned to new datasets. "
+                                                                    "NOTE that a counter value is appended if more than "
+                                                                    "one new dataset is found")
+
+
+
+
 def _add_command(command, command_parser):
     """Add a command instance to the set of command parsers
 
@@ -609,6 +685,8 @@ def main():
     command_parsers = parser.add_subparsers()
     _add_command(InitCommand(), command_parsers)
     _add_command(RunCommand(), command_parsers)
+    _add_command(ListDataCommand(), command_parsers)
+    _add_command(ScanCommand(), command_parsers)
     _add_command(SubmitCommand(), command_parsers)
     _add_command(ConfigCommand(), command_parsers)
     _add_command(JobsCommand(), command_parsers)
