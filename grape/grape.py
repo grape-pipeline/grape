@@ -20,7 +20,7 @@ class Grape(object):
         self._default_job_config = None
         self._user_job_config = None
 
-    def configure_job(self, tool, project, dataset, user_config=None):
+    def configure_job(self, tool, project=None, dataset=None, user_config=None):
         """Apply job configuration to this tool. The configuration
         is loaded first from the grape_home, then from the user home.
         Lastly, if specified, the user_config is applied to the job.
@@ -30,6 +30,15 @@ class Grape(object):
 
         - the log directory where the jobs log file is stored
         """
+        import jip
+
+        job = tool
+        name = None
+        if isinstance(tool, jip.tools.Tool):
+            job = tool.job
+            name = tool.name
+
+        # load configuration lazily once
         if self._default_job_config is None:
             self._default_job_config = self.__load_configuration("jobs.json",
                                                                  use_global=True)
@@ -37,28 +46,38 @@ class Grape(object):
             self._user_job_config = self.__load_configuration("jobs.json",
                                                               use_global=False)
 
-        self.__apply_job_config(tool, self._default_job_config.get("default",
-                                                                   None))
-        self.__apply_job_config(tool, self._default_job_config.get(tool._name,
-                                                                   None))
-        self.__apply_job_config(tool, self._user_job_config.get("default",
-                                                                None))
-        self.__apply_job_config(tool, self._user_job_config.get(tool._name,
-                                                                None))
+        # apply configuration in order
+        #
+        # 1. set the log file location if a project is specified. This can be overwritten by
+        # custom configuration
+        if project is not None:
+            job.logdir = project.logdir()
 
+        # 2. the global default
+        self.__apply_job_config(job, self._default_job_config.get("default",
+                                                                   None))
+
+        # 3. the global configuration for the tool based on the tool name
+        self.__apply_job_config(job, self._default_job_config.get(name,
+                                                                   None))
+
+        # 4. the user default
+        self.__apply_job_config(job, self._user_job_config.get("default",
+                                                                None))
+        # 5. the user configuration for the tool based on the tool name
+        self.__apply_job_config(job, self._user_job_config.get(name,
+                                                                None))
+        # 6. user specified overrides
         if user_config is not None:
-            self.__apply_job_config(tool, user_config)
-
-        # set the log file location
-        tool.job.logdir = project.logdir()
+            self.__apply_job_config(job, user_config)
 
 
-    def __apply_job_config(self, tool, cfg):
+    def __apply_job_config(self, job, cfg):
         if cfg is None:
             return
         for k, v in cfg.items():
-            if hasattr(tool.job, k) and v is not None:
-                tool.job.__setattr__(k, v)
+            if hasattr(job, k) and v is not None:
+                job.__setattr__(k, v)
 
     def get_cluster(self):
         """Return the cluster instance from either global or user
@@ -102,6 +121,9 @@ class Grape(object):
             directory.
         :param use_global: set to False to search users $HOME/.grape folder
         """
+        if self.home is None:
+            return {}
+
         base = os.path.join(self.home, "conf")
         if not use_global:
             base = os.path.join(os.path.expanduser("~"), ".grape")
