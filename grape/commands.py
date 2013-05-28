@@ -392,10 +392,15 @@ class SubmitCommand(GrapeCommand):
                     jobid = ""
                 else:
                     state = cli.green("Submitted")
+                    # hard code some paramters
+                    # the name is always set
+                    # and we want cluster jobs to be verbose by default
                     step.job.name = "GRP-%s" % (str(step))
+                    step.job.verbose = True
+
                     index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
                     jobs.store.prepare_tool(step._tool, project.path,
-                                                  pipeline.name)
+                                            pipeline.name)
 
                     # we need to explicitly lock the store here as the
                     # job is already on the cluster and we need to make
