@@ -72,6 +72,7 @@ class InitCommand(GrapeCommand):
     def add(self, parser):
         parser.add_argument("path", default=os.getcwd(), nargs="?")
 
+
 class SetupCommand(GrapeCommand):
     name = "setup"
     description = """Run the pre-processing steps needed to prepare the pipeline for the execution"""
@@ -161,6 +162,7 @@ class SetupCommand(GrapeCommand):
                             help='Run the setup steps in a HPC cluster environment - requires a working cluster configuration')
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False)
+
 
 class RunCommand(GrapeCommand):
     name = "run"
@@ -458,6 +460,7 @@ class ConfigCommand(GrapeCommand):
         group.add_argument('--remove', nargs=1, required=False, metavar=('key'),
                         help='Remove information to the project configuration file')
 
+
 class ImportCommand(GrapeCommand):
     name = 'import'
     description = """Import dataset information to the current project from an external csv/tsv file."""
@@ -570,6 +573,7 @@ class ListToolsCommand(GrapeCommand):
 
     def add(self, parser):
         parser.add_argument('--show-config', dest='show_config', default=False, action="store_true")
+
 
 def _add_command(command, command_parser):
     """Add a command instance to the set of command parsers
