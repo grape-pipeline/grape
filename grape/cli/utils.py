@@ -3,6 +3,7 @@
 from clint.textui import colored, puts, columns
 from jip.pipelines import PipelineException
 import grape.commands
+from grape.grape import Grape
 
 
 def get_project_and_datasets(args):
@@ -97,7 +98,7 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
     :rtype pipelines: list
     """
     pipelines = []
-    grp = grape.Grape()
+    grp = Grape()
     for d in datasets:
         pipeline = pipeline_fun(d, project.config)
 

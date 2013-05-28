@@ -431,7 +431,7 @@ class _OnSuccessListener(object):
     def __call__(self, tool, args):
         # grape.grape has an import grape.index.* so we
         # import implicitly here to avoid circular dependencies
-        from grape.grape import Project
+        from .grape import Project
 
         project = Project(self.project)
         index = project.index
@@ -440,7 +440,7 @@ class _OnSuccessListener(object):
             for k in tool.__dict__['outputs']:
                 v = self.config[k]
                 if os.path.exists(v):
-                    info = {'type': k, 'md5': grape.utils.md5sum(v)}
+                    info = {'type': k, 'md5': utils.md5sum(v)}
                     if self.config.has_key('view'):
                         info['view'] = self.config['view']
                     index.add(self.config['name'], v, info)

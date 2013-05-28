@@ -365,7 +365,7 @@ class Config(object):
     def _load_config(self):
         """Load the confguration information from the project config file
         """
-        self.data = grape.utils.uni_convert(json.load(open(self._config_file,'r')))
+        self.data = utils.uni_convert(json.load(open(self._config_file,'r')))
 
     def _write_config(self, tabs=4):
         """Write the configuration to the config file
