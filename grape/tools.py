@@ -41,6 +41,7 @@ class modules(object):
 
 @modules([("gemtools", "1.6.1")])
 class gem_index(Tool):
+    short_description = "The GEM indexer"
     inputs = {
         "input": None,
         "name": None,
@@ -71,6 +72,7 @@ class gem_index(Tool):
 
 @modules([("gemtools", "1.6.1")])
 class gem_t_index(Tool):
+    short_description = "The GEM transcriptome indexer"
     inputs = {
         "index": None,
         "annotation": None,
@@ -108,6 +110,7 @@ class gem_t_index(Tool):
 
 @modules([("gemtools", "1.6.1")])
 class gem(Tool):
+    short_description = "The GEMTools Mapping Pipeline"
     inputs = {
         "index": None,
         "annotation": None,
@@ -167,6 +170,7 @@ def flux_prepare_folders(tool, args):
 
 @modules([("flux", "1.2.3")])
 class flux(Tool):
+    short_description = "The Flux Capacitor"
     inputs = {
         "sortinram": True,
         "input": None,

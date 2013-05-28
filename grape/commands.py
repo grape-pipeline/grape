@@ -513,6 +513,64 @@ class ExportCommand(GrapeCommand):
                             metavar='<output_file>', help='Export the project index to a standalone index format')
         #parser.add_argument('--custom-fields', dest='fields', nargs='+', help='Get a list of custom field to add to the index')
 
+
+class ListToolsCommand(GrapeCommand):
+    name = 'tools'
+    description = """List tools and pipeline configuration options"""
+
+    def run(self, args):
+        import jip
+        import json
+        import textwrap
+
+        tool_classes = jip.discover()
+        if args.show_config:
+            grape = Grape()
+            cfgs = {}
+            # do not include these paramters
+            excludes = set(["verbose", "template", "jobid", "working_dir", "dependencies", "name"])
+
+            # default config
+            cfgs["default"] = {}
+            default_job = jip.tools.Job()
+            grape.configure_job(default_job)
+            for k in filter(lambda x: x not in excludes, vars(default_job)):
+                v = getattr(default_job, k, "")
+                cfgs["default"][k] = v
+
+
+            # all registered tools by name
+            for tc in tool_classes:
+                i = tc()
+                grape.configure_job(i)
+                cfgs[i.name] = {}
+                for k in filter(lambda x: x not in excludes, vars(i.job)):
+                    v = getattr(i.job, k, "")
+                    cfgs[i.name][k] = v
+
+            cli.puts(json.dumps(cfgs, indent=4))
+        else:
+            cli.puts(
+                textwrap.dedent("""
+                The following tools are available for grape pipeline runs.\n
+                You can get the available configuration options that can be applied for each tool
+                globally in your jobs.json configuration file with the --show-config option.
+                """)
+            )
+            cli.puts(cli.columns(["Tool Name", 20], ["Description", 60]))
+            cli.puts("-" * 80)
+            for tc in tool_classes:
+                i = tc()
+                description = i.short_description
+                if description is None:
+                    description = ""
+
+                cli.puts(cli.columns([i.name, 20], [description, 60]))
+        return True
+
+    def add(self, parser):
+        parser.add_argument('--show-config', dest='show_config', default=False, action="store_true")
+
 def _add_command(command, command_parser):
     """Add a command instance to the set of command parsers
 
@@ -543,6 +601,7 @@ def main():
     _add_command(ConfigCommand(), command_parsers)
     _add_command(JobsCommand(), command_parsers)
     _add_command(ImportCommand(), command_parsers)
+    _add_command(ListToolsCommand(), command_parsers)
     #_add_command(ExportCommand(), command_parsers)
     _add_command(SetupCommand(), command_parsers)
 

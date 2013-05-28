@@ -43,6 +43,11 @@ bundle: downloads
 	@rm $(BUNDLE_DIR)/*.rst $(BUNDLE_DIR)/bin/buildout $(BUNDLE_DIR)/bin/mako-render # remove some artifacts created during installation
 	@cp dist-utils/grape.py $(BUNDLE_DIR)/bin/grape
 	@cp dist-utils/grape-buildout.py $(BUNDLE_DIR)/bin/grape-buildout
+	@cp dist-utils/README.txt $(BUNDLE_DIR)/
+	@mkdir -o $(BUNDLE_DIR)/conf
+	@cp dist-utils/cluster.conf $(BUNDLE_DIR)/conf
+	@cp dist-utils/jobs.json $(BUNDLE_DIR)/conf
+
 	@tar -C bundle -czf bundle/grape-$(VERSION).tar.gz grape-$(VERSION)
 
 downloads:
