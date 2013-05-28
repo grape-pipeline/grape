@@ -48,6 +48,9 @@ class Grape(object):
 
         # apply configuration in order
         #
+        # 0. hardocoded configuration for all jobs
+        job.verbose = False
+
         # 1. set the log file location if a project is specified. This can be overwritten by
         # custom configuration
         if project is not None:
