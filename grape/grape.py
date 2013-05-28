@@ -48,6 +48,9 @@ class Grape(object):
 
         # apply configuration in order
         #
+        # 0. hardocoded configuration for all jobs
+        job.verbose = False
+
         # 1. set the log file location if a project is specified. This can be overwritten by
         # custom configuration
         if project is not None:
@@ -165,10 +168,12 @@ class Project(object):
             self.index = Index(os.path.join(self.path,'.index'))
 
 
-    def initialize(self):
+    def initialize(self, init_structure=True):
         """Initialize the current project.
         The initialization happens only if no .grape folder is found in the
         project path.
+
+        :param init_structure: Initialize the project structure
         """
         if self.exists():
             return
@@ -176,8 +181,9 @@ class Project(object):
         self.__mkdir(".grape")
         self.config = Config(self.path)
         self.index = Index(os.path.join(self.path,'.index'))
-        #create project structure
-        self._initialize_structure()
+        if init_structure:
+            #create project structure
+            self._initialize_structure()
 
     def import_data(self, file, sep=None, id='labExpId', path='path'):
         """Import entries from a SV file. The sv file must have an header line with the name of the properties.

@@ -2,9 +2,9 @@
 #
 # test basic tools
 #
-from another.pipelines import Pipeline
+from jip.pipelines import Pipeline
 import grape.tools as tools
-from another.tools import ToolException, ValidationException
+from jip.tools import ValidationException
 
 import pytest
 

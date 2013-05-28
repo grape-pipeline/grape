@@ -1,4 +1,4 @@
-from grape import Config
+from grape.grape import Config
 
 import os
 import pytest
