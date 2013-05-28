@@ -34,7 +34,7 @@ class Grape(object):
 
         job = tool
         name = None
-        if isinstance(tool, jip.tools.Tool):
+        if isinstance(tool, jip.pipelines.PipelineTool):
             job = tool.job
             name = tool.name
 
@@ -73,7 +73,6 @@ class Grape(object):
         # 6. user specified overrides
         if user_config is not None:
             self.__apply_job_config(job, user_config)
-
 
     def __apply_job_config(self, job, cfg):
         if cfg is None:
