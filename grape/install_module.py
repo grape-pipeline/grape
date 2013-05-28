@@ -65,8 +65,8 @@ class Recipe(object):
         return dst
 
     def get_destination(self):
-       grape_home = os.getenv(GRAPE_HOME, os.path.join(os.getenv('HOME'), 'grape'))
-       return os.path.join(grape_home, 'modules')
+        grape_home = os.getenv(GRAPE_HOME, os.path.join(os.getenv('HOME'), 'grape'))
+        return os.path.join(grape_home, 'modules')
 
 
     def update(self):
