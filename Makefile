@@ -1,6 +1,9 @@
 VERSION = $(shell python -c 'import grape; print grape.__version__')
 BUNDLE_ENV27 = $(shell pwd)/bundle/env27
+BUNDLE_ENV26 = $(shell pwd)/bundle/env26
 BUNDLE_DIR = $(shell pwd)/bundle/grape-$(VERSION)
+DOWNLOAD_CACHE = downloads
+PIP_OPTIONS = --download-cache $(DOWNLOAD_CACHE) --install-option="--prefix=$(BUNDLE_DIR)"
 
 all:
 	python setup.py build
@@ -14,19 +17,37 @@ test:
 	@py.test -q tests
 	@echo "All tests ran successfully"
 
-bundle:
+bundle: downloads
 	@echo "Creating bundled distribution for $(VERSION)"
 	@rm -rf $(BUNDLE_ENV27)
-	# create dist for python 2.7
-	@virtualenv -p python2.7 $(BUNDLE_ENV27)
+
 	@rm -rf $(BUNDLE_DIR)
+	@rm -f bundle/grape-$(VERSION)
+	@rm -rf $(BUNDLE_ENV27)
+	@rm -rf $(BUNDLE_ENV26)
+
+	@echo "Bundeling for 2.7"
 	@mkdir -p $(BUNDLE_DIR)/lib/python2.7/site-packages
-	. $(BUNDLE_ENV27)/bin/activate; pip install -r bundle_requirements.txt --install-option="--prefix=$(BUNDLE_DIR)"
-	. $(BUNDLE_ENV27)/bin/activate; pip install lib/jip --install-option="--prefix=$(BUNDLE_DIR)"
-	. $(BUNDLE_ENV27)/bin/activate; python setup.py install --old-and-unmanageable --prefix=$(BUNDLE_DIR)
+	@virtualenv -p python2.7 $(BUNDLE_ENV27)
+	@. $(BUNDLE_ENV27)/bin/activate; pip install -r bundle_requirements.txt $(PIP_OPTIONS)
+	@. $(BUNDLE_ENV27)/bin/activate; pip install lib/jip $(PIP_OPTIONS)
+	@. $(BUNDLE_ENV27)/bin/activate; python setup.py install --old-and-unmanageable --prefix=$(BUNDLE_DIR)
+	
+	@echo "Bundeling for 2.6"
+	@mkdir -p $(BUNDLE_DIR)/lib/python2.6/site-packages
+	@virtualenv -p python2.6 $(BUNDLE_ENV26)
+	@. $(BUNDLE_ENV26)/bin/activate; pip install -r bundle_requirements.txt $(PIP_OPTIONS)
+	@. $(BUNDLE_ENV26)/bin/activate; pip install lib/jip $(PIP_OPTIONS)
+	@. $(BUNDLE_ENV26)/bin/activate; python setup.py install --old-and-unmanageable --prefix=$(BUNDLE_DIR)
+
 	@rm $(BUNDLE_DIR)/*.rst $(BUNDLE_DIR)/bin/buildout $(BUNDLE_DIR)/bin/mako-render # remove some artifacts created during installation
 	@cp dist-utils/grape.py $(BUNDLE_DIR)/bin/grape
 	@cp dist-utils/grape-buildout.py $(BUNDLE_DIR)/bin/grape-buildout
+	@tar -C bundle -czf bundle/grape-$(VERSION).tar.gz grape-$(VERSION)
+
+downloads:
+	@mkdir -p $(DOWNLOAD_CACHE)
+
 clean:
 	@rm -rf bundle/
 	@rm -rf build/

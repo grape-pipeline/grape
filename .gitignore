@@ -3,3 +3,8 @@
 .ropeproject
 .idea
 *.iml
+build/
+bundle/
+distribute-*
+distro/
+downloads

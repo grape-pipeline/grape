@@ -2,7 +2,7 @@
 """Grape default pipeline are defined in this module"""
 
 from jip.pipelines import Pipeline
-import grape.tools as tools
+from . import tools
 import os
 
 def pre_pipeline(config=None):

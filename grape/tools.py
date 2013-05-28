@@ -2,26 +2,26 @@
 """Grape basic tools and utilities
 and manage modules
 """
-from jip.tools import Tool, ToolException, ValidationException
-import grape.buildout
+from jip.tools import Tool, ValidationException
 import os
 
 
 class modules(object):
-    """The @modueles decorator allows to decorate tool
+    """The @modules decorator allows to decorate tool
     classes to add module dependencies
     """
     def __init__(self, modules):
         self.modules = modules
 
     def _load_modules(self, mods):
+        from . import buildout
         # laod modules
         for m in self.modules:
             name = m[0]
             version = None
             if len(m) > 1:
                 version = m[1]
-            mods.append(grape.buildout.find(name, version))
+            mods.append(buildout.find(name, version))
 
     def __call__(self, clazz):
         if self.modules is not None:

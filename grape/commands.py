@@ -581,6 +581,6 @@ def buildout():
         buildout = Buildout(buildout_conf)
         buildout.install([])
     except GrapeError as e:
-        cli.error('Buildout error - %r', str(e))
+        cli.error('Buildout error - %s', str(e))
         sys.exit(1)
 
