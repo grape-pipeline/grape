@@ -1,4 +1,4 @@
-from grape import Project
+from grape.grape import Project
 from grape.index import Metadata, Dataset, Index
 
 import os

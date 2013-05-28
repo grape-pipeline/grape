@@ -65,12 +65,15 @@ class InitCommand(GrapeCommand):
             return True
 
         cli.info("Initializing project ... ", newline=False)
-        project.initialize()
+        project.initialize(init_structure=not args.empty)
         cli.info(cli.green("Done"))
         return True
 
     def add(self, parser):
-        parser.add_argument("path", default=os.getcwd(), nargs="?")
+        parser.add_argument("path", default=os.getcwd(), nargs="?",
+                            help="Path to the project folder. Defaults to current directory")
+        parser.add_argument("--empty", dest="empty", default=False, action="store_true",
+                            help="Do not create default folder structure")
 
 
 class SetupCommand(GrapeCommand):

@@ -165,10 +165,12 @@ class Project(object):
             self.index = Index(os.path.join(self.path,'.index'))
 
 
-    def initialize(self):
+    def initialize(self, init_structure=True):
         """Initialize the current project.
         The initialization happens only if no .grape folder is found in the
         project path.
+
+        :param init_structure: Initialize the project structure
         """
         if self.exists():
             return
@@ -176,8 +178,9 @@ class Project(object):
         self.__mkdir(".grape")
         self.config = Config(self.path)
         self.index = Index(os.path.join(self.path,'.index'))
-        #create project structure
-        self._initialize_structure()
+        if init_structure:
+            #create project structure
+            self._initialize_structure()
 
     def import_data(self, file, sep=None, id='labExpId', path='path'):
         """Import entries from a SV file. The sv file must have an header line with the name of the properties.
@@ -387,7 +390,7 @@ class Config(object):
     def _load_config(self):
         """Load the confguration information from the project config file
         """
-        self.data = grape.utils.uni_convert(json.load(open(self._config_file,'r')))
+        self.data = utils.uni_convert(json.load(open(self._config_file,'r')))
 
     def _write_config(self, tabs=4):
         """Write the configuration to the config file
