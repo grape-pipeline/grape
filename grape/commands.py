@@ -551,8 +551,10 @@ class ListToolsCommand(GrapeCommand):
         if args.show_config:
             grape = Grape()
             cfgs = {}
+
             # do not include these paramters
-            excludes = set(["verbose", "template", "jobid", "working_dir", "dependencies", "name"])
+            excludes = set(["verbose", "template", "jobid",
+                            "working_dir", "dependencies", "name"])
 
             # default config
             cfgs["default"] = {}
@@ -561,7 +563,6 @@ class ListToolsCommand(GrapeCommand):
             for k in filter(lambda x: x not in excludes, vars(default_job)):
                 v = getattr(default_job, k, "")
                 cfgs["default"][k] = v
-
 
             # all registered tools by name
             for tc in tool_classes:
@@ -618,35 +619,82 @@ class ScanCommand(GrapeCommand):
 
     def run(self, args):
         import re
+        from grape.index import Dataset
 
         project = Project.find()
         if not project or not project.exists():
             cli.error("No grape project found")
             return False
         cli.info("Scanning data/fastq folder ... ", newline=False)
-        fastqs = sorted(Project.search_fastq_files(os.path.join(project.path, "data/fastq")))
+        fastqs = sorted(Project.search_fastq_files(os.path.join(project.path,
+                                                                "data/fastq")))
+        cli.info("%d fastq files found" % len(fastqs))
+        if len(fastqs) == 0:
+            return True
+
+        cli.info("Checking known data ... ", newline=False)
+        cli.info("%d new files found" % len(fastqs))
+
+
+        file_info = {}
+        if args.quality is not None:
+            file_info["quality"] = args.quality
+        if args.sex is not None:
+            file_info["sex"] = args.sex
 
         # collect groups
         groups = {}
         scanned = []
         for fastq in fastqs:
             name = os.path.basename(fastq)
-            match = re.match("^(?P<name>.*)(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)?$", name)
+            match = re.match("^(?P<name>.*)(?P<id>\d)\.(fastq|fq)(\.gz)?$", name)
             if match is not None:
                 try:
                     id = int(match.group("id"))
                     nm = match.group("name")
                     d = groups.get(nm, [])
                     d.append(fastq)
+                    groups[nm] = d
                     scanned.append(fastq)
                 except Exception, e:
                     pass
 
         # add all groups
         id = args.id
-        counter = 0
-        for group in groups:
-            project.index.add()
+        counter = 1
+        add_counter = len(groups) + (len(scanned) - len(fastqs)) > 1
+        for name, files in groups.items():
+            if len(files) > 2 or len(files) == 1:
+                # ignore those ones and
+                # add them as single entries
+                for file in files:
+                    scanned.remove(file)
+                continue
+            # try to build the id from specified id + counter or just the file
+            # name
+            ds_id = id
+            if ds_id is None:
+                ds_id = name
+                if ds_id[-1] in ["-", ".", "_"]:
+                    ds_id = ds_id[:-1]
+            elif add_counter:
+                    ds_id = "%s_%d" % (ds_id, counter)
+                    counter += 1
+            print "Adding %s : " % (ds_id), files
+            for file in files:
+                if not ds_id in project.index.datasets:
+                    Dataset(file_info)
+                project.index.add(ds_id, file, file_info)
+
+        # add the singletons, everything that is not in scanned
+        for file in set(fastqs).difference(set(scanned)):
+            ds_id = id
+            if ds_id is None:
+                ds_id = os.path.basename(file)
+            print "Adding %s : " % (ds_id), file
+            project.index.add(ds_id, file, file_info)
+
+        project.index.save()
 
 
     def add(self, parser):
@@ -655,8 +703,6 @@ class ScanCommand(GrapeCommand):
         parser.add_argument('--id', dest='id', metavar='<id>', help="Experiment id assigned to new datasets. "
                                                                     "NOTE that a counter value is appended if more than "
                                                                     "one new dataset is found")
-
-
 
 
 def _add_command(command, command_parser):

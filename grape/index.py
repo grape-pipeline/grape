@@ -27,7 +27,7 @@ class Metadata(object):
         for k,v in kwargs.items():
             self.__setattr__(k,str(v))
 
-    def get_tags(self, tags=[], exclude=[], sep=' '):
+    def get_tags(self, tags=None, exclude=None, sep=' '):
         """Concatenate specified tags using the provided tag separator. The tag are formatted
         according to the 'index file' format
 
@@ -38,6 +38,11 @@ class Metadata(object):
         sep  - the tag separator character. The default value is a <space> according to
                the 'index file' format.
         """
+        if tags is None:
+            tags = []
+        if exclude is None:
+            exclude = []
+
         tag_list = []
         if not tags:
             tags = self.__dict__.keys()
@@ -320,7 +325,7 @@ class Index(object):
     """A class to access information stored into 'index files'.
     """
 
-    def __init__(self, path, datasets={}, clear=False):
+    def __init__(self, path, datasets=None, clear=False):
         """Creates an instance of an Index class
 
         path - path of the index file
@@ -328,6 +333,8 @@ class Index(object):
         Keyword arguments:
         entries -  a list containing all the entries as dictionaries. Default empty list.
         """
+        if datasets is None:
+            datasets = {}
 
         self.path = path
         self.datasets = datasets
