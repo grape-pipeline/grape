@@ -3,6 +3,7 @@
 from clint.textui import colored, puts, columns
 from jip.pipelines import PipelineException
 import grape.commands
+from grape.grape import Grape
 
 
 def get_project_and_datasets(args):

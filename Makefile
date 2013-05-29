@@ -45,7 +45,7 @@ bundle: downloads
 	@cp dist-utils/grape-buildout.py $(BUNDLE_DIR)/bin/grape-buildout
 	@cp dist-utils/README.txt $(BUNDLE_DIR)/
 	@mkdir -p $(BUNDLE_DIR)/conf
-	@cp dist-utils/cluster.json $(BUNDLE_DIR)/conf
+	@cp dist-utils/cluster.json	$(BUNDLE_DIR)/conf
 	@cp dist-utils/jobs.json $(BUNDLE_DIR)/conf
 
 	@tar -C bundle -czf bundle/grape-$(VERSION).tar.gz grape-$(VERSION)
