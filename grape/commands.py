@@ -471,7 +471,7 @@ class ConfigCommand(GrapeCommand):
             out.append(r)
         ind = [1,2]
         header = 'Project %r' % config.data['name']
-        line = '=' * (len(s.format('',''))+ind[-1])
+        line = '=' * max(len(header)+ind[0], len(s.format('',''))+ind[-1])
 
         cli.info(line)
         with indent(ind[0]):
