@@ -534,7 +534,7 @@ class Config(object):
         if len(values) == 1:
             values = values[0]
 
-        if value.find(os.path.sep) > -1:
+        if value.find(os.path.sep) > -1 and os.path.exists(value):
             if os.path.commonprefix([self.path, self.get(key)]) == self.path:
                 self.remove(key)
             # create symlink in project data folder and replace path in index file
