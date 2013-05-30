@@ -315,6 +315,20 @@ class Project(object):
                 raise GrapeError("Only one copy of %s is present. The file won't be deleted." % (path))
 
 
+    @staticmethod
+    def _get_dest(path):
+        name, ext  = os.path.splitext(path)
+        genomes = set(['.fa','.fasta','.gem'])
+        annotations = set(['.gtf','.gff'])
+        data = set(['.fastq','.fastq.gz','.fq','.fq.gz'])
+        if ext in genomes:
+            return 'genomes'
+        if ext in annotations:
+            return 'annotations'
+        if ext in data:
+            return 'data'
+        return None
+
     def get_indices(self):
         """Return the absolute path to all .gem files in the genomes
         folder of the project
@@ -460,8 +474,8 @@ class Config(object):
         """
         data = self.data
         if key is not None:
-             data = self.data.get(key, None)
-        values = self._dot_keys(None, data, exclude)
+             data = self.get(key)
+        values = self._dot_keys(key, data, exclude)
         if sort_order:
             values = self._get_sorted_values(values, sort_order)
 
@@ -520,12 +534,12 @@ class Config(object):
         if len(values) == 1:
             values = values[0]
 
-        if keys[0] in ['genome', 'genomes', 'annotation', 'annotations']:
+        if value.find(os.path.sep) > -1:
             if os.path.commonprefix([self.path, self.get(key)]) == self.path:
                 self.remove(key)
             # create symlink in project data folder and replace path in index file
-            dest = keys[0].rstrip('s')+'s'
-            symlink = Project._make_link(values, os.path.join(self.path, dest), symbolic=False)
+            dest = Project._get_dest(values)
+            symlink = Project._make_link(values, os.path.join(self.path, dest) if dest else self.path, symbolic=False)
             values = symlink
 
         d[keys[-1]] = values
@@ -547,16 +561,13 @@ class Config(object):
         keys = key.split('.')
 
         d = self.data
-        for k in keys:
-            if isinstance(d, dict):
-                if not k in d.keys():
-                    raise GrapeError('Key %r does not exists' % k)
-                if len(keys) > 1 and isinstance(d[k], dict):
-                    d = d[k]
+        for k in keys[:-1]:
+            d = d[k]
 
-        if keys[0] in ['genome', 'genomes', 'annotation', 'annotations']  and type(d[keys[-1]]) is str:
-            if os.path.commonprefix([self.path, d[keys[-1]]]) == self.path:
-                Project._rm_link(d[keys[-1]])
+        values = self.get_values(key=key)
+        for k,v in values:
+            if v.find(os.path.sep) > -1 and os.path.commonprefix([self.path, v]) == self.path:
+                Project._rm_link(v)
 
         del d[keys[-1]]
 
