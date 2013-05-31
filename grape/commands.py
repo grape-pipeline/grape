@@ -461,25 +461,20 @@ class ConfigCommand(GrapeCommand):
     def _show_config(self, config):
         from clint.textui import indent
         # print configuration
-        out = []
         values = config.get_values(exclude=['name'], sort_order=[])
-        m1 = max([len(x[0]) for x in values])
-        m2 = max([len(x[1]) for x in values])
-        s = '{0:%d} {1:%d}' % (m1,m2)
-        for k,v in values:
-            r = s.format(k,v)
-            out.append(r)
-        ind = [1,2]
-        header = 'Project %r' % config.data['name']
-        line = '=' * max(len(header)+ind[0], len(s.format('',''))+ind[-1])
 
+        max_keys = max([len(x[0]) for x in values]) + 1
+        max_values = max([len(x[1]) for x in values]) + 1
+
+        header = cli.green('Project %r' % config.data['name'])
+        line = '-' * max(len(header), max_keys+max_values)
+
+        cli.info('')
+        cli.info(header)
         cli.info(line)
-        with indent(ind[0]):
-            cli.info(cli.green(header))
-        cli.info(line)
-        with indent(ind[1]):
-            for s in out:
-                cli.info(s)
+        for k,v in values:
+            k = cli.yellow(k)
+            cli.info(cli.columns([k,max_keys],[v,max_values]))
         cli.info(line)
 
 
