@@ -180,7 +180,11 @@ class Dataset(object):
     def get_genome(self, config):
         """Return the default index that should be used by this dataset
         """
-        return config.get('.'.join(['genomes', self.sex, 'path']))
+        try:
+            sex = self.sex
+            return config.get('.'.join(['genomes', sex, 'path']))
+        except:
+            return None
 
     def get_index(self, config):
         """Return the default index that should be used by this dataset
@@ -191,7 +195,11 @@ class Dataset(object):
         """Return the default annotation that should be used for this
         dataset
         """
-        return config.get('.'.join(['annotations', self.sex, 'path']))
+        try:
+            sex = self.sex
+            return config.get('.'.join(['annotations', self.sex, 'path']))
+        except:
+            return None
 
     @staticmethod
     def find_secondary(name):
@@ -199,6 +207,7 @@ class Dataset(object):
         that file or return None
         """
 
+        basedir = os.path.dirname(name)
         name = os.path.basename(name)
         expr = "^(?P<name>.*)(?P<delim>[_\.-])" \
                "(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
@@ -213,10 +222,10 @@ class Dataset(object):
                 compr = match.group("compression")
                 if compr is None:
                     compr = ""
-                return "%s%s%d.%s%s" % (match.group("name"),
+                return match.group("name"), os.path.join(basedir, "%s%s%d.%s%s" % (match.group("name"),
                                         match.group("delim"),
                                         id, match.group("type"),
-                                        compr)
+                                        compr))
             except Exception:
                 pass
         return None
@@ -269,7 +278,7 @@ class Dataset(object):
             if name is 'id': return self.metadata.__getattribute__(self.tag_id)
             if name is 'primary': return self.fastq[0].path if hasattr(self,'fastq') and len(self.fastq) > 0 else None
             if name is 'secondary': return self.fastq[1].path if hasattr(self,'fastq') and len(self.fastq) > 1 else None
-            if name is 'single_end': return self.metadata.readType.find('2x') == -1 if hasattr(self.metadata, 'readType') else False
+            if name is 'single_end': return self.metadata.readType.find('2x') == -1 if hasattr(self.metadata, 'readType') else True
         #if hasattr(self.metadata, name):
         #    return self.metadata.__getattribute__(name)
         raise AttributeError('%r object has no attribute %r' % (self.__class__.__name__,name))
