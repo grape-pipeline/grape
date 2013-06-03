@@ -207,20 +207,22 @@ class Project(object):
         reader = csv.DictReader(file, dialect=dialect)
         reader.fieldnames = [{id:'labExpId', path:'path'}.get(x, x) for x in reader.fieldnames]
 
-
         for line in reader:
-            meta = Metadata(line)
-            dataset = self.index.datasets.get(meta.labExpId, None)
+            self.import_dataset(line)
 
-            # create symlink in project data folder and replace path in index file
-            symlink = self._make_link(meta.path, 'data')
-            meta.path = symlink
+    def import_dataset(self, line):
+        meta = Metadata(line)
+        dataset = self.index.datasets.get(meta.labExpId, None)
 
-            if not dataset:
-                dataset = Dataset(meta)
-                self.index.datasets[dataset.id] = dataset
-            else:
-                dataset.add_file(meta.path, meta)
+        # create symlink in project data folder and replace path in index file
+        symlink = self._make_link(meta.path, 'data')
+        meta.path = symlink
+
+        if not dataset:
+            dataset = Dataset(meta)
+            self.index.datasets[dataset.id] = dataset
+        else:
+            dataset.add_file(meta.path, meta)
 
     def logdir(self):
         """Get the path to the projects log file directory"""
@@ -285,6 +287,13 @@ class Project(object):
         if dir_name == 'fastq':
             dst_path = os.path.join(dst_path, dir_name)
         dst_path = os.path.join(dst_path, file_name)
+
+        src_path = os.path.abspath(src_path)
+
+        if os.path.abspath(dst_path) == src_path:
+            return src_path
+
+        print (src_path, dst_path, symbolic)
 
         if symbolic:
             os.symlink(src_path, dst_path)
