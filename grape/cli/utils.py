@@ -15,10 +15,40 @@ def get_project_and_datasets(args):
          datasets
     """
     from grape.grape import Project
+    from grape.index import Dataset
+    import os, re
+
+    m = {'type':'fastq'}
 
     project = Project.find()
     if project is None or not project.exists():
-        raise grape.commands.CommandError("No grape project found!")
+        project = Project(os.getcwd())
+        project.initialize()
+        if 'genome' in args and args.genome:
+            project.config.set('genome',os.path.abspath(args.genome), commit=True)
+            args.genome = project.config.get('genome')
+        if 'annotation' in args and args.annotation:
+            project.config.set('annotation',os.path.abspath(args.annotation), commit=True)
+            args.annotation = project.config.get('annotation')
+        if 'quality' in args and args.quality:
+            project.config.set('quality', args.quality)
+            m['quality'] = args.quality
+    if 'paired' in args and args.paired:
+        m['readType'] = '2x'
+
+    if 'input' in args and args.input:
+        for dataset in args.input:
+            m['path'] = dataset
+            expr = "^(.*/)*(?P<name>.*)\.(fastq|fq)(\.gz)?$"
+            name = re.match(expr, dataset).group('name')
+            if args.paired:
+                name, secondary = Dataset.find_secondary(dataset)
+            m['labExpId'] = name
+            project.import_dataset(m)
+            if args.paired:
+                m['path'] = secondary
+                project.import_dataset(m)
+            project.index.save()
 
     datasets = None
     if "datasets" in args:
@@ -46,6 +76,18 @@ def add_default_job_configuration(parser, add_cluster_parameter=True):
                                       "applied to all jobs")
     group.add_argument("-c", "--cpus", dest="threads",
                         help="Number of threads/cpus assigned to the jobs")
+    group.add_argument("-i", "--input", default=None, nargs="*",
+                       help="The input files to run grape without creating a project")
+    group.add_argument("-g", "--genome", default=None,
+                       help="The genome to be used in the run")
+    group.add_argument("-a", "--annotation", default=None,
+                       help="The annotation to be used for the run")
+    group.add_argument("--quality", default=None,
+                       help="The fastq offset for datasets quality")
+    group.add_argument("--paired-end", dest="paired", default=False,
+                       help="Pairedness of the data. Default False, meaning single end data.",
+                       action="store_true")
+
     if add_cluster_parameter:
         group.add_argument("-t", "--time", dest="max_time",
                             help="Maximum wall clock time")
@@ -58,7 +100,6 @@ def add_default_job_configuration(parser, add_cluster_parameter=True):
     else:
         group.add_argument("--verbose", default=False, action="store_true",
                             dest="verbose", help="Verbose job output")
-
 
 def _prepare_pipeline(pipeline):
     """Validate the pipeline and prints
@@ -99,9 +140,32 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
     """
     pipelines = []
     grp = Grape()
-    for d in datasets:
-        pipeline = pipeline_fun(d, project.config)
 
+    genome = configuration.get('genome', None)
+    annotation = configuration.get('annotation', None)
+    quality = configuration.get('quality', None)
+
+    if not genome:
+        genome = project.config.get('genome')
+        configuration['genome'] = genome
+    if not annotation:
+        annotation = project.config.get('annotation')
+        configuration['annotation'] = annotation
+    if not quality:
+        quality = project.config.get('quality')
+        configuration['quality'] = quality
+
+    for d in datasets:
+        if d:
+            if not configuration.get('genome', None):
+                configuration['genome'] = d.get_genome(project.config)
+            if not configuration.get('annotation', None):
+                configuration['annotation'] = d.get_annotation(project.config)
+            if not configuration.get('quality', None):
+                configuration['quality'] = d.quality
+            pipeline = pipeline_fun(d, configuration)
+        else:
+            pipeline = pipeline_fun(configuration)
         # validate the pipeline
         if not _prepare_pipeline(pipeline):
             return False
@@ -110,4 +174,5 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
         if configuration is not None:
             for step in pipeline.tools.values():
                 grp.configure_job(step, project, d, configuration)
+
     return pipelines
