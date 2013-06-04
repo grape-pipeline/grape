@@ -62,7 +62,7 @@ def get_project_and_datasets(args):
     return (project, datasets)
 
 
-def add_default_job_configuration(parser, add_cluster_parameter=True):
+def add_default_job_configuration(parser, add_cluster_parameter=True, add_exec_parameter=True):
     """Add the default job configuration options to the given argument
     parser
 
@@ -76,17 +76,18 @@ def add_default_job_configuration(parser, add_cluster_parameter=True):
                                       "applied to all jobs")
     group.add_argument("-c", "--cpus", dest="threads",
                         help="Number of threads/cpus assigned to the jobs")
-    group.add_argument("-i", "--input", default=None, nargs="*",
-                       help="The input files to run grape without creating a project")
-    group.add_argument("-g", "--genome", default=None,
-                       help="The genome to be used in the run")
-    group.add_argument("-a", "--annotation", default=None,
-                       help="The annotation to be used for the run")
-    group.add_argument("--quality", default=None,
-                       help="The fastq offset for datasets quality")
-    group.add_argument("--paired-end", dest="paired", default=False,
-                       help="Pairedness of the data. Default False, meaning single end data.",
-                       action="store_true")
+    if add_exec_parameter:
+        group.add_argument("-i", "--input", default=None, nargs="*",
+                           help="The input files to run grape without creating a project")
+        group.add_argument("-g", "--genome", default=None,
+                           help="The genome to be used in the run")
+        group.add_argument("-a", "--annotation", default=None,
+                           help="The annotation to be used for the run")
+        group.add_argument("--quality", default=None,
+                           help="The fastq offset for datasets quality")
+        group.add_argument("--paired-end", dest="paired", default=False,
+                           help="Pairedness of the data. Default False, meaning single end data.",
+                           action="store_true")
 
     if add_cluster_parameter:
         group.add_argument("-t", "--time", dest="max_time",
