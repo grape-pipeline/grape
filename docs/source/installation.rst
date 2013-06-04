@@ -33,7 +33,7 @@ Until we have something on pypi, the install strategy will be clone and install 
 Buildout and initialisation
 ---------------------------
 
-After the basic setup is done, there should be a grape-buildout command available to the user. The command takes a path argument and and triggers the buildout process on that path. This path is know as grape_home and should be made availabe to grape by
+After the basic setup is done, there should be a grape-buildout command available to the user. The command takes a path argument and and triggers the buildout process on that path. This path is know as **grape_home** and should be made availabe to grape by
 
 - grape user config in $HOME/.grape
 - GRAPE_HOME environment variable
@@ -47,7 +47,7 @@ The basic structure should be created::
           <version>   -- the module version 
             activate  -- activate script to load the module into the current environment
 
-The grape_home contains a global grape configuration and a set of modules. Each module must provide a name and a versions and can be activated by sourcing the activate script in the module folder. This will but the modules binaries in front of the path and prepend to any other environment variables as needed (i.e. PYTHONPATH).
+The **grape_home** contains a global grape configuration and a set of modules. Each module must provide a name and a versions and can be activated by sourcing the activate script in the module folder. This will but the modules binaries in front of the path and prepend to any other environment variables as needed (i.e. PYTHONPATH).
 
 Adding a new module to the buildout
 -----------------------------------

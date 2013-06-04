@@ -3,7 +3,7 @@ File formats
 
 Index files
 -----------
-Index files are used to store information related to files. Information can be metadata information about samples or any other properties about samples or raw files. The employed vocabulary is derived by the ENCODE controlled vocabulary.
+Index files are used to store information related to files. Information can be metadata information about samples or any other properties about samples or raw files. The employed vocabulary is derived by the `ENCODE controlled vocabulary <http://genome.ucsc.edu/ENCODE/otherTerms.html>`_.
 
 Specifications
 **************
@@ -23,7 +23,7 @@ Example::
 Project configuration files
 ---------------------------
 
-Grape project configuration files are text files in Json format. The config file represent a dictionary for the project configuration. Any key/value pair can be specified, but at the moment only the following items are used n the pieline:
+Grape project configuration files are text files in `Json <http://www.json.org/>`_ format. The config file represent a dictionary for the project configuration. Any key/value pair can be specified, but at the moment only the following items are used n the pieline:
 
 - **name**, the project name
 - **quality**, a global quality offset for the reads

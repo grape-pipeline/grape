@@ -70,7 +70,7 @@ In case you need, it is possible to remove entries from the configuration file u
 Import datasets
 ---------------
 
-In order to import datasets into the project a csv/tsv file with all the meta information related to the datasets is needed. The file must have a header defining the datasets' properties used in it. Some properties are mandatory for the correct execution of the pipeline. The file must contain a dataset identifier to uniquely identify the sample and a path property to specify the fastq file path. Other properties like sex, quality, tissue, lab, etc. are optional and not strictly needed for the pipeline. execution. The default names for the compulsory properties are respectively labExpId and path. If different names are chosen for these properties the correspondence has to be specified in the grape import command. However, in general, the property names should comply with the ENCODE controlled vocabulary, please see Index files for additional information.
+In order to import datasets into the project a csv/tsv file with all the meta information related to the datasets is needed. The file must have a header defining the datasets' properties used in it. Some properties are mandatory for the correct execution of the pipeline. The file must contain a dataset identifier to uniquely identify the sample and a path property to specify the fastq file path. Other properties like sex, quality, tissue, lab, etc. are optional and not strictly needed for the pipeline. execution. The default names for the compulsory properties are respectively **labExpId** and **path**. If different names are chosen for these properties the correspondence has to be specified in the grape import command. However, in general, the property names should comply with the ENCODE controlled vocabulary, please see :doc:`Index files <file_formats>` for additional information.
 
 The import command creates symlinks to the specified fastq files in the project data folder. It also creates an index file internal to the project, containing dataset entries for all the input and output files belonging to the project.
 
@@ -84,6 +84,6 @@ Note that the id and path properties have the default name. This file can be imp
 
     $ grape import index.csv
 
-In case one of the property names were different form the default (e.g file_path for the path property), the command would be like the following::
+In case one of the property names were different form the default (e.g **file_path** for the path property), the command would be like the following::
 
     $ grape import index.csv --path-key file_path

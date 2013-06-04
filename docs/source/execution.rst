@@ -13,11 +13,11 @@ Default Pipeline
 
 At the moment a Default Pipeline is configured, which includes the following tools:
 
-- the GEMTools pipeline, for the mapping step
-- the FluxCapacitor program, for the isoform quanitfication step
+- the `GEMTools <http://github.com/gemtools/gemtools>`_ pipeline, for the mapping step
+- the `FluxCapacitor <http://sammeth.net/confluence/display/FLUX/Home>`_ program, for the isoform quanitfication step
 
-1. Setup
---------
+Setup
+-----
 
 The basic idea of the setup is to check all the prerequisites for any configured pipeline and run all the necessary steps to reach a valid initial state from which the pipeline can be run. Prerequisites here means all the common files and configurations needed to be able to run the pipeline on several datasets and that have to be created once.
 At the moment the grape setup command executes the gemtools index and t-index commands to create the genome index and transcriptome index files needed to run the Default Pipeline::
@@ -26,8 +26,9 @@ At the moment the grape setup command executes the gemtools index and t-index co
     Setting up Default Pipeline
     (  1/2) | Running gem_index            : DONE [0:00:04]
     (  2/2) | Running gem_t_index          : DONE [0:00:02]
-2. Execution
-------------
+
+Execution
+---------
 
 The execution step run the pipeline on the given dataset(s). The pipeline can be run locally using the grape run command, int he following way::
 
