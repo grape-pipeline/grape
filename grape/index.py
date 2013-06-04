@@ -137,6 +137,8 @@ class Dataset(object):
             if k in ['type', 'view', 'md5', 'size', 'path']:
                 file_info.__setattr__(k, v)
         type = file_info.type
+        if not hasattr(file_info, 'md5'):
+            file_info.md5 = utils.md5sum(path)
         file_info.path = path
         if not hasattr(self, type):
             self.__setattr__(type, [])
@@ -201,35 +203,6 @@ class Dataset(object):
         except:
             return None
 
-    @staticmethod
-    def find_secondary(name):
-        """Find secondary dataset file and return the basename of
-        that file or return None
-        """
-
-        basedir = os.path.dirname(name)
-        name = os.path.basename(name)
-        expr = "^(?P<name>.*)(?P<delim>[_\.-])" \
-               "(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
-        match = re.match(expr, name)
-        if match is not None:
-            try:
-                id = int(match.group("id"))
-                if id < 2:
-                    id += 1
-                else:
-                    id -= 1
-                compr = match.group("compression")
-                if compr is None:
-                    compr = ""
-                return match.group("name"), os.path.join(basedir, "%s%s%d.%s%s" % (match.group("name"),
-                                        match.group("delim"),
-                                        id, match.group("type"),
-                                        compr))
-            except Exception:
-                pass
-        return None
-
     def _get_fastq(self, sort_by_name=True):
         #self.primary = os.path.abspath(self.fastq[0].path)
         #self.secondary = None
@@ -285,6 +258,80 @@ class Dataset(object):
 
     def __repr__(self):
         return "Dataset: %s" % (self.id)
+
+    @staticmethod
+    def find(path):
+        """Find dataset from path. Detect if paired and find mate
+        file if possible
+
+        path: path to the input file
+
+        return:
+            None if no dataset found
+            [name, mate1] if single end
+            [name, mate1, mate2] if paired end
+        """
+
+        basedir = os.path.dirname(path)
+        name = os.path.basename(path)
+        expr_paired = "^(?P<name>.*)(?P<delim>[_\.-])" \
+               "(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
+        expr_single = "^(?P<name>.*)\.(fastq|fq)(\.gz)*?$"
+        match = re.match(expr_paired, name)
+        if match:
+            try:
+                id = int(match.group('id'))
+                if id < 2:
+                    id += 1
+                else:
+                    id -= 1
+                compr = match.group("compression")
+                if compr is None:
+                    compr = ""
+                files = [path, os.path.join(basedir, "%s%s%d.%s%s")
+                                                    % (match.group('name'),
+                                                    match.group('delim'),
+                                                    id, match.group('type'),
+                                                    compr)]
+                files.sort()
+
+                return match.group('name'), files
+            except:
+                pass
+        match = re.match(expr_single, name)
+        if match:
+            return match.group('name'), [path]
+        return None
+
+    @staticmethod
+    def find_secondary(name):
+        """Find secondary dataset file and return the basename of
+        that file or return None
+        """
+
+        basedir = os.path.dirname(name)
+        name = os.path.basename(name)
+        expr = "^(?P<name>.*)(?P<delim>[_\.-])" \
+               "(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
+        match = re.match(expr, name)
+        if match is not None:
+            try:
+                id = int(match.group("id"))
+                if id < 2:
+                    id += 1
+                else:
+                    id -= 1
+                compr = match.group("compression")
+                if compr is None:
+                    compr = ""
+                return match.group("name"), os.path.join(basedir, "%s%s%d.%s%s"
+                                        % (match.group("name"),
+                                           match.group("delim"),
+                                           id, match.group("type"),
+                                           compr))
+            except Exception:
+                pass
+        return None
 
 
 class IndexDefinition(object):
