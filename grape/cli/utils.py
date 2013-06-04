@@ -19,39 +19,44 @@ def get_project_and_datasets(args):
     import os, re
 
     m = {'type':'fastq'}
+    datasets = None
 
     project = Project.find()
     if project is None or not project.exists():
         project = Project(os.getcwd())
         project.initialize()
         if 'genome' in args and args.genome:
-            project.config.set('genome',os.path.abspath(args.genome), commit=True)
-            args.genome = project.config.get('genome')
+            project.config.set('genome',os.path.abspath(args.genome),
+                                commit=True)
+            #args.genome = project.config.get('genome')
         if 'annotation' in args and args.annotation:
-            project.config.set('annotation',os.path.abspath(args.annotation), commit=True)
-            args.annotation = project.config.get('annotation')
+            project.config.set('annotation',os.path.abspath(args.annotation),
+                                commit=True)
+            #args.annotation = project.config.get('annotation')
         if 'quality' in args and args.quality:
             project.config.set('quality', args.quality)
             m['quality'] = args.quality
-    if 'paired' in args and args.paired:
-        m['readType'] = '2x'
+
+        if 'read_type' in args and args.read_type:
+            m['readType'] = args.read_type
 
     if 'input' in args and args.input:
+        ds = {}
         for dataset in args.input:
-            m['path'] = dataset
-            expr = "^(.*/)*(?P<name>.*)\.(fastq|fq)(\.gz)?$"
-            name = re.match(expr, dataset).group('name')
-            if args.paired:
-                name, secondary = Dataset.find_secondary(dataset)
+            if Dataset.find(dataset):
+                name, files = Dataset.find(dataset)
+                ds[name] = files
+        for name, files in ds.items():
             m['labExpId'] = name
-            project.import_dataset(m)
-            if args.paired:
-                m['path'] = secondary
+            if len(files) > 1 and not 'readType' in m:
+                m['readType'] = '2x'
+            for f in files:
+                m['path'] = f
                 project.import_dataset(m)
             project.index.save()
+        datasets = project.get_datasets(query_list=ds.keys())
 
-    datasets = None
-    if "datasets" in args:
+    if "datasets" in args and not datasets:
         datasets = args.datasets
         if datasets is None:
             raise grape.commands.CommandError("No datasets specified!")
@@ -88,9 +93,8 @@ def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeli
                            help="The annotation to be used for the run")
         pgroup.add_argument("--quality", default=None,
                            help="The fastq offset for datasets quality")
-        pgroup.add_argument("--paired-end", dest="paired", default=False,
-                           help="Pairedness of the data. Default False, meaning single end data.",
-                           action="store_true")
+        pgroup.add_argument("--read-type", dest='read_type', default=None,
+                           help="The read type and length")
 
     if add_cluster_parameter:
         group.add_argument("-t", "--time", dest="max_time",

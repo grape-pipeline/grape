@@ -206,11 +206,17 @@ class Project(object):
 
         reader = csv.DictReader(file, dialect=dialect)
         reader.fieldnames = [{id:'labExpId', path:'path'}.get(x, x) for x in reader.fieldnames]
-
         for line in reader:
+            if not os.path.isabs(line['path']) and not os.path.exists(line['path']):
+                for folder in set([os.path.dirname(file.name)]):
+                    path = os.path.join(folder, line['path'])
+                    if os.path.exists(path):
+                        line['path'] = os.path.abspath(path)
+                        break
             self.import_dataset(line)
 
     def import_dataset(self, line):
+
         meta = Metadata(line)
         dataset = self.index.datasets.get(meta.labExpId, None)
 
@@ -293,7 +299,8 @@ class Project(object):
         if os.path.abspath(dst_path) == src_path:
             return src_path
 
-        print (src_path, dst_path, symbolic)
+        if os.path.exists(dst_path) and os.path.islink(dst_path):
+            os.unlink(dst_path)
 
         if symbolic:
             os.symlink(src_path, dst_path)
@@ -513,7 +520,7 @@ class Config(object):
         l.sort()
         return [x[1] for x in l]
 
-    def set(self, key, value, commit=False):
+    def set(self, key, value, commit=False, make_link=True):
         """Set values into the configuration for a given key
 
         Arguments:
@@ -543,13 +550,15 @@ class Config(object):
         if len(values) == 1:
             values = values[0]
 
-        if value.find(os.path.sep) > -1 and os.path.exists(value):
+        if os.path.exists(value):
             if os.path.commonprefix([self.path, self.get(key)]) == self.path:
                 self.remove(key)
-            # create symlink in project data folder and replace path in index file
-            dest = Project._get_dest(values)
-            symlink = Project._make_link(values, os.path.join(self.path, dest) if dest else self.path, symbolic=False)
-            values = symlink
+            if make_link:
+                # create symlink in project destination folder and replace path
+                dest = Project._get_dest(values)
+                symlink = Project._make_link(values, os.path.join(self.path, dest)
+                                            if dest else self.path, symbolic=False)
+                values = symlink
 
         d[keys[-1]] = values
 
