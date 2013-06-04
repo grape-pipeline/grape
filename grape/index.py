@@ -138,7 +138,10 @@ class Dataset(object):
                 file_info.__setattr__(k, v)
         type = file_info.type
         if not hasattr(file_info, 'md5'):
-            file_info.md5 = utils.md5sum(path)
+            try:
+                file_info.md5 = utils.md5sum(path)
+            except:
+                pass
         file_info.path = path
         if not hasattr(self, type):
             self.__setattr__(type, [])
