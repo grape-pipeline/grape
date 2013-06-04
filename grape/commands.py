@@ -165,7 +165,7 @@ class SetupCommand(GrapeCommand):
                             help='Run the setup steps in a HPC cluster environment - requires a working cluster configuration')
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False,
-                                            add_exec_parameter=False)
+                                            add_pipeline_parameter=False)
 
 
 class RunCommand(GrapeCommand):
