@@ -2,6 +2,8 @@
 File formats
 ============
 
+.. _index-files:
+
 Index files
 ===========
 
