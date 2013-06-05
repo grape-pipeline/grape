@@ -3,8 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+=======================
 Grape 2.0 documentation
 =======================
+
 Grape RNAseq Analysis Pipeline Environment is an automated workflow integrating the management, analysis and visualization of RNA-Seq data.
 
 .. toctree::

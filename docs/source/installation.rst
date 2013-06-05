@@ -1,8 +1,9 @@
-Grape Installation
-==================
+============
+Installation
+============
 
 Basic installation
-------------------
+==================
 
 We want to be able to create a simple way to install the grape environment. The basics are: 
 
@@ -12,26 +13,30 @@ We want to be able to create a simple way to install the grape environment. The 
 - Grape will be deployed to pypi to allow easy installation
 
 Usage
------
+=====
 
-When grape is deployed to pypi, this should work::
+When grape is deployed to pypi, this should work:
+
+.. code-block:: bash
 
     $ pip install grape
 
 or
 
-::
+.. code-block:: bash
     
     $ easy_install grape
 
-Until we have something on pypi, the install strategy will be clone and install like::
+Until we have something on pypi, the install strategy will be clone and install like:
+
+.. code-block:: bash
     
     $ git clone https://github.com/grape-pipeline/grape
     $ cd grape
     $ python setup.py install
 
 Buildout and initialisation
----------------------------
+===========================
 
 After the basic setup is done, there should be a grape-buildout command available to the user. The command takes a path argument and and triggers the buildout process on that path. This path is know as **grape_home** and should be made availabe to grape by
 
@@ -50,9 +55,11 @@ The basic structure should be created::
 The **grape_home** contains a global grape configuration and a set of modules. Each module must provide a name and a versions and can be activated by sourcing the activate script in the module folder. This will but the modules binaries in front of the path and prepend to any other environment variables as needed (i.e. PYTHONPATH).
 
 Adding a new module to the buildout
------------------------------------
+===================================
 
-In order to install a new module into the pipeline the buildout.conf file should be modified. A grape buildout configuration file looks like the following::
+In order to install a new module into the pipeline the buildout.conf file should be modified. A grape buildout configuration file looks like the following:
+
+.. code-block:: ini
 
     [buildout]
     parts = gem
@@ -71,7 +78,11 @@ In order to install a new module into the pipeline the buildout.conf file should
     md5sum = f62b001bbfda9d6ac6537f2f144509e7 
     name = flux
     version = 1.2.3
-    If a new part is required to be added, the new part should be added. As an example the fastqc programs are added to the buildout configuration:
+
+If a new part is required to be added, the new part should be added. As an example the fastqc programs are added to the buildout configuration:
+
+.. code-block:: ini
+    
     [fastqc]
     recipe = grape:install_module
     url = http://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.10.1.zip
@@ -79,18 +90,24 @@ In order to install a new module into the pipeline the buildout.conf file should
     name = fastqc
     version = 0.10.1
 
-Then, to allow the [fastqc] part to be installed the part has to be added to the parts field in the [buildout] section::
+Then, to allow the [fastqc] part to be installed the part has to be added to the parts field in the [buildout] section:
+
+.. code-block:: ini
 
     [buildout]
     parts = gem
             flux
             fastqc
 
-After this giving the command::
+After this giving the command:
+
+.. code-block:: bash
 
     $ grape-buildout
 
-would install the fastqc module, producing the following output::
+would install the fastqc module, producing the following output:
+
+.. code-block:: bash
 
     Installing gem.
     Skipping module gemtools-1.6.1 - already installed
