@@ -457,8 +457,7 @@ class ConfigCommand(GrapeCommand):
             return False
 
         if args.show:
-            # print configuration
-            print project.config.get_printable()
+            self._show_config(project.config)
             return True
         if args.set:
             info = args.set
@@ -469,8 +468,29 @@ class ConfigCommand(GrapeCommand):
             project.config.remove(key[0], commit=True)
             return True
 
-        print project.config.get_printable()
+        self._show_config(project.config)
         return True
+
+    def _show_config(self, config):
+        from clint.textui import indent
+        # print configuration
+        values = config.get_values(exclude=['name'], sort_order=[])
+
+        max_keys = max([len(x[0]) for x in values]) + 1
+        max_values = max([len(x[1]) for x in values]) + 1
+
+        header = cli.green('Project %r' % config.data['name'])
+        line = '-' * max(len(header), max_keys+max_values)
+
+        cli.info('')
+        cli.info(header)
+        cli.info(line)
+        for k,v in values:
+            k = cli.yellow(k)
+            cli.info(cli.columns([k,max_keys],[v,max_values]))
+        cli.info(line)
+
+
 
     def add(self, parser):
         group = parser.add_mutually_exclusive_group()

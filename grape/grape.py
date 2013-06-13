@@ -34,7 +34,7 @@ class Grape(object):
 
         job = tool
         name = None
-        if isinstance(tool, jip.tools.Tool):
+        if isinstance(tool, jip.pipelines.PipelineTool):
             job = tool.job
             name = tool.name
 
@@ -73,7 +73,6 @@ class Grape(object):
         # 6. user specified overrides
         if user_config is not None:
             self.__apply_job_config(job, user_config)
-
 
     def __apply_job_config(self, job, cfg):
         if cfg is None:
@@ -214,7 +213,7 @@ class Project(object):
             dataset = self.index.datasets.get(meta.labExpId, None)
 
             # create symlink in project data folder and replace path in index file
-            symlink = self._make_symlink(meta.path)
+            symlink = self._make_link(meta.path, 'data')
             meta.path = symlink
 
             if not dataset:
@@ -273,20 +272,63 @@ class Project(object):
             else:
                 raise GrapeError("Unable to create folder %s" % (path))
 
-    def _make_symlink(self, src_path):
+    @staticmethod
+    def _make_link(src_path, dest, symbolic=True):
+
+        if not os.path.exists(src_path):
+            raise GrapeError("The file %s does not exists" % (src_path))
+
         file_name = os.path.basename(src_path)
         dir_name = os.path.basename(os.path.dirname(src_path))
 
-        dst_path = os.path.join('.','data')
+        dst_path = os.path.join('.', dest)
 
         if dir_name == 'fastq':
             dst_path = os.path.join(dst_path, dir_name)
         dst_path = os.path.join(dst_path, file_name)
 
-        if not os.path.exists(dst_path):
+        if symbolic:
             os.symlink(src_path, dst_path)
+        else:
+            try:
+                os.link(src_path, dst_path)
+            except OSError, e:
+                if e.errno == errno.EXDEV:
+                    os.symlink(src_path, dst_path)
+                else:
+                    raise e
 
         return dst_path
+
+    @staticmethod
+    def _rm_link(path):
+        if not os.path.exists(path):
+            #raise GrapeError("The file %s does not exists" % (path))
+            return
+
+        if os.path.islink(path):
+            os.unlink(path)
+        else:
+            stat = os.stat(path)
+            if stat.st_nlink > 1:
+                os.remove(path)
+            else:
+                raise GrapeError("Only one copy of %s is present. The file won't be deleted." % (path))
+
+
+    @staticmethod
+    def _get_dest(path):
+        name, ext  = os.path.splitext(path)
+        genomes = set(['.fa','.fasta','.gem'])
+        annotations = set(['.gtf','.gff'])
+        data = set(['.fastq','.fastq.gz','.fq','.fq.gz'])
+        if ext in genomes:
+            return 'genomes'
+        if ext in annotations:
+            return 'annotations'
+        if ext in data:
+            return 'data'
+        return None
 
     def get_indices(self):
         """Return the absolute path to all .gem files in the genomes
@@ -404,39 +446,13 @@ class Config(object):
 
 
     def get_printable(self, tabs=4):
-        """Return a the configuation information in a pretty printing layout
+        """Return the configuation information in json layout
 
         Keyword arguments:
         ------------------
         tabs - indent size for printing
         """
         return json.dumps(self.data, indent=tabs)
-
-    def remove(self, key, commit=False):# TODO: check empty fields when removing and remove them as well
-        """Remove a key-value pair form the configuration
-
-        Arguments:
-        ----------
-        key - the key to remove from the config
-
-        Keyword arguments:
-        ------------------
-        commit - if True writes the changes to the configuration file. Default False
-        """
-        keys = key.split('.')
-
-        d = self.data
-        for k in keys:
-            if isinstance(d, dict):
-                if not k in d.keys():
-                    raise GrapeError('Key %r does not exists' % k)
-                if len(keys) > 1 and isinstance(d[k], dict):
-                    d = d[k]
-
-        del d[keys[-1]]
-
-        if commit:
-            self._write_config()
 
     def get(self, key):
         keys = key.split('.')
@@ -448,6 +464,46 @@ class Config(object):
             d = d[k]
 
         return d
+
+    def get_values(self, key=None, exclude=[], sort_order=[]):
+        """Return values from the data dictionary
+
+        Keyword arguments:
+        ------------------
+        key - return values for a specific key
+        exclude - exclude specified keys
+        """
+        data = self.data
+        if key is not None:
+             data = self.get(key)
+        values = self._dot_keys(key, data, exclude)
+        if sort_order:
+            values = self._get_sorted_values(values, sort_order)
+
+        return values
+
+    def _dot_keys(self, key, value, exclude):
+        if value is None or type(value) is str:
+            return [(key,value)]
+        res = []
+        for k,v in value.items():
+            if k in exclude:
+                continue
+            if key:
+                k = '.'.join([key,k])
+            res.extend(self._dot_keys(k, v, exclude))
+        return res
+
+    def _get_sorted_values(self, values, sort_order):
+        l = []
+        for value in values:
+            key = value[0].split('.')[0]
+            if key in sort_order:
+                l.append((sort_order.index(key),value))
+            else:
+                l.append((len(sort_order), value))
+        l.sort()
+        return [x[1] for x in l]
 
     def set(self, key, value, commit=False):
         """Set values into the configuration for a given key
@@ -478,8 +534,43 @@ class Config(object):
         values = value.split(',')
         if len(values) == 1:
             values = values[0]
+
+        if value.find(os.path.sep) > -1 and os.path.exists(value):
+            if os.path.commonprefix([self.path, self.get(key)]) == self.path:
+                self.remove(key)
+            # create symlink in project data folder and replace path in index file
+            dest = Project._get_dest(values)
+            symlink = Project._make_link(values, os.path.join(self.path, dest) if dest else self.path, symbolic=False)
+            values = symlink
+
         d[keys[-1]] = values
 
         if commit:
             self._write_config()
 
+    def remove(self, key, commit=False):# TODO: check empty fields when removing and remove them as well
+        """Remove a key-value pair form the configuration
+
+        Arguments:
+        ----------
+        key - the key to remove from the config
+
+        Keyword arguments:
+        ------------------
+        commit - if True writes the changes to the configuration file. Default False
+        """
+        keys = key.split('.')
+
+        d = self.data
+        for k in keys[:-1]:
+            d = d[k]
+
+        values = self.get_values(key=key)
+        for k,v in values:
+            if v.find(os.path.sep) > -1 and os.path.commonprefix([self.path, v]) == self.path:
+                Project._rm_link(v)
+
+        del d[keys[-1]]
+
+        if commit:
+            self._write_config()
