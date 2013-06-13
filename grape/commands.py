@@ -619,7 +619,7 @@ class ScanCommand(GrapeCommand):
 
     def run(self, args):
         import re
-        from grape.index import Dataset
+        from .index import Dataset
 
         project = Project.find()
         if not project or not project.exists():
@@ -682,9 +682,7 @@ class ScanCommand(GrapeCommand):
                     counter += 1
             print "Adding %s : " % (ds_id), files
             for file in files:
-                if not ds_id in project.index.datasets:
-                    Dataset(file_info)
-                project.index.add(ds_id, file, file_info)
+                project.index.add(ds_id, file, file_info, create=True)
 
         # add the singletons, everything that is not in scanned
         for file in set(fastqs).difference(set(scanned)):
@@ -692,7 +690,7 @@ class ScanCommand(GrapeCommand):
             if ds_id is None:
                 ds_id = os.path.basename(file)
             print "Adding %s : " % (ds_id), file
-            project.index.add(ds_id, file, file_info)
+            project.index.add(ds_id, file, file_info, create=True)
 
         project.index.save()
 

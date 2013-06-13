@@ -282,6 +282,35 @@ class Dataset(object):
     def __repr__(self):
         return "Dataset: %s" % (self.id)
 
+    @staticmethod
+    def create(id, path, metadata, id_key=None, path_key=None):
+        """Creates a new Dataset with the given id and the specified path. The path
+        and id are also added to the Metadata using the default keys if no other
+        keys are specified.
+
+        :param id: the dataset id
+        :type id: string
+        :param path: the path to the file
+        :type path: string
+        :param metadata: a dictionary with additional information about the dataset
+        :type metadata: dict
+        :param id_key: the key used to store the id in the metadata
+        :type id_key: string
+        :param path_key: the key used to store the path in the metadata
+        :type path_key: string
+        :returns dataset: the created dataset
+        :rtype dataset: Dataset
+        """
+        if id_key is None:
+            id_key = "labExpId"
+        if path_key is None:
+            path_key = "path"
+
+        metadata[id_key] = id
+        metadata[path_key] = path
+        return Dataset(metadata, id_key=id_key, path_key=path_key)
+
+
 
 class IndexDefinition(object):
     """A class to specify the index meta information
@@ -320,6 +349,7 @@ class IndexDefinition(object):
     @classmethod
     def dump(cls, tabs=2):
         return json.dumps(cls.data, indent=tabs)
+
 
 class Index(object):
     """A class to access information stored into 'index files'.
@@ -388,11 +418,16 @@ class Index(object):
 
         dataset.add_file(file, meta)
 
-    def add(self, id, path, file_info):
+    def add(self, id, path, file_info, create=False):
         meta = Metadata(file_info)
         dataset = self.datasets.get(id, None)
         if not dataset:
-            raise ValueError("Dataset %r not found" % id)
+            if not create:
+                raise ValueError("Dataset %r not found" % id)
+            else:
+                # create the dataset
+                dataset = Dataset.create(id, path, file_info)
+                self.datasets[dataset.id] = dataset
         dataset.add_file(path, meta)
 
 
@@ -431,6 +466,7 @@ class Index(object):
         self._lock = None
         return True
 
+
 class _OnSuccessListener(object):
     def __init__(self, project, config):
         self.project = project
@@ -454,6 +490,7 @@ class _OnSuccessListener(object):
             index.save()
         finally:
             index.release()
+
 
 def prepare_tool(tool, project, config):
     """Add listeners to the tool to ensure that it updates the job store
