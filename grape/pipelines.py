@@ -15,13 +15,11 @@ def pre_pipeline(config=None):
     if config is None:
         config = {}
 
-    genome = config.get("genome")
-    annotation = config.get("annotation")
-
-    if genome is None:
-        genome = dataset.get_genome(config)
-    if annotation is None:
-        annotation = dataset.get_annotation(config)
+    genome = config.get("genome", None)
+    annotation = config.get("annotation", None)
+    max_length = config.get('max_length', None)
+    if not max_length:
+        max_length = 150
 
     pipeline = Pipeline(name="Default Pipeline Setup")
     gem_index = pipeline.add(tools.gem_index())
@@ -35,7 +33,7 @@ def pre_pipeline(config=None):
     gem_t_index.annotation = annotation
     gem_t_index.name = os.path.basename(annotation)
     gem_t_index.output_dir = os.path.dirname(annotation)
-    gem_t_index.max_length = 150
+    gem_t_index.max_length = max_length
     return pipeline
 
 def default_pipeline(dataset, config=None):
@@ -50,20 +48,12 @@ def default_pipeline(dataset, config=None):
     if config is None:
         config = {}
 
-    index = config.get("index")
-    annotation = config.get("annotation")
-    quality = config.get("quality")
+    index = config.get("index", None)
+    annotation = config.get("annotation", None)
+    quality = config.get("quality", None)
 
     if index is None:
-        genome = config.get("genome")
-        index = '%s%s' % (genome,'.gem')
-
-    if index == 'None.gem':
-        index = dataset.get_index(config)
-    if annotation is None:
-        annotation = dataset.get_annotation(config)
-    if quality is None:
-        quality = dataset.quality
+        index = '.'.join([config.get("genome", None),'gem'])
 
     pipeline = Pipeline(name="Default Pipeline %s" % (dataset.id))
     gem = pipeline.add(tools.gem())

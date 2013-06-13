@@ -99,16 +99,16 @@ class SetupCommand(GrapeCommand):
         project, datasets = utils.get_project_and_datasets(args)
         pipelines = []
         grp = Grape()
-        pipeline = _pipelines.pre_pipeline(project.config)
+        pipelines = utils.create_pipelines(_pipelines.pre_pipeline, project, [None], vars(args))
+        #pipeline = _pipelines.pre_pipeline(vars(args))
         # update job params
-        for step in pipeline.tools.values():
-            grp.configure_job(step, project, None, vars(args))
-
+        #for step in pipeline.tools.values():
+        #    grp.configure_job(step, project, None, vars(args))
 
         # validate the pipeline
-        if not utils._prepare_pipeline(pipeline):
-            raise ValueError('Cannot prepare pipeline')
-        pipelines.append(pipeline)
+        #if not utils._prepare_pipeline(pipeline):
+        #    raise ValueError('Cannot prepare pipeline')
+        #pipelines.append(pipeline)
         if not pipelines:
             raise ValueError('No pipelines found')
         if args.submit:
@@ -177,7 +177,8 @@ class SetupCommand(GrapeCommand):
         parser.add_argument('--submit', action='store_true', default=False,
                             help='Run the setup steps in a HPC cluster environment - requires a working cluster configuration')
         utils.add_default_job_configuration(parser,
-                                            add_cluster_parameter=False)
+                                            add_cluster_parameter=False,
+                                            add_pipeline_parameter=False)
 
 
 class RunCommand(GrapeCommand):
@@ -745,6 +746,7 @@ def main():
     parser = argparse.ArgumentParser(prog="grape")
     parser.add_argument('-v', '--version', action='version',
                         version='grape %s' % (__version__))
+
     # add commands
     command_parsers = parser.add_subparsers()
     _add_command(InitCommand(), command_parsers)
@@ -776,6 +778,7 @@ def main():
             sys.exit(1)
         else:
             raise e
+
 
 
 def buildout():

@@ -15,13 +15,48 @@ def get_project_and_datasets(args):
          datasets
     """
     from grape.grape import Project
+    from grape.index import Dataset
+    import os, re
+
+    m = {'type':'fastq'}
+    datasets = None
 
     project = Project.find()
     if project is None or not project.exists():
-        raise grape.commands.CommandError("No grape project found!")
+        project = Project(os.getcwd())
+        project.initialize()
+        if 'genome' in args and args.genome:
+            project.config.set('genome',os.path.abspath(args.genome),
+                                commit=True)
+            #args.genome = project.config.get('genome')
+        if 'annotation' in args and args.annotation:
+            project.config.set('annotation',os.path.abspath(args.annotation),
+                                commit=True)
+            #args.annotation = project.config.get('annotation')
+        if 'quality' in args and args.quality:
+            project.config.set('quality', args.quality)
+            m['quality'] = args.quality
 
-    datasets = None
-    if "datasets" in args:
+        if 'read_type' in args and args.read_type:
+            m['readType'] = args.read_type
+
+    if 'input' in args and args.input:
+        ds = {}
+        for dataset in args.input:
+            if Dataset.find(dataset):
+                name, files = Dataset.find(dataset)
+                ds[name] = files
+        for name, files in ds.items():
+            m['labExpId'] = name
+            if len(files) > 1 and not 'readType' in m:
+                m['readType'] = '2x'
+            for f in files:
+                m['path'] = f
+                project.import_dataset(m)
+            project.index.save()
+        datasets = project.get_datasets(query_list=ds.keys())
+
+    if "datasets" in args and not datasets:
         datasets = args.datasets
         if datasets is None:
             raise grape.commands.CommandError("No datasets specified!")
@@ -32,7 +67,7 @@ def get_project_and_datasets(args):
     return (project, datasets)
 
 
-def add_default_job_configuration(parser, add_cluster_parameter=True):
+def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeline_parameter=True):
     """Add the default job configuration options to the given argument
     parser
 
@@ -46,6 +81,21 @@ def add_default_job_configuration(parser, add_cluster_parameter=True):
                                       "applied to all jobs")
     group.add_argument("-c", "--cpus", dest="threads",
                         help="Number of threads/cpus assigned to the jobs")
+    if add_pipeline_parameter:
+        pgroup = parser.add_argument_group("Pipeline",
+                                          "Pipeline execution parameters")
+
+        pgroup.add_argument("-i", "--input", default=None, nargs="*",
+                           help="The input files to run grape without creating a project")
+        pgroup.add_argument("-g", "--genome", default=None,
+                           help="The genome to be used in the run")
+        pgroup.add_argument("-a", "--annotation", default=None,
+                           help="The annotation to be used for the run")
+        pgroup.add_argument("--quality", default=None,
+                           help="The fastq offset for datasets quality")
+        pgroup.add_argument("--read-type", dest='read_type', default=None,
+                           help="The read type and length")
+
     if add_cluster_parameter:
         group.add_argument("-t", "--time", dest="max_time",
                             help="Maximum wall clock time")
@@ -58,7 +108,6 @@ def add_default_job_configuration(parser, add_cluster_parameter=True):
     else:
         group.add_argument("--verbose", default=False, action="store_true",
                             dest="verbose", help="Verbose job output")
-
 
 def _prepare_pipeline(pipeline):
     """Validate the pipeline and prints
@@ -100,9 +149,32 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
     from grape.grape import Grape
     pipelines = []
     grp = Grape()
-    for d in datasets:
-        pipeline = pipeline_fun(d, project.config)
 
+    genome = configuration.get('genome', None)
+    annotation = configuration.get('annotation', None)
+    quality = configuration.get('quality', None)
+
+    if not genome:
+        genome = project.config.get('genome')
+        configuration['genome'] = genome
+    if not annotation:
+        annotation = project.config.get('annotation')
+        configuration['annotation'] = annotation
+    if not quality:
+        quality = project.config.get('quality')
+        configuration['quality'] = quality
+
+    for d in datasets:
+        if d:
+            if not configuration.get('genome', None):
+                configuration['genome'] = d.get_genome(project.config)
+            if not configuration.get('annotation', None):
+                configuration['annotation'] = d.get_annotation(project.config)
+            if not configuration.get('quality', None):
+                configuration['quality'] = d.quality
+            pipeline = pipeline_fun(d, configuration)
+        else:
+            pipeline = pipeline_fun(configuration)
         # validate the pipeline
         if not _prepare_pipeline(pipeline):
             return False
@@ -111,4 +183,5 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
         if configuration is not None:
             for step in pipeline.tools.values():
                 grp.configure_job(step, project, d, configuration)
+
     return pipelines

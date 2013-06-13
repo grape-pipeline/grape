@@ -206,21 +206,29 @@ class Project(object):
 
         reader = csv.DictReader(file, dialect=dialect)
         reader.fieldnames = [{id:'labExpId', path:'path'}.get(x, x) for x in reader.fieldnames]
-
-
         for line in reader:
-            meta = Metadata(line)
-            dataset = self.index.datasets.get(meta.labExpId, None)
+            if not os.path.isabs(line['path']) and not os.path.exists(line['path']):
+                for folder in set([os.path.dirname(file.name)]):
+                    path = os.path.join(folder, line['path'])
+                    if os.path.exists(path):
+                        line['path'] = os.path.abspath(path)
+                        break
+            self.import_dataset(line)
 
-            # create symlink in project data folder and replace path in index file
-            symlink = self._make_link(meta.path, 'data')
-            meta.path = symlink
+    def import_dataset(self, line):
 
-            if not dataset:
-                dataset = Dataset(meta)
-                self.index.datasets[dataset.id] = dataset
-            else:
-                dataset.add_file(meta.path, meta)
+        meta = Metadata(line)
+        dataset = self.index.datasets.get(meta.labExpId, None)
+
+        # create symlink in project data folder and replace path in index file
+        symlink = self._make_link(meta.path, 'data')
+        meta.path = symlink
+
+        if not dataset:
+            dataset = Dataset(meta)
+            self.index.datasets[dataset.id] = dataset
+        else:
+            dataset.add_file(meta.path, meta)
 
     def logdir(self):
         """Get the path to the projects log file directory"""
@@ -286,6 +294,14 @@ class Project(object):
         if dir_name == 'fastq':
             dst_path = os.path.join(dst_path, dir_name)
         dst_path = os.path.join(dst_path, file_name)
+
+        src_path = os.path.abspath(src_path)
+
+        if os.path.abspath(dst_path) == src_path:
+            return src_path
+
+        if os.path.exists(dst_path) and os.path.islink(dst_path):
+            os.unlink(dst_path)
 
         if symbolic:
             os.symlink(src_path, dst_path)
@@ -505,7 +521,7 @@ class Config(object):
         l.sort()
         return [x[1] for x in l]
 
-    def set(self, key, value, commit=False):
+    def set(self, key, value, commit=False, make_link=True):
         """Set values into the configuration for a given key
 
         Arguments:
@@ -535,13 +551,15 @@ class Config(object):
         if len(values) == 1:
             values = values[0]
 
-        if value.find(os.path.sep) > -1 and os.path.exists(value):
+        if os.path.exists(value):
             if os.path.commonprefix([self.path, self.get(key)]) == self.path:
                 self.remove(key)
-            # create symlink in project data folder and replace path in index file
-            dest = Project._get_dest(values)
-            symlink = Project._make_link(values, os.path.join(self.path, dest) if dest else self.path, symbolic=False)
-            values = symlink
+            if make_link:
+                # create symlink in project destination folder and replace path
+                dest = Project._get_dest(values)
+                symlink = Project._make_link(values, os.path.join(self.path, dest)
+                                            if dest else self.path, symbolic=False)
+                values = symlink
 
         d[keys[-1]] = values
 
