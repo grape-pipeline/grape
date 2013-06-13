@@ -5,11 +5,13 @@ BUNDLE_DIR = $(shell pwd)/bundle/grape-$(VERSION)
 DOWNLOAD_CACHE = downloads
 PIP_OPTIONS = --download-cache $(DOWNLOAD_CACHE) --install-option="--prefix=$(BUNDLE_DIR)"
 
+.PHONY: docs docs-clean
+
 all:
 	python setup.py build
 
 devel:
-	cd lib/another_tool/; python setup.py develop
+	cd lib/jip/; python setup.py develop
 	python setup.py develop
 
 test:
@@ -49,6 +51,12 @@ bundle: downloads
 	@cp dist-utils/jobs.json $(BUNDLE_DIR)/conf
 
 	@tar -C bundle -czf bundle/grape-$(VERSION).tar.gz grape-$(VERSION)
+
+docs:
+	@test -d ./docs && cd docs; $(MAKE) html
+
+docs-clean:
+	@test -d docs && cd docs; $(MAKE) clean
 
 downloads:
 	@mkdir -p $(DOWNLOAD_CACHE)
