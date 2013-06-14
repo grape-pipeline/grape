@@ -200,7 +200,7 @@ class RunCommand(GrapeCommand):
             cli.info("Starting pipeline run: %s" % pipeline)
             steps = pipeline.get_sorted_tools()
             for i, step in enumerate(steps):
-                skip = step.is_done()
+                skip = step.is_done() or args.force
                 state = "Running"
                 if skip:
                     state = cli.yellow("Skipped")
@@ -225,6 +225,8 @@ class RunCommand(GrapeCommand):
 
     def add(self, parser):
         parser.add_argument("datasets", default=["all"], nargs="*")
+        parser.add_argument("--force", default=False, action="store_true",
+                            help="Force computation of all jobs")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False)
 
