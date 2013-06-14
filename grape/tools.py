@@ -143,8 +143,13 @@ class gem(Tool):
 
         if args.get("name", None) is None:
             errs["name"] = "No name specified!"
+        if args.get("index", None) is None:
+            errs["index"] = "No index specified!"
+        elif not os.path.exists(args["index"]):
+            errs["index"] = "Index file not found!"
         if args.get("quality", None) is None:
             errs["quality"] = "No quality offset specified!"
+
         if args.get("annotation", None) is not None:
             if not os.path.exists(args["annotation"]):
                 errs["annotation"] = "Annotation file not found %s" % \

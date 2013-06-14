@@ -53,7 +53,10 @@ def default_pipeline(dataset, config=None):
     quality = config.get("quality", None)
 
     if index is None:
-        index = '.'.join([config.get("genome", None),'gem'])
+        genome = config.get("genome", None)
+        if genome is None:
+            genome = "genome"
+        index = '.'.join([genome, 'gem'])
 
     pipeline = Pipeline(name="Default Pipeline %s" % (dataset.id))
     gem = pipeline.add(tools.gem())
