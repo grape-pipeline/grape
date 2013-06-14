@@ -654,6 +654,13 @@ class ScanCommand(GrapeCommand):
             return True
 
         cli.info("Checking known data ... ", newline=False)
+        fqts = set(fastqs)
+        for name, dataset in project.index.datasets.items():
+            if (dataset.primary in fqts):
+                fqts.remove(dataset.primary)
+            if (dataset.secondary in fqts):
+                fqts.remove(dataset.secondary)
+        fastqs = sorted(list(fqts))
         cli.info("%d new files found" % len(fastqs))
 
 
@@ -662,6 +669,7 @@ class ScanCommand(GrapeCommand):
             file_info["quality"] = args.quality
         if args.sex is not None:
             file_info["sex"] = args.sex
+        file_info["type"] = "fastq"
 
         # collect groups
         groups = {}

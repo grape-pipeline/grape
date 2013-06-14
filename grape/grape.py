@@ -364,12 +364,14 @@ class Project(object):
                 for f in os.listdir(folder) if (f.endswith(".gtf") or
                                                 f.endswith(".gtf.gz"))]
 
-    def get_datasets(self, query_list=[]):
+    def get_datasets(self, query_list=None):
         """Return a list of all datasets found in this project"""
         datasets = {}
+        if query_list is None:
+            query_list = []
         # get the files in the data folder
         for k,d in self.index.datasets.items():
-            if query_list and not k in query_list:
+            if len(query_list) > 0 and not k in query_list:
                 continue
             if d.primary not in datasets:
                 datasets[d.primary] = d

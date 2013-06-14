@@ -125,7 +125,11 @@ class Dataset(object):
                     information
         """
         self.metadata = Metadata({})
-        for k,v in vars(metadata).items():
+        meta_dict = metadata
+        if not isinstance(metadata, dict):
+            meta_dict = vars(metadata)
+
+        for k,v in meta_dict.items():
             if k not in ['type', 'view', 'md5', 'size', 'path']:
                 self.metadata.__setattr__(k, v)
         self.tag_id = id_key

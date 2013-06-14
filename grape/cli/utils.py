@@ -58,11 +58,14 @@ def get_project_and_datasets(args):
 
     if "datasets" in args and not datasets:
         datasets = args.datasets
-        if datasets is None:
-            raise grape.commands.CommandError("No datasets specified!")
-        if datasets == ['all']:
-            datasets = []
-        datasets = project.get_datasets(query_list=datasets)
+    else:
+        datasets = ["all"]
+
+    if datasets is None:
+        raise grape.commands.CommandError("No datasets specified!")
+    if datasets == ['all']:
+        datasets = []
+    datasets = project.get_datasets(query_list=datasets)
 
     return (project, datasets)
 
