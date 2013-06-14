@@ -154,6 +154,7 @@ class Dataset(object):
         file_info.path = path
         if not hasattr(self, type):
             self.__setattr__(type, [])
+
         if not path in [x.path for x in self.__getattribute__(type)]:
             self.__getattribute__(type).append(file_info)
             self.__setattr__(type, sorted(self.__getattribute__(type), key=lambda file: file.path))
