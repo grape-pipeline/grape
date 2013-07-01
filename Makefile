@@ -11,6 +11,8 @@ all:
 	python setup.py build
 
 devel:
+	git submodule init
+	git submodule update
 	cd lib/jip/; python setup.py develop
 	python setup.py develop
 

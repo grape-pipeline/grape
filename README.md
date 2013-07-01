@@ -18,4 +18,4 @@ We assume you have a dedicated virtualenv set up and activated. To get started:
 This will install all dependencies. In order to get the commands into path and
 be able to run things from command line even if you are in development mode, do
 
-    python setup.py develop
+    make devel
