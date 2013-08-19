@@ -12,6 +12,7 @@ all:
 
 devel:
 	cd lib/jip/; python setup.py develop
+	cd lib/indexfile; python setup.py develop
 	python setup.py develop
 
 test:
