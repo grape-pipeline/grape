@@ -3,7 +3,7 @@ import errno
 import re
 import json
 from . import utils
-from .index import *
+from indexfile.index import *
 
 
 class GrapeError(Exception):
@@ -176,59 +176,13 @@ class Project(object):
         """
         if self.exists():
             return
-            # create .grape
+        # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
         self.index = Index(os.path.join(self.path,'.index'))
         if init_structure:
             #create project structure
             self._initialize_structure()
-
-    def import_data(self, file, sep=None, id='labExpId', path='path'):
-        """Import entries from a SV file. The sv file must have an header line with the name of the properties.
-
-        Arguments:
-        ----------
-        path - path to the sv files to be imported
-        """
-        import csv
-
-        if not csv.Sniffer().has_header(file.readline()):
-            raise ValueError('Metadata file must have a header')
-
-        file.seek(0)
-
-        dialect = None
-        if sep is None:
-            dialect = csv.Sniffer().sniff(file.readline(), delimiters=[',','\t'])
-
-        file.seek(0)
-
-        reader = csv.DictReader(file, dialect=dialect)
-        reader.fieldnames = [{id:'labExpId', path:'path'}.get(x, x) for x in reader.fieldnames]
-        for line in reader:
-            if not os.path.isabs(line['path']) and not os.path.exists(line['path']):
-                for folder in set([os.path.dirname(file.name)]):
-                    path = os.path.join(folder, line['path'])
-                    if os.path.exists(path):
-                        line['path'] = os.path.abspath(path)
-                        break
-            self.import_dataset(line)
-
-    def import_dataset(self, line):
-
-        meta = Metadata(line)
-        dataset = self.index.datasets.get(meta.labExpId, None)
-
-        # create symlink in project data folder and replace path in index file
-        symlink = self._make_link(meta.path, 'data')
-        meta.path = symlink
-
-        if not dataset:
-            dataset = Dataset(meta)
-            self.index.datasets[dataset.id] = dataset
-        else:
-            dataset.add_file(meta.path, meta)
 
     def logdir(self):
         """Get the path to the projects log file directory"""
@@ -240,27 +194,52 @@ class Project(object):
         """
         return os.path.exists("%s/.grape" % (self.path))
 
-    def metainf(self):
-        """Return the path to the meta.inf file describing the meta information for the project
+    def load(self, path=None, format=None):
+        """Load project from file.
+
+        :param path: the indexfile to be loaded. If no path is passed the project index
+                        is loaded
+        :param format: the format of the index. It can be a path to a json file or a valid
+                        json string containing format information
         """
-        metafile = os.path.join(self.path, '.grape/meta.inf')
-        return metafile
+        if not path:
+            path = self.indexfile()
+        if not format:
+            format = self.formatfile()
+        self.index.set_format(format)
+
+        self.index.open(path)
+
+    def save(self, path=None):
+        """Save the project.
+
+        :param path: the path of the output file. If no path is passed the
+                        project index is used.
+        """
+        if not path:
+            path = self.indexfile()
+        self.index.save(path)
+
+    def export(self, out, type='index'):
+        """Export the project.
+
+        :param path: the path of the output file. If no path is passed the
+                        stdout is used.
+        """
+        for line in self.index.export(type=type):
+            out.write('%s%s' % (line,os.linesep))
+
+    def formatfile(self):
+        """Return the path to the json file describing the format for the project index
+        """
+        format_file = os.path.join(self.path, '.grape/format.json')
+        return format_file
 
     def indexfile(self):
         """Return the path to the index file for this project
         """
         indexfile = os.path.join(self.path,'.index')
         return indexfile
-
-    def has_data_index(self):
-        """Return true if the project has an index file
-        """
-        return os.path.exists("%s/.index" % self.path)
-
-    def has_metainf(self):
-        """Return true if the meta.inf file exists
-        """
-        return os.path.exists("%s/.grape/meta.inf" % self.path)
 
     def _initialize_structure(self):
         """Initialize the project structure"""
@@ -364,19 +343,15 @@ class Project(object):
                 for f in os.listdir(folder) if (f.endswith(".gtf") or
                                                 f.endswith(".gtf.gz"))]
 
-    def get_datasets(self, query_list=None):
+    def get_datasets(self, **kwargs):
         """Return a list of all datasets found in this project"""
-        datasets = {}
-        if query_list is None:
-            query_list = []
-        # get the files in the data folder
-        for k,d in self.index.datasets.items():
-            if len(query_list) > 0 and not k in query_list:
-                continue
-            if d.primary not in datasets:
-                datasets[d.primary] = d
+        if not self.index.datasets:
+            self.load()
 
-        return [d for k, d in datasets.items()]
+        if not kwargs.get('type'):
+            kwargs['type'] = 'fastq'
+
+        return self.index.select(**kwargs)
 
     @staticmethod
     def search_fastq_files(directory, level=0):

@@ -19,7 +19,7 @@ import argparse
 
 from . import cli
 from . import jobs
-from . import index
+from indexfile import index
 from . import pipelines as _pipelines
 from .grape import Grape, Project, GrapeError
 from .cli import utils
@@ -515,26 +515,13 @@ class ImportCommand(GrapeCommand):
             cli.error("No grape project found")
             return False
 
-        file = args.input
-        if file is sys.stdin:
-            import tempfile
-            t = tempfile.TemporaryFile('r+w')
-            for line in file:
-                t.write(line)
-            t.seek(0)
-            file = t
-
-        if type == 'index':
-            project.index.load(file)
-        else:
-            project.import_data(file, id=args.id_key, path=args.path_key)
-        project.index.save()
+        project.load(args.input)
+        project.save()
 
     def add(self, parser):
         parser.add_argument('input', nargs='?', type=argparse.FileType('r'), const=sys.stdin, default=sys.stdin,
                             metavar='<input_file>', help="path to the metadata file")
-        parser.add_argument('--id-key', dest='id_key', default='labExpId', metavar='<id_key>')
-        parser.add_argument('--path-key', dest='path_key', default='path', metavar='<path_key>')
+        parser.add_argument('-f', '--format', dest='format', default='', metavar='<format_string>', help='Format string')
 
 
 class ExportCommand(GrapeCommand):
@@ -543,22 +530,23 @@ class ExportCommand(GrapeCommand):
 
     def run(self, args):
         project = Project.find()
+
+        project.load()
+
         if not project or not project.exists():
             cli.error("No grape project found")
             return False
         if args.output:
-            #if args.fields:
-            #    cli.error("Invalid argument")
             signal.signal(signal.SIGPIPE, signal.SIG_DFL)
             out = args.output
-            project.index.export(out, absolute=True, jsonout=True)
+            project.export(out)
             return True
 
 
     def add(self, parser):
         parser.add_argument('-o', '--output', nargs='?', type=argparse.FileType('w'), default=sys.stdout,
                             metavar='<output_file>', help='Export the project index to a standalone index format')
-        #parser.add_argument('--custom-fields', dest='fields', nargs='+', help='Get a list of custom field to add to the index')
+        parser.add_argument('-f', '--format', dest='format', default='', metavar='<format_string>', help='Format string')
 
 
 class ListToolsCommand(GrapeCommand):
@@ -630,6 +618,8 @@ class ListDataCommand(GrapeCommand):
             datasets = []
         cli.puts("Project: %s" % (project.config.get("name")))
         cli.puts("%d datasets registered in project" % len(datasets))
+        for d in datasets:
+            print d
         return True
 
     def add(self, parser):

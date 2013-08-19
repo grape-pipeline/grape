@@ -15,7 +15,7 @@ def get_project_and_datasets(args):
          datasets
     """
     from grape.grape import Project
-    from grape.index import Dataset
+    from indexfile.index import Dataset
     import os, re
 
     m = {'type':'fastq'}
@@ -65,7 +65,7 @@ def get_project_and_datasets(args):
         raise grape.commands.CommandError("No datasets specified!")
     if datasets == ['all']:
         datasets = []
-    datasets = project.get_datasets(query_list=datasets)
+    datasets = project.get_datasets(id=datasets)
 
     return (project, datasets)
 
