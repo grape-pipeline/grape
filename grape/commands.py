@@ -551,7 +551,7 @@ class ExportCommand(GrapeCommand):
             #    cli.error("Invalid argument")
             signal.signal(signal.SIGPIPE, signal.SIG_DFL)
             out = args.output
-            project.index.export(out, absolute=True)
+            project.index.export(out, absolute=True, jsonout=True)
             return True
 
 
@@ -768,7 +768,7 @@ def main():
     _add_command(JobsCommand(), command_parsers)
     _add_command(ImportCommand(), command_parsers)
     _add_command(ListToolsCommand(), command_parsers)
-    #_add_command(ExportCommand(), command_parsers)
+    _add_command(ExportCommand(), command_parsers)
     _add_command(SetupCommand(), command_parsers)
 
     args = parser.parse_args()

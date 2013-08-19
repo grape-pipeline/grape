@@ -166,7 +166,7 @@ class Dataset(object):
         if type == 'fastq':
             self._get_fastq()
 
-    def export(self, absolute=False, types=[]):
+    def export(self, absolute=False, types=[], jsonout=False):
         """Convert an index entry object to its string representation in index file format
         """
         out = []
@@ -174,11 +174,14 @@ class Dataset(object):
             types = [x for x in self.__dict__ if x not in ['metadata', 'type_folders', 'data_folder', 'tag_id']]
         for type in types:
             for file in self.__getattribute__(type):
-                path = file.path
-                if absolute:
-                    path = os.path.abspath(path)
-                tags = ' '.join([self.metadata.get_tags(),file.get_tags(exclude=['path', self.tag_id])])
-                out.append('\t'.join([path, tags]))
+                if json:
+                    out.append(json.dumps(dict(self.metadata.__dict__.items() + file.__dict__.items())))
+                else:
+                    path = file.path
+                    if absolute:
+                        path = os.path.abspath(path)
+                    tags = ' '.join([self.metadata.get_tags(),file.get_tags(exclude=['path', self.tag_id])])
+                    out.append('\t'.join([path, tags]))
         return out
 
     def folder(self, name=None):
@@ -494,13 +497,13 @@ class Index(object):
         dataset.add_file(path, meta)
 
 
-    def export(self, out=None, absolute=False):
+    def export(self, out=None, absolute=False, jsonout=False):
         """Save changes made to the index structure loaded in memory to the index file
         """
         if not out:
             out = sys.stdout
         for dataset in self.datasets.values():
-            for line in dataset.export(absolute=absolute):
+            for line in dataset.export(absolute=absolute, jsonout=jsonout):
                 out.write('%s%s' % (line, os.linesep))
 
 
