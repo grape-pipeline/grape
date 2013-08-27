@@ -206,6 +206,7 @@ class Project(object):
             path = self.indexfile()
         if not format:
             format = self.formatfile()
+
         self.index.set_format(format)
 
         self.index.open(path)
@@ -344,14 +345,11 @@ class Project(object):
                                                 f.endswith(".gtf.gz"))]
 
     def get_datasets(self, **kwargs):
-        """Return a list of all datasets found in this project"""
+        """Return a list of datasets found in this project. Filters such as 'sex=M' can be used."""
         if not self.index.datasets:
             self.load()
 
-        if not kwargs.get('type'):
-            kwargs['type'] = 'fastq'
-
-        return self.index.select(**kwargs)
+        return self.index.select(**kwargs).datasets.values()
 
     @staticmethod
     def search_fastq_files(directory, level=0):
@@ -393,6 +391,50 @@ class Project(object):
             if(path == "/"):
                 return None
             return Project.find(path)
+
+    @staticmethod
+    def find_dataset(path):
+        """Find dataset from path. Detect if paired and find mate
+        file if possible
+
+        path: path to the input file
+
+        return:
+            None if no dataset found
+            [name, mate1] if single end
+            [name, mate1, mate2] if paired end
+        """
+
+        basedir = os.path.dirname(path)
+        name = os.path.basename(path)
+        expr_paired = "^(?P<name>.*)(?P<delim>[_\.-])" \
+               "(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
+        expr_single = "^(?P<name>.*)\.(fastq|fq)(\.gz)*?$"
+        match = re.match(expr_paired, name)
+        if match:
+            try:
+                id = int(match.group('id'))
+                if id < 2:
+                    id += 1
+                else:
+                    id -= 1
+                compr = match.group("compression")
+                if compr is None:
+                    compr = ""
+                files = [path, os.path.join(basedir, "%s%s%d.%s%s")
+                                                    % (match.group('name'),
+                                                    match.group('delim'),
+                                                    id, match.group('type'),
+                                                    compr)]
+                files.sort()
+
+                return match.group('name'), files
+            except:
+                pass
+        match = re.match(expr_single, name)
+        if match:
+            return match.group('name'), [path]
+        return None
 
 
 class Config(object):
