@@ -18,7 +18,7 @@ def get_project_and_datasets(args):
     from indexfile.index import Dataset
     import os, re
 
-    m = {'type':'fastq'}
+    metadata = {'type':'fastq'}
     datasets = None
 
     project = Project.find()
@@ -35,26 +35,26 @@ def get_project_and_datasets(args):
             #args.annotation = project.config.get('annotation')
         if 'quality' in args and args.quality:
             project.config.set('quality', args.quality)
-            m['quality'] = args.quality
+            metadata['quality'] = args.quality
 
         if 'read_type' in args and args.read_type:
-            m['readType'] = args.read_type
+            metadata['readType'] = args.read_type
 
     if 'input' in args and args.input:
         ds = {}
         for dataset in args.input:
-            if Dataset.find(dataset):
-                name, files = Dataset.find(dataset)
+            if Project.find(dataset):
+                name, files = Project.find(dataset)
                 ds[name] = files
         for name, files in ds.items():
-            m['labExpId'] = name
+            metadata['id'] = name
             if len(files) > 1 and not 'readType' in m:
-                m['readType'] = '2x'
+                metadata['readType'] = '2x'
             for f in files:
-                m['path'] = f
-                project.import_dataset(m)
-            project.index.save()
-        datasets = project.get_datasets(query_list=ds.keys())
+                metadata['path'] = f
+                project.index.insert(**metadata)
+            project.save()
+        datasets = project.get_datasets(id=ds.keys())
 
     if "datasets" in args and not datasets:
         datasets = args.datasets
@@ -65,6 +65,7 @@ def get_project_and_datasets(args):
         raise grape.commands.CommandError("No datasets specified!")
     if datasets == ['all']:
         datasets = []
+
     datasets = project.get_datasets(id=datasets)
 
     return (project, datasets)

@@ -618,9 +618,32 @@ class ListDataCommand(GrapeCommand):
             datasets = []
         cli.puts("Project: %s" % (project.config.get("name")))
         cli.puts("%d datasets registered in project" % len(datasets))
-        for d in datasets:
-            print d
+        data = project.index.select(id=[d.id for d in datasets]).export(type='json')
+        self._list(data)
         return True
+
+    def _list(self, data, tags=None):
+        from clint.textui import indent
+        import json
+        # print
+        d = json.loads(data[0])
+        header = d.keys()
+        if tags:
+            header = tags
+        values = d.values()
+
+        max_keys =[len(x)+1 for x in header]
+        max_values = [len(x)+1 for x in values]
+
+        line = '-' * (sum([i if i>j else j for i,j in zip(max_keys,max_values)])+len(max_keys))
+
+        cli.info(line)
+        cli.info(cli.green(cli.columns(*[[o,max(max_keys[i],max_values[i])] for i,o in enumerate(header)])))
+        cli.info(line)
+        for l in data:
+            cli.info(cli.columns(*[[o, max(max_keys[i],max_values[i])] for i,o in enumerate(json.loads(l).values())]))
+        cli.info(line)
+
 
     def add(self, parser):
         pass
