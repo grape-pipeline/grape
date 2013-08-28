@@ -19,7 +19,7 @@ import argparse
 
 from . import cli
 from . import jobs
-from indexfile import index
+from . import grapeindex as index
 from . import pipelines as _pipelines
 from .grape import Grape, Project, GrapeError
 from .cli import utils
@@ -619,7 +619,8 @@ class ListDataCommand(GrapeCommand):
         cli.puts("Project: %s" % (project.config.get("name")))
         cli.puts("%d datasets registered in project" % len(datasets))
         data = project.index.select(id=[d.id for d in datasets]).export(type='json',absolute=True)
-        self._list(data,sort=[project.index.format.get('id','id')])
+        if data:
+            self._list(data,sort=[project.index.format.get('id','id')])
         return True
 
     def _list(self, data, tags=None,sort=None):
@@ -634,11 +635,17 @@ class ListDataCommand(GrapeCommand):
             header = tags
         values = d.values()
         if sort:
-            values = [ d[k] for k in header ]
+            values = [ d.get(k,'-') for k in header ]
 
 
-        max_keys =[len(x)+1 for x in header]
-        max_values = [len(x)+1 for x in values]
+        max_keys = [len(x)+1 for x in header]
+        max_values = []
+        len_values = []
+        for v in data:
+            values = [ json.loads(v).get(k,'-') for k in header ]
+            len_values.append([len(x)+1 for x in values])
+        max_values = [ max(t) for t in zip(*len_values) ]
+
 
         line = '-' * (sum([i if i>j else j for i,j in zip(max_keys,max_values)])+len(max_keys)-2)
 
@@ -646,7 +653,7 @@ class ListDataCommand(GrapeCommand):
         cli.info(cli.green(cli.columns(*[[o,max(max_keys[i],max_values[i])] for i,o in enumerate(header)])))
         cli.info(line)
         for l in data:
-            cli.info(cli.columns(*[[o, max(max_keys[i],max_values[i])] for i,o in enumerate([json.loads(l)[k] for k in header])]))
+            cli.info(cli.columns(*[[o, max(max_keys[i],max_values[i])] for i,o in enumerate([json.loads(l).get(k,'-') for k in header])]))
         cli.info(line)
 
 
@@ -660,15 +667,20 @@ class ScanCommand(GrapeCommand):
 
     def run(self, args):
         import re
-        from .index import Dataset
 
         project = Project.find()
+        try:
+            project.load()
+        except:
+            pass
         if not project or not project.exists():
             cli.error("No grape project found")
             return False
-        cli.info("Scanning data/fastq folder ... ", newline=False)
-        fastqs = sorted(Project.search_fastq_files(os.path.join(project.path,
-                                                                "data/fastq")))
+        path = args.path
+        if not path:
+            path = project.folder('fastq')
+        cli.info("Scanning %s folder ... " % path, newline=False)
+        fastqs = sorted(Project.search_fastq_files(path))
         cli.info("%d fastq files found" % len(fastqs))
         if len(fastqs) == 0:
             return True
@@ -729,22 +741,37 @@ class ScanCommand(GrapeCommand):
             elif add_counter:
                     ds_id = "%s_%d" % (ds_id, counter)
                     counter += 1
-            print "Adding %s : " % (ds_id), files
             for file in files:
-                project.index.add(ds_id, file, file_info, create=True)
+                file_info['id'] = ds_id
+                if path != os.path.join(project.path,project.data_folder):
+                   print "Creating link to %s in %s" % (file, project.data_folder)
+                   Project._make_link(file, project.data_folder)
+                   file = os.path.join(project.data_folder,os.path.basename(file))
+                file_info['path'] = file
+                print "Adding %s : " % (ds_id), file
+                project.index.insert(**file_info)
 
         # add the singletons, everything that is not in scanned
         for file in set(fastqs).difference(set(scanned)):
             ds_id = id
             if ds_id is None:
                 ds_id = os.path.basename(file)
+            file_info['id'] = ds_id
+            if path != os.path.join(project.path,project.data_folder):
+                print "Creating link to %s in %s" % (file, project.data_folder)
+                Project._make_link(file, project.data_folder)
+                file = os.path.join(project.data_folder,os.path.basename(file))
+            file_info['path'] = file
             print "Adding %s : " % (ds_id), file
-            project.index.add(ds_id, file, file_info, create=True)
+            project.index.insert(**file_info)
 
-        project.index.save()
+        project.save()
+
 
 
     def add(self, parser):
+        parser.add_argument("path", default=None, nargs="?",
+                            help="Path to folder containg the fastq files.")
         parser.add_argument('--quality', dest='quality', metavar='<quality>', help="Quality offset assigned to new data sets")
         parser.add_argument('--sex', dest='sex', metavar='<sex>', help="Sex value assigned to new datasets")
         parser.add_argument('--id', dest='id', metavar='<id>', help="Experiment id assigned to new datasets. "

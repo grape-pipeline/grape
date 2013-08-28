@@ -176,7 +176,7 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
                 configuration['annotation'] = d.get_annotation(project.config)
             if not configuration.get('quality', None):
                 configuration['quality'] = d.quality
-            pipeline = pipeline_fun(d, configuration)
+            pipeline = pipeline_fun(project, d, configuration)
         else:
             pipeline = pipeline_fun(configuration)
         # validate the pipeline
