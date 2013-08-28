@@ -3,8 +3,8 @@ import errno
 import re
 import json
 from . import utils
-from indexfile.index import *
-
+#from indexfile.index import *
+from grapeindex import GrapeIndex
 
 class GrapeError(Exception):
     """Base grape error"""
@@ -152,7 +152,7 @@ class Project(object):
     in a given folder.
     """
 
-    def __init__(self, path):
+    def __init__(self, path, type_folders=False, dataset_folders=False):
         """Create a new project instance for a given path. The path
         must point to the projects root directory.
 
@@ -161,11 +161,17 @@ class Project(object):
         path - path to the projects root folder where the .grape folder
                is located
         """
+        if type_folders and dataset_folders:
+            raise GrapeError("Only one of type_folders and dataset_folders can be True")
         self.path = path
+        self.type_folders = type_folders
+        self.dataset_folders = dataset_folders
+        self.genome_folder = "genomes"
+        self.annotation_older =  "annotations"
+        self.data_folder = "data"
         if self.exists():
             self.config = Config(self.path)
-            self.index = Index(self.indexfile())
-
+            self.index = GrapeIndex(self.indexfile)
 
     def initialize(self, init_structure=True):
         """Initialize the current project.
@@ -179,7 +185,7 @@ class Project(object):
         # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
-        self.index = Index(self.indexfile())
+        self.index = GrapeIndex(self.indexfile())
         if init_structure:
             #create project structure
             self._initialize_structure()
@@ -203,9 +209,12 @@ class Project(object):
                         json string containing format information
         """
         if not path:
-            path = self.indexfile()
+            path = self.indexfile
         if not format:
-            format = self.formatfile()
+            if os.path.exists(self.formatfile):
+                format = self.formatfile
+            else:
+                format = os.path.join(os.environ.get('GRAPE_HOME'),'conf','format.json')
 
         self.index.set_format(format)
 
@@ -218,7 +227,7 @@ class Project(object):
                         project index is used.
         """
         if not path:
-            path = self.indexfile()
+            path = self.indexfile
         self.index.save(path)
 
     def export(self, out, type='index'):
@@ -230,24 +239,44 @@ class Project(object):
         for line in self.index.export(type=type):
             out.write('%s%s' % (line,os.linesep))
 
+    @property
     def formatfile(self):
         """Return the path to the json file describing the format for the project index
         """
         format_file = os.path.join(self.path, '.grape','format.json')
         return format_file
 
+    @property
     def indexfile(self):
         """Return the path to the index file for this project
         """
         indexfile = os.path.join(self.path,'.index')
         return indexfile
 
+    def folder(self, dataset=None, name=None):
+        """Resolve a folder based on datasets project folder and
+        if type_folders. If type folders is True, this always resolves
+        to the data folder. Otherwise, if name is specified, it resolves
+        to the named folder under this datasets data folder.
+        """
+        if self.type_folders and self.dataset_folders:
+            raise GrapeError("Only one of type_folders and dataset_folders can be True")
+        if self.type_folders and name:
+            return os.path.join(self.path, self.data_folder, name)
+        if self.dataset_folders and dataset:
+            return os.path.join(self.path, self.data_folder, dataset.id)
+
+        return os.path.join(self.path, self.data_folder)
+
+
     def _initialize_structure(self):
         """Initialize the project structure"""
-        self.__mkdir("annotations")
-        self.__mkdir("genomes")
-        self.__mkdir("data")
-        self.__mkdir("data/fastq")
+
+        self.__mkdir(self.annotation_folder)
+        self.__mkdir(self.genome_folder)
+        self.__mkdir(self.data_folder)
+        if self.type_folders:
+            self.__mkdir(os.path.join(self.data_folder,"fastq"))
 
     def __mkdir(self, name):
         """Helper class to mimik mkdir -p """
@@ -347,7 +376,10 @@ class Project(object):
     def get_datasets(self, **kwargs):
         """Return a list of datasets found in this project. Filters such as 'sex=M' can be used."""
         if not self.index.datasets:
-            self.load()
+            try:
+                self.load()
+            except:
+                pass
 
         return self.index.select(**kwargs).datasets.values()
 
