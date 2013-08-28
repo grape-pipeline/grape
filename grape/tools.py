@@ -129,6 +129,7 @@ class gem(Tool):
     gemtools rna-pipeline -i ${index} \
             -a ${annotation} \
             -f ${primary} ${secondary} \
+            ${'--single-end' if single_end else ''} \
             -t ${job.threads} \
             -q ${quality} \
             -o ${output_dir} \

@@ -36,7 +36,7 @@ def pre_pipeline(config=None):
     gem_t_index.max_length = max_length
     return pipeline
 
-def default_pipeline(dataset, config=None):
+def default_pipeline(project, dataset, config=None):
     """Create the grape default pipeline for the given dataset. You can
     override defaults from the configuration dictionary.
 
@@ -63,15 +63,17 @@ def default_pipeline(dataset, config=None):
     gem.index = index
     gem.annotation = annotation
     gem.quality = quality
-    gem.output_dir = dataset.folder("mappings")
+    gem.output_dir = project.folder(dataset, "mappings")
     gem.name = dataset.id
     gem.primary = dataset.primary
-    if not dataset.single_end:
+    if dataset.single_end:
+        gem.single_end = True
+    else:
         gem.secondary = dataset.secondary
 
     flux = pipeline.add(tools.flux())
     flux.annotation = annotation
     flux.input = gem.bam
     flux.name = dataset.id
-    flux.output_dir = dataset.folder("quantifications")
+    flux.output_dir = project.folder(dataset, "quantifications")
     return pipeline
