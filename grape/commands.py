@@ -618,30 +618,35 @@ class ListDataCommand(GrapeCommand):
             datasets = []
         cli.puts("Project: %s" % (project.config.get("name")))
         cli.puts("%d datasets registered in project" % len(datasets))
-        data = project.index.select(id=[d.id for d in datasets]).export(type='json')
-        self._list(data)
+        data = project.index.select(id=[d.id for d in datasets]).export(type='json',absolute=True)
+        self._list(data,sort=[project.index.format.get('id','id')])
         return True
 
-    def _list(self, data, tags=None):
+    def _list(self, data, tags=None,sort=None):
         from clint.textui import indent
         import json
         # print
         d = json.loads(data[0])
         header = d.keys()
+        if sort:
+            header = sort + [ k for k in d.keys() if k not in sort ]
         if tags:
             header = tags
         values = d.values()
+        if sort:
+            values = [ d[k] for k in header ]
+
 
         max_keys =[len(x)+1 for x in header]
         max_values = [len(x)+1 for x in values]
 
-        line = '-' * (sum([i if i>j else j for i,j in zip(max_keys,max_values)])+len(max_keys))
+        line = '-' * (sum([i if i>j else j for i,j in zip(max_keys,max_values)])+len(max_keys)-2)
 
         cli.info(line)
         cli.info(cli.green(cli.columns(*[[o,max(max_keys[i],max_values[i])] for i,o in enumerate(header)])))
         cli.info(line)
         for l in data:
-            cli.info(cli.columns(*[[o, max(max_keys[i],max_values[i])] for i,o in enumerate(json.loads(l).values())]))
+            cli.info(cli.columns(*[[o, max(max_keys[i],max_values[i])] for i,o in enumerate([json.loads(l)[k] for k in header])]))
         cli.info(line)
 
 
@@ -766,6 +771,9 @@ def main():
     line tool"""
 
     from . import __version__
+    import warnings
+
+    warnings.simplefilter("ignore")
     parser = argparse.ArgumentParser(prog="grape")
     parser.add_argument('-v', '--version', action='version',
                         version='grape %s' % (__version__))

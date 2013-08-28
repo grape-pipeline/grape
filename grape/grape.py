@@ -164,7 +164,7 @@ class Project(object):
         self.path = path
         if self.exists():
             self.config = Config(self.path)
-            self.index = Index(os.path.join(self.path,'.index'))
+            self.index = Index(self.indexfile())
 
 
     def initialize(self, init_structure=True):
@@ -179,7 +179,7 @@ class Project(object):
         # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
-        self.index = Index(os.path.join(self.path,'.index'))
+        self.index = Index(self.indexfile())
         if init_structure:
             #create project structure
             self._initialize_structure()
@@ -233,7 +233,7 @@ class Project(object):
     def formatfile(self):
         """Return the path to the json file describing the format for the project index
         """
-        format_file = os.path.join(self.path, '.grape/format.json')
+        format_file = os.path.join(self.path, '.grape','format.json')
         return format_file
 
     def indexfile(self):
