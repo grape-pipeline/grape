@@ -21,6 +21,7 @@ from . import cli
 from . import jobs
 from . import grapeindex as index
 from . import pipelines as _pipelines
+from . import utils as grapeutils
 from .grape import Grape, Project, GrapeError
 from .cli import utils
 from .jobs.store import PipelineStore
@@ -618,25 +619,23 @@ class ListDataCommand(GrapeCommand):
             datasets = []
         cli.puts("Project: %s" % (project.config.get("name")))
         cli.puts("%d datasets registered in project" % len(datasets))
-        data = project.index.select(id=[d.id for d in datasets]).export(type='json',absolute=True)
+        index = project.index.select(id=[d.id for d in datasets])
+        data = index.export(type='json',absolute=True)
         if data:
-            self._list(data,sort=[project.index.format.get('id','id')])
+            self._list(data,tags=index._alltags,sort=[project.index.format.get('id','id')])
         return True
 
     def _list(self, data, tags=None,sort=None):
         from clint.textui import indent
         import json
-        # print
-        d = json.loads(data[0])
-        header = d.keys()
-        if sort:
-            header = sort + [ k for k in d.keys() if k not in sort ]
+
         if tags:
             header = tags
-        values = d.values()
+        else:
+            d = json.loads(data[0])
+            header = d.keys()
         if sort:
-            values = [ d.get(k,'-') for k in header ]
-
+            header = sort + [ k for k in header if k not in sort ]
 
         max_keys = [len(x)+1 for x in header]
         max_values = []
@@ -697,6 +696,7 @@ class ScanCommand(GrapeCommand):
 
 
         file_info = {}
+        file_stats = args.file_stats
         if args.quality is not None:
             file_info["quality"] = args.quality
         if args.sex is not None:
@@ -748,7 +748,12 @@ class ScanCommand(GrapeCommand):
                    Project._make_link(file, project.data_folder)
                    file = os.path.join(project.data_folder,os.path.basename(file))
                 file_info['path'] = file
-                print "Adding %s : " % (ds_id), file
+                if file_stats:
+                    print "Computing file statistcs for %s" % (file)
+                    md5,size = grapeutils.file_stats(file, True)
+                    file_info['md5'] = md5
+                    file_info['size'] = size
+                print "Adding %r: " % (ds_id), file
                 project.index.insert(**file_info)
 
         # add the singletons, everything that is not in scanned
@@ -762,7 +767,12 @@ class ScanCommand(GrapeCommand):
                 Project._make_link(file, project.data_folder)
                 file = os.path.join(project.data_folder,os.path.basename(file))
             file_info['path'] = file
-            print "Adding %s : " % (ds_id), file
+            if file_stats:
+                print "Computing file statistcs for %s" % (file)
+                md5,size = grapeutils.file_stats(file, True)
+                file_info['md5'] = md5
+                file_info['size'] = size
+            print "Adding %r: " % (ds_id), file
             project.index.insert(**file_info)
 
         project.save()
@@ -772,6 +782,8 @@ class ScanCommand(GrapeCommand):
     def add(self, parser):
         parser.add_argument("path", default=None, nargs="?",
                             help="Path to folder containg the fastq files.")
+        parser.add_argument("--stats", default=False, dest='file_stats', action='store_true',
+                            help="Compute statistics for fastq files.")
         parser.add_argument('--quality', dest='quality', metavar='<quality>', help="Quality offset assigned to new data sets")
         parser.add_argument('--sex', dest='sex', metavar='<sex>', help="Sex value assigned to new datasets")
         parser.add_argument('--id', dest='id', metavar='<id>', help="Experiment id assigned to new datasets. "
