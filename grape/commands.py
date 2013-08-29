@@ -516,8 +516,13 @@ class ImportCommand(GrapeCommand):
             cli.error("No grape project found")
             return False
 
-        project.load(args.input)
+
+        project.load(path=args.input,format=args.format)
         project.save()
+
+        if project.index.format and not os.path.exists(project.formatfile):
+            import json
+            json.dump(project.index.format, open(project.formatfile,'w+'))
 
     def add(self, parser):
         parser.add_argument('input', nargs='?', type=argparse.FileType('r'), const=sys.stdin, default=sys.stdin,
@@ -620,7 +625,7 @@ class ListDataCommand(GrapeCommand):
         cli.puts("Project: %s" % (project.config.get("name")))
         cli.puts("%d datasets registered in project" % len(datasets))
         index = project.index.select(id=[d.id for d in datasets])
-        data = index.export(type='json',absolute=True)
+        data = index.export(type='json',absolute=True, map=None)
         if data:
             self._list(data,tags=index._alltags,sort=[project.index.format.get('id','id')])
         return True

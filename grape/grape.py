@@ -505,7 +505,7 @@ class Config(object):
         """
         self.data = utils.uni_convert(json.load(open(self._config_file,'r')))
 
-    def _write_config(self, tabs=4):
+    def _write_config(self, tabs=None):
         """Write the configuration to the config file
         """
         with open(self._config_file,'w+') as config:
