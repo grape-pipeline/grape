@@ -1,5 +1,6 @@
 import indexfile
 from indexfile.index import *
+from . import utils
 
 class GrapeDataset(Dataset):
 
@@ -33,25 +34,33 @@ class _OnSuccessListener(object):
     def __init__(self, project, config):
         self.project = project
         self.config = config
-    def __call__(self, tool, args):
+    def __call__(self, tool, args, file_stats=False):
         # grape.grape has an import grape.index.* so we
         # import implicitly here to avoid circular dependencies
         from .grape import Project
 
         project = Project(self.project)
+        project.load()
         index = project.index
         try:
             index.lock()
             for k in tool.__dict__['outputs']:
+                info = {}
                 v = self.config[k]
                 if os.path.exists(v):
-                    name, ext = os.path.splitext(v)
+                    info['path'] = v
+                    name, ext = os.path.splitext(os.path.basename(v))
                     if ext == '.gz':
                         name, ext = os.path.splitext(name)
-                    info = {'type': ext.lstrip('.'), 'md5': utils.md5sum(v)}
+                    info['id'] = name.replace('.bam','')
+                    info['type'] = ext.lstrip('.')
+                    if file_stats:
+                        md5,size = utils.file_stats(v)
+                        info['size'] = size
+                        info['md5'] =  md5
                     if self.config.has_key('view') and self.config['view'].get(k, None):
                         info['view'] = self.config['view'][k]
-                    index.add(self.config['name'], v, info)
+                    index.insert(**info)
             index.save()
         finally:
             index.release()
