@@ -167,7 +167,7 @@ class Project(object):
         self.type_folders = type_folders
         self.dataset_folders = dataset_folders
         self.genome_folder = "genomes"
-        self.annotation_older =  "annotations"
+        self.annotation_folder =  "annotations"
         self.data_folder = "data"
         if self.exists():
             self.config = Config(self.path)
@@ -185,7 +185,7 @@ class Project(object):
         # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
-        self.index = GrapeIndex(self.indexfile())
+        self.index = GrapeIndex(self.indexfile)
         if init_structure:
             #create project structure
             self._initialize_structure()
