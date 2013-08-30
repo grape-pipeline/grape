@@ -31,10 +31,11 @@ class GrapeIndex(Index):
 
 
 class _OnSuccessListener(object):
-    def __init__(self, project, config):
+    def __init__(self, project, config, compute_stats=False):
         self.project = project
         self.config = config
-    def __call__(self, tool, args, file_stats=False):
+        self.compute_stats = compute_stats
+    def __call__(self, tool, args):
         # grape.grape has an import grape.index.* so we
         # import implicitly here to avoid circular dependencies
         from .grape import Project
@@ -54,18 +55,18 @@ class _OnSuccessListener(object):
                         name, ext = os.path.splitext(name)
                     info['id'] = name.replace('.bam','')
                     info['type'] = ext.lstrip('.')
-                    if file_stats:
+                    if self.compute_stats:
                         md5,size = utils.file_stats(v)
                         info['size'] = size
                         info['md5'] =  md5
                     if self.config.has_key('view') and self.config['view'].get(k, None):
                         info['view'] = self.config['view'][k]
-                    index.insert(**info)
+                    index.insert(update=True,**info)
             index.save()
         finally:
             index.release()
 
-def prepare_tool(tool, project, config):
+def prepare_tool(tool, project, config, compute_stats=False):
     """Add listeners to the tool to ensure that it updates the index
     during execution.
 
@@ -76,4 +77,4 @@ def prepare_tool(tool, project, config):
     :param name: the run name used to identify the job store
     :type name: string
     """
-    tool.on_success.append(_OnSuccessListener(project, config))
+    tool.on_success.append(_OnSuccessListener(project, config, compute_stats))

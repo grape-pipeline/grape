@@ -210,7 +210,7 @@ class RunCommand(GrapeCommand):
                                                        state, step)
                 cli.info(s, newline=skip)
                 if not skip:
-                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
+                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]), args.compute_stats)
                     start_time = time.time()
                     try:
                         step.run()
@@ -222,12 +222,15 @@ class RunCommand(GrapeCommand):
                         return False
                     end = datetime.timedelta(seconds=int(time.time() - start_time))
                     cli.info(" : " + cli.green("DONE") + " [%s]" % end)
+
         return True
 
     def add(self, parser):
         parser.add_argument("datasets", default=["all"], nargs="*")
         parser.add_argument("--force", default=False, action="store_true",
                             help="Force computation of all jobs")
+        parser.add_argument("--compute-stats", default=False, action="store_true",
+                            help="Compute md5 sums and size for jobs output files")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False)
 
@@ -627,10 +630,10 @@ class ListDataCommand(GrapeCommand):
         index = project.index.select(id=[d.id for d in datasets])
         data = index.export(type='json',absolute=True, map=None)
         if data:
-            self._list(data,tags=index._alltags,sort=[project.index.format.get('id','id')])
+            self._list(data,tags=index._alltags,sort=[project.index.format.get('id','id')], human=args.human)
         return True
 
-    def _list(self, data, tags=None,sort=None):
+    def _list(self, data, tags=None,sort=None, human=False):
         from clint.textui import indent
         import json
 
@@ -645,8 +648,19 @@ class ListDataCommand(GrapeCommand):
         max_keys = [len(x)+1 for x in header]
         max_values = []
         len_values = []
+        out=[]
         for v in data:
             values = [ json.loads(v).get(k,'-') for k in header ]
+            if human:
+                def isnum(x):
+                    try:
+                        float(x)
+                        return True
+                    except:
+                        return False
+
+                values = [grapeutils.human_fmt(float(v),header[1]=='size') if isnum(v) else v for i,v in enumerate(values)]
+            out.append(values)
             len_values.append([len(x)+1 for x in values])
         max_values = [ max(t) for t in zip(*len_values) ]
 
@@ -656,12 +670,14 @@ class ListDataCommand(GrapeCommand):
         cli.info(line)
         cli.info(cli.green(cli.columns(*[[o,max(max_keys[i],max_values[i])] for i,o in enumerate(header)])))
         cli.info(line)
-        for l in data:
-            cli.info(cli.columns(*[[o, max(max_keys[i],max_values[i])] for i,o in enumerate([json.loads(l).get(k,'-') for k in header])]))
+        for l in out:
+            cli.info(cli.columns(*[[o, max(max_keys[i],max_values[i])] for i,o in enumerate(l)]))
         cli.info(line)
 
 
     def add(self, parser):
+        parser.add_argument('-m','--human-readable', dest='human', action='store_true', default=False,
+                        help='Output file size in a human readable format')
         pass
 
 
@@ -701,7 +717,7 @@ class ScanCommand(GrapeCommand):
 
 
         file_info = {}
-        file_stats = args.file_stats
+        compute_stats = args.compute_stats
         if args.quality is not None:
             file_info["quality"] = args.quality
         if args.sex is not None:
@@ -753,7 +769,7 @@ class ScanCommand(GrapeCommand):
                    Project._make_link(file, project.data_folder)
                    file = os.path.join(project.data_folder,os.path.basename(file))
                 file_info['path'] = file
-                if file_stats:
+                if compute_stats:
                     print "Computing file statistcs for %s" % (file)
                     md5,size = grapeutils.file_stats(file, True)
                     file_info['md5'] = md5
@@ -772,7 +788,7 @@ class ScanCommand(GrapeCommand):
                 Project._make_link(file, project.data_folder)
                 file = os.path.join(project.data_folder,os.path.basename(file))
             file_info['path'] = file
-            if file_stats:
+            if compute_stats:
                 print "Computing file statistcs for %s" % (file)
                 md5,size = grapeutils.file_stats(file, True)
                 file_info['md5'] = md5
@@ -787,7 +803,7 @@ class ScanCommand(GrapeCommand):
     def add(self, parser):
         parser.add_argument("path", default=None, nargs="?",
                             help="Path to folder containg the fastq files.")
-        parser.add_argument("--stats", default=False, dest='file_stats', action='store_true',
+        parser.add_argument("--stats", default=False, dest='compute_stats', action='store_true',
                             help="Compute statistics for fastq files.")
         parser.add_argument('--quality', dest='quality', metavar='<quality>', help="Quality offset assigned to new data sets")
         parser.add_argument('--sex', dest='sex', metavar='<sex>', help="Sex value assigned to new datasets")
