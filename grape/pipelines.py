@@ -48,12 +48,12 @@ def default_pipeline(project, dataset, config=None):
     if config is None:
         config = {}
 
-    index = config.get("index", None)
-    annotation = config.get("annotation", None)
-    quality = config.get("quality", None)
+    index = config.get("index")
+    annotation = config.get("annotation")
+    quality = config.get("quality")
 
     if index is None:
-        genome = config.get("genome", None)
+        genome = config.get("genome")
         if genome is None:
             genome = "genome"
         index = '.'.join([genome, 'gem'])
@@ -66,9 +66,8 @@ def default_pipeline(project, dataset, config=None):
     gem.output_dir = project.folder(dataset, "mappings")
     gem.name = dataset.id
     gem.primary = dataset.primary
-    if dataset.single_end:
-        gem.single_end = True
-    else:
+    gem.single_end = dataset.single_end
+    if not gem.single_end:
         gem.secondary = dataset.secondary
 
     flux = pipeline.add(tools.flux())
