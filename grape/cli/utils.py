@@ -154,9 +154,10 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
     pipelines = []
     grp = Grape()
 
-    genome = configuration.get('genome', None)
-    annotation = configuration.get('annotation', None)
-    quality = configuration.get('quality', None)
+    genome = configuration.get('genome')
+    annotation = configuration.get('annotation')
+    quality = configuration.get('quality')
+    index =  configuration.get('index')
 
     if not genome:
         genome = project.config.get('genome')
@@ -167,14 +168,17 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
     if not quality:
         quality = project.config.get('quality')
         configuration['quality'] = quality
+    if not index:
+        index = project.config.get('index')
+        configuration['index'] = index
 
     for d in datasets:
         if d:
-            if not configuration.get('genome', None):
-                configuration['genome'] = d.get_genome(project.config)
-            if not configuration.get('annotation', None):
-                configuration['annotation'] = d.get_annotation(project.config)
-            if not configuration.get('quality', None):
+            if not configuration.get('genome') and hasattr(d,'genome'):
+               configuration['genome'] = d.genome
+            if not configuration.get('annotation') and hasattr(d,'annotation'):
+               configuration['annotation'] = d.annotation
+            if not configuration.get('quality') and hasattr(d,'quality'):
                 configuration['quality'] = d.quality
             pipeline = pipeline_fun(project, d, configuration)
         else:
