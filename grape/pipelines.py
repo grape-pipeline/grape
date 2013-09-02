@@ -63,7 +63,7 @@ def default_pipeline(project, dataset, config=None):
     gem.index = index
     gem.annotation = annotation
     gem.quality = quality
-    gem.output_dir = project.folder(dataset, "mappings")
+    gem.output_dir = project.folder("mappings", dataset.id)
     gem.name = dataset.id
     gem.primary = dataset.primary
     gem.single_end = dataset.single_end
@@ -74,5 +74,5 @@ def default_pipeline(project, dataset, config=None):
     flux.annotation = annotation
     flux.input = gem.bam
     flux.name = dataset.id
-    flux.output_dir = project.folder(dataset, "quantifications")
+    flux.output_dir = project.folder("quantifications", dataset.id)
     return pipeline
