@@ -152,7 +152,7 @@ class Project(object):
     in a given folder.
     """
 
-    def __init__(self, path, type_folders=False, dataset_folders=False):
+    def __init__(self, path):
         """Create a new project instance for a given path. The path
         must point to the projects root directory.
 
@@ -161,19 +161,15 @@ class Project(object):
         path - path to the projects root folder where the .grape folder
                is located
         """
-        if type_folders and dataset_folders:
-            raise GrapeError("Only one of type_folders and dataset_folders can be True")
         self.path = path
-        self.type_folders = type_folders
-        self.dataset_folders = dataset_folders
-        self.genome_folder = "genomes"
+        self.genome_folder =  "genomes"
         self.annotation_folder =  "annotations"
         self.data_folder = "data"
         if self.exists():
             self.config = Config(self.path)
             self.index = GrapeIndex(self.indexfile)
 
-    def initialize(self, init_structure=True):
+    def initialize(self, init_structure=True, folder_structure=''):
         """Initialize the current project.
         The initialization happens only if no .grape folder is found in the
         project path.
@@ -187,6 +183,9 @@ class Project(object):
         self.config = Config(self.path)
         self.index = GrapeIndex(self.indexfile)
         if init_structure:
+            if folder_structure:
+                self.config.set('_folders', folder_structure)
+                self.config._write_config()
             #create project structure
             self._initialize_structure()
 
@@ -253,18 +252,29 @@ class Project(object):
         indexfile = os.path.join(self.path,'.index')
         return indexfile
 
-    def folder(self, dataset=None, name=None):
+    @property
+    def type_folders(self):
+        if not self.config.get('_folders'):
+            return False
+        return self.config.get('_folders') == 'type'
+
+    @property
+    def dataset_folders(self):
+        if not self.config.get('_folders'):
+            return False
+        return self.config.get('_folders') == 'dataset'
+
+
+    def folder(self, name, dataset=None):
         """Resolve a folder based on datasets project folder and
         if type_folders. If type folders is True, this always resolves
         to the data folder. Otherwise, if name is specified, it resolves
         to the named folder under this datasets data folder.
         """
-        if self.type_folders and self.dataset_folders:
-            raise GrapeError("Only one of type_folders and dataset_folders can be True")
-        if self.type_folders and name:
+        if self.type_folders:
             return os.path.join(self.path, self.data_folder, name)
         if self.dataset_folders and dataset:
-            return os.path.join(self.path, self.data_folder, dataset.id)
+            return os.path.join(self.path, self.data_folder, dataset)
 
         return os.path.join(self.path, self.data_folder)
 
@@ -294,6 +304,9 @@ class Project(object):
 
         if not os.path.exists(src_path):
             raise GrapeError("The file %s does not exists" % (src_path))
+
+        if not os.path.exists(dest):
+            os.makedirs(dest)
 
         file_name = os.path.basename(src_path)
         dir_name = os.path.basename(os.path.dirname(src_path))
@@ -494,9 +507,10 @@ class Config(object):
         """Initialize a default configuration file for the current project
         """
         self.data['name'] = 'Default project'
-        self.data['quality'] = '33'
         self.data['genome'] = ''
+        self.data['index'] = ''
         self.data['annotation'] = ''
+        self.data['quality'] = ''
 
         self._write_config()
 
@@ -532,7 +546,7 @@ class Config(object):
 
         return d
 
-    def get_values(self, key=None, exclude=[], sort_order=[]):
+    def get_values(self, key=None, exclude=[], sort_order=[], show_hidden=False, show_empty=False):
         """Return values from the data dictionary
 
         Keyword arguments:
@@ -544,6 +558,10 @@ class Config(object):
         if key is not None:
              data = self.get(key)
         values = self._dot_keys(key, data, exclude)
+        if not show_hidden:
+            values = [(k,v) for k,v in values if not k.startswith('_')]
+        if not show_empty:
+            values = [(k,v) for k,v in values if v]
         if sort_order:
             values = self._get_sorted_values(values, sort_order)
 
