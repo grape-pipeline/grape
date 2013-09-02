@@ -65,8 +65,14 @@ class InitCommand(GrapeCommand):
             cli.warn("Project already exists")
             return True
 
+        folders = ''
+        if args.type_folders:
+            folders = 'type'
+        if args.dataset_folders:
+            folders = 'dataset'
+
         cli.info("Initializing project ... ", newline=False)
-        project.initialize(init_structure=not args.empty)
+        project.initialize(init_structure=not args.empty, folder_structure=folders)
         cli.info(cli.green("Done"))
 
         if args.quality is not None or args.name is not None:
@@ -85,6 +91,10 @@ class InitCommand(GrapeCommand):
                             help="Path to the project folder. Defaults to current directory")
         parser.add_argument("--empty", dest="empty", default=False, action="store_true",
                             help="Do not create default folder structure")
+        parser.add_argument("--by-type", dest="type_folders", default=False, action="store_true",
+                            help="Organize project data folder by type")
+        parser.add_argument("--by-dataset", dest="dataset_folders", default=False, action="store_true",
+                            help="Organize project data folder by dataset")
         parser.add_argument("--quality", dest="quality", help="Set the default quality "
                                                               "offset for the project")
         parser.add_argument("--name", dest="name", help="Set the projects name")
@@ -475,34 +485,39 @@ class ConfigCommand(GrapeCommand):
             project.config.remove(key[0], commit=True)
             return True
 
-        self._show_config(project.config)
+        self._show_config(project.config, args.hidden, args.empty)
         return True
 
-    def _show_config(self, config):
+    def _show_config(self, config, show_hidden, show_empty):
         from clint.textui import indent
         # print configuration
-        values = config.get_values(exclude=['name'], sort_order=[])
+        values = config.get_values(exclude=['name'], show_hidden=show_hidden, show_empty=show_empty)
 
-        max_keys = max([len(x[0]) for x in values]) + 1
-        max_values = max([len(x[1]) for x in values]) + 1
+        if values:
+            max_keys = max([len(x[0]) for x in values]) + 1
+            max_values = max([len(x[1]) for x in values]) + 1
 
-        header = cli.green('Project %r' % config.data['name'])
-        line = '-' * max(len(header), max_keys+max_values)
+            header = cli.green('Project %r' % config.data['name'])
+            line = '-' * max(len(header), max_keys+max_values)
 
-        cli.info('')
-        cli.info(header)
-        cli.info(line)
-        for k,v in values:
-            k = cli.yellow(k)
-            cli.info(cli.columns([k,max_keys],[v,max_values]))
-        cli.info(line)
+            cli.info('')
+            cli.info(header)
+            cli.info(line)
+            for k,v in values:
+                k = cli.yellow(k)
+                cli.info(cli.columns([k,max_keys],[v,max_values]))
+            cli.info(line)
 
 
 
     def add(self, parser):
+        parser.add_argument('--hidden', action='store_true', default=False,
+                        help='Include hidden information')
+        parser.add_argument('--empty', action='store_true', default=False,
+                        help='Include information with empty values')
         group = parser.add_mutually_exclusive_group()
         group.add_argument('--show', action='store_true', default=False,
-                        help='List all the configuration information for a project')
+                        help='List the configuration information for a project')
         group.add_argument('--set', nargs=2, required=False, metavar=('key', 'value'),
                 help='Add a key/value pair information to the project configuration file')
         group.add_argument('--remove', nargs=1, required=False, metavar=('key'),
@@ -667,12 +682,15 @@ class ListDataCommand(GrapeCommand):
 
         line = '-' * (sum([i if i>j else j for i,j in zip(max_keys,max_values)])+len(max_keys)-2)
 
-        cli.info(line)
+        #cli.info(line)
+        cli.info(cli.columns(*[[(max(max_keys[i],max_values[i])-1)*"=",max(max_keys[i],max_values[i])] for i,o in enumerate(header)]))
         cli.info(cli.green(cli.columns(*[[o,max(max_keys[i],max_values[i])] for i,o in enumerate(header)])))
-        cli.info(line)
+        cli.info(cli.columns(*[[(max(max_keys[i],max_values[i])-1)*"=",max(max_keys[i],max_values[i])] for i,o in enumerate(header)]))
+        #cli.info(line)
         for l in out:
             cli.info(cli.columns(*[[o, max(max_keys[i],max_values[i])] for i,o in enumerate(l)]))
-        cli.info(line)
+        cli.info(cli.columns(*[[(max(max_keys[i],max_values[i])-1)*"=",max(max_keys[i],max_values[i])] for i,o in enumerate(header)]))
+        #cli.info(line)
 
 
     def add(self, parser):
@@ -765,9 +783,10 @@ class ScanCommand(GrapeCommand):
             for file in files:
                 file_info['id'] = ds_id
                 if path != os.path.join(project.path,project.data_folder):
-                   print "Creating link to %s in %s" % (file, project.data_folder)
-                   Project._make_link(file, project.data_folder)
-                   file = os.path.join(project.data_folder,os.path.basename(file))
+                    dest_folder = project.folder('fastq', ds_id)
+                    print "Creating link to %s in %s" % (file, dest_folder)
+                    Project._make_link(file, dest_folder)
+                    file = os.path.join(dest_folder,os.path.basename(file))
                 file_info['path'] = file
                 if compute_stats:
                     print "Computing file statistcs for %s" % (file)
@@ -784,9 +803,10 @@ class ScanCommand(GrapeCommand):
                 ds_id = os.path.basename(file)
             file_info['id'] = ds_id
             if path != os.path.join(project.path,project.data_folder):
-                print "Creating link to %s in %s" % (file, project.data_folder)
-                Project._make_link(file, project.data_folder)
-                file = os.path.join(project.data_folder,os.path.basename(file))
+                dest_folder = project.folder('fastq', ds_id)
+                print "Creating link to %s in %s" % (file, dest_folder)
+                Project._make_link(file, dest_folder)
+                file = os.path.join(dest_folder,os.path.basename(file))
             file_info['path'] = file
             if compute_stats:
                 print "Computing file statistcs for %s" % (file)
