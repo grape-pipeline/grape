@@ -412,7 +412,8 @@ class Project(object):
             is_fastq = re.match(".*\.(fastq|fq)(\.gz)*?$", f)
             if is_file and is_fastq:
                 datasets.append(absname)
-            elif not os.path.isfile(absname) and f == "fastq":
+            #elif not os.path.isfile(absname) and f == "fastq":
+            elif not os.path.isfile(absname):
                 # scan folder
                 sub = Project.search_fastq_files(absname,
                                                    level=level + 1)
@@ -480,6 +481,9 @@ class Project(object):
         if match:
             return match.group('name'), [path]
         return None
+
+    def __str__(self):
+        return "Project: %r" % (self.config.get("name"))
 
 
 class Config(object):

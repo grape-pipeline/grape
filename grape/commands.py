@@ -485,28 +485,29 @@ class ConfigCommand(GrapeCommand):
             project.config.remove(key[0], commit=True)
             return True
 
-        self._show_config(project.config, args.hidden, args.empty)
+        self._show_config(project, args.hidden, args.empty)
         return True
 
-    def _show_config(self, config, show_hidden, show_empty):
+    def _show_config(self, project, show_hidden, show_empty):
         from clint.textui import indent
         # print configuration
-        values = config.get_values(exclude=['name'], show_hidden=show_hidden, show_empty=show_empty)
+        values = project.config.get_values(exclude=['name'], show_hidden=show_hidden, show_empty=show_empty)
 
         if values:
             max_keys = max([len(x[0]) for x in values]) + 1
             max_values = max([len(x[1]) for x in values]) + 1
 
-            header = cli.green('Project %r' % config.data['name'])
+            header = str(project)
             line = '-' * max(len(header), max_keys+max_values)
 
-            cli.info('')
+            #cli.info(line)
             cli.info(header)
-            cli.info(line)
+            cli.info(cli.columns(['='*(max_keys-1),max_keys],['='*(max_values-1),max_values]))
             for k,v in values:
-                k = cli.yellow(k)
+                k = cli.green(k)
                 cli.info(cli.columns([k,max_keys],[v,max_values]))
-            cli.info(line)
+            cli.info(cli.columns(['='*(max_keys-1),max_keys],['='*(max_values-1),max_values]))
+            #cli.info(line)
 
 
 
@@ -640,7 +641,7 @@ class ListDataCommand(GrapeCommand):
         (project, datasets) = utils.get_project_and_datasets(args)
         if datasets is None:
             datasets = []
-        cli.puts("Project: %s" % (project.config.get("name")))
+        cli.puts(str(project))
         cli.puts("%d datasets registered in project" % len(datasets))
         index = project.index.select(id=[d.id for d in datasets])
         data = index.export(type='json',absolute=True, map=None)
