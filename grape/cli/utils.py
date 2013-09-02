@@ -43,17 +43,18 @@ def get_project_and_datasets(args):
     if 'input' in args and args.input:
         ds = {}
         for dataset in args.input:
-            if Project.find(dataset):
-                name, files = Project.find(dataset)
+            if Project.find_dataset(dataset):
+                name, files = Project.find_dataset(dataset)
                 ds[name] = files
         for name, files in ds.items():
             metadata['id'] = name
-            if len(files) > 1 and not 'readType' in m:
+            if len(files) > 1 and not 'readType' in metadata:
                 metadata['readType'] = '2x'
             for f in files:
                 metadata['path'] = f
                 project.index.insert(**metadata)
             project.save()
+            project.load()
         datasets = project.get_datasets(id=ds.keys())
 
     if "datasets" in args and not datasets:
@@ -170,6 +171,8 @@ def create_pipelines(pipeline_fun, project, datasets, configuration):
         configuration['quality'] = quality
     if not index:
         index = project.config.get('index')
+        if not index and genome:
+            index = "%s.gem" % genome
         configuration['index'] = index
 
     for d in datasets:

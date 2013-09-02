@@ -393,7 +393,6 @@ class Project(object):
                 self.load()
             except:
                 pass
-
         return self.index.select(**kwargs).datasets.values()
 
     @staticmethod
