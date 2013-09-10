@@ -40,3 +40,12 @@ def test_project_initialization_without_structure(tmpdir):
     assert tmpdir.ensure(".grape", dir=True)
 
 
+def test_project_find_dataset():
+    print Dataset.find_secondary("test_0.fastq")
+    assert Dataset.find_secondary("test_1.fastq.gz") == ("test", "test_2.fastq.gz")
+    assert Dataset.find_secondary("test_0.fastq.gz") == ("test","test_1.fastq.gz")
+    assert Dataset.find_secondary("test_0.fastq") == ("test", "test_1.fastq")
+    assert Dataset.find_secondary("test_0.fq") == ("test", "test_1.fq")
+    assert Dataset.find_secondary("test_0.fq.gz") == ("test", "test_1.fq.gz")
+    assert Dataset.find_secondary("test-0.fq.gz") == ("test", "test-1.fq.gz")
+    assert Dataset.find_secondary("test.0.fq.gz") == ("test", "test.1.fq.gz")
