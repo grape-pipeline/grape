@@ -1,9 +1,9 @@
-============
+===========
+Admin Guide
+===========
+
 Installation
 ============
-
-Basic installation
-==================
 
 We want to be able to create a simple way to install the grape environment. The basics are: 
 
@@ -12,8 +12,8 @@ We want to be able to create a simple way to install the grape environment. The 
 - The setup.py should install to global, user or virtualenv 
 - Grape will be deployed to pypi to allow easy installation
 
-Usage
-=====
+Install from Pypi
+-----------------
 
 When grape is deployed to pypi, this should work:
 
@@ -26,6 +26,9 @@ or
 .. code-block:: bash
     
     $ easy_install grape
+
+Install from Github
+-------------------
 
 Until we have something on pypi, the install strategy will be clone and install like:
 
