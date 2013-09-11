@@ -1,3 +1,5 @@
+.. _adminguide:
+
 ===========
 Admin Guide
 ===========
@@ -5,17 +7,7 @@ Admin Guide
 Installation
 ============
 
-We want to be able to create a simple way to install the grape environment. The basics are: 
-
-- Install via setup.py to support python/pip/easy_install
-- The setup.py script will take care of the base dependencies, but no tools
-- The setup.py should install to global, user or virtualenv 
-- Grape will be deployed to pypi to allow easy installation
-
-Install from Pypi
------------------
-
-When grape is deployed to pypi, this should work:
+The Grape environment has been deployed to Pypi to allow easy installation. To install Grape with this method do the following: 
 
 .. code-block:: bash
 
@@ -27,10 +19,7 @@ or
     
     $ easy_install grape
 
-Install from Github
--------------------
-
-Until we have something on pypi, the install strategy will be clone and install like:
+It is also possible to install Grape from the program git repository on GitHub. This should be done for development purposes or for having access to the latest development version of the program.
 
 .. code-block:: bash
     
@@ -41,7 +30,7 @@ Until we have something on pypi, the install strategy will be clone and install 
 Buildout and initialisation
 ===========================
 
-After the basic setup is done, there should be a grape-buildout command available to the user. The command takes a path argument and and triggers the buildout process on that path. This path is know as **grape_home** and should be made availabe to grape by
+After the basic setup is done, there will be a grape-buildout command available to the user. The command takes a path argument and triggers the buildout process on that path. This path is know as **grape_home** and should be made availabe to Grape by
 
 - grape user config in $HOME/.grape
 - GRAPE_HOME environment variable
@@ -49,13 +38,16 @@ After the basic setup is done, there should be a grape-buildout command availabl
 The basic structure should be created::
 
     <grape_home>
-      grape.conf      -- global configuration
-      modules         -- base dire for modules
+      conf            -- configuration folder
+        cluster.json  -- cluster configuration
+        format.json   -- default index format configuration
+        jobs.json     -- deafult jobs configuration
+      modules         -- base directory for modules
         <name>        -- the module name
           <version>   -- the module version 
             activate  -- activate script to load the module into the current environment
 
-The **grape_home** contains a global grape configuration and a set of modules. Each module must provide a name and a versions and can be activated by sourcing the activate script in the module folder. This will but the modules binaries in front of the path and prepend to any other environment variables as needed (i.e. PYTHONPATH).
+The **grape_home** contains a global grape configuration directory and a set of modules. Each module must provide a name and a versions and can be activated by sourcing the activate script in the module folder. This will put the modules binaries in front of the path and prepend to any other environment variables as needed (i.e. PYTHONPATH).
 
 Adding a new module to the buildout
 ===================================
