@@ -34,9 +34,12 @@ class Grape(object):
 
         job = tool
         name = None
-        if isinstance(tool, jip.pipelines.PipelineTool):
+
+        try:
             job = tool.job
             name = tool.name
+        except:
+            pass
 
         # load configuration lazily once
         if self._default_job_config is None:

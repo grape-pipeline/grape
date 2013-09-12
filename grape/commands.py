@@ -422,6 +422,10 @@ class SubmitCommand(GrapeCommand):
                     jobid = ""
                 else:
                     state = cli.green("Submitted")
+
+                    # apply job configutration
+                    grp.configure_job(step._tool)
+
                     # hard code some paramters
                     # the name is always set
                     # and we want cluster jobs to be verbose by default
