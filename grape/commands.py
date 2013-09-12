@@ -189,7 +189,8 @@ class SetupCommand(GrapeCommand):
                             help='Run the setup steps in a HPC cluster environment - requires a working cluster configuration')
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False,
-                                            add_pipeline_parameter=False)
+                                            add_pipeline_parameter=False,
+                                            add_dataset_parameter=False)
 
 
 class RunCommand(GrapeCommand):
@@ -741,10 +742,12 @@ class ScanCommand(GrapeCommand):
 
         file_info = {}
         compute_stats = args.compute_stats
-        if args.quality is not None:
+        if args.quality:
             file_info["quality"] = args.quality
-        if args.sex is not None:
+        if args.sex:
             file_info["sex"] = args.sex
+        if args.read_type:
+            file_info["read_type"] = args.read_type
         file_info["type"] = "fastq"
 
         # collect groups
@@ -795,7 +798,7 @@ class ScanCommand(GrapeCommand):
                 file_info['path'] = file
                 if compute_stats:
                     print "Computing file statistcs for %s" % (file)
-                    md5,size = grapeutils.file_stats(file, True)
+                    md5,size = grapeutils.file_stats(file)
                     file_info['md5'] = md5
                     file_info['size'] = size
                 print "Adding %r: " % (ds_id), file
@@ -815,7 +818,7 @@ class ScanCommand(GrapeCommand):
             file_info['path'] = file
             if compute_stats:
                 print "Computing file statistcs for %s" % (file)
-                md5,size = grapeutils.file_stats(file, True)
+                md5,size = grapeutils.file_stats(file)
                 file_info['md5'] = md5
                 file_info['size'] = size
             print "Adding %r: " % (ds_id), file
@@ -830,11 +833,14 @@ class ScanCommand(GrapeCommand):
                             help="Path to folder containg the fastq files.")
         parser.add_argument("--stats", default=False, dest='compute_stats', action='store_true',
                             help="Compute statistics for fastq files.")
-        parser.add_argument('--quality', dest='quality', metavar='<quality>', help="Quality offset assigned to new data sets")
         parser.add_argument('--sex', dest='sex', metavar='<sex>', help="Sex value assigned to new datasets")
         parser.add_argument('--id', dest='id', metavar='<id>', help="Experiment id assigned to new datasets. "
                                                                     "NOTE that a counter value is appended if more than "
                                                                     "one new dataset is found")
+        utils.add_default_job_configuration(parser,
+                                            add_cluster_parameter=False,
+                                            add_pipeline_parameter=False)
+
 
 
 def _add_command(command, command_parser):
