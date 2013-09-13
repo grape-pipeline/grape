@@ -727,7 +727,7 @@ class ScanCommand(GrapeCommand):
     def add(self, parser):
         parser.add_argument("path", default=None, nargs="?",
                             help="Path to folder containg the fastq files.")
-        parser.add_argument("--stats", default=False, dest='compute_stats', action='store_true',
+        parser.add_argument("--compute-stats", default=False, dest='compute_stats', action='store_true',
                             help="Compute statistics for fastq files.")
         parser.add_argument('--sex', dest='sex', metavar='<sex>', help="Sex value assigned to new datasets")
         parser.add_argument('--id', dest='id', metavar='<id>', help="Experiment id assigned to new datasets. "
