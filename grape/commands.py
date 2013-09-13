@@ -433,7 +433,7 @@ class SubmitCommand(GrapeCommand):
                     step.job.name = "GRP-%s" % (str(step))
                     step.job.verbose = True
 
-                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
+                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]), args.compute_stats)
                     jobs.store.prepare_tool(step._tool, project.path,
                                             pipeline.name)
 
@@ -463,6 +463,8 @@ class SubmitCommand(GrapeCommand):
 
 
     def add(self, parser):
+        parser.add_argument("--compute-stats", default=False, action="store_true",
+                            help="Compute md5 sums and size for jobs output files")
         parser.add_argument("datasets", default=["all"], nargs="*")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=True)
