@@ -2,7 +2,7 @@
 Quickstart
 ----------
 
-To follow this guide you need to have the Grape environment already installed and configured in your system. For more detailed information please see :ref:`Installation <adminguide>` and :ref:`User Guide <userguide>`.
+To follow this guide you need to have the Grape environment already installed and configured in your system. For detailed information please see :ref:`Installation <adminguide>` and :ref:`User Guide <userguide>`.
 
 What you need
 -------------
