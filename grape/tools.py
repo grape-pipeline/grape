@@ -64,7 +64,7 @@ class gem_index(Tool):
         if incoming is None:
             incoming = {}
 
-        if args.get("input", None) is None:
+        if not args.get("input"):
             errs["input"] = "No input genome file specified!"
         if len(errs) > 0:
             ex = ValidationException(errs)
@@ -98,9 +98,9 @@ class gem_t_index(Tool):
         if incoming is None:
             incoming = {}
 
-        if args.get("index", None) is None:
+        if not args.get("index"):
             errs["input"] = "No input genome file specified!"
-        if args.get("annotation", None) is None:
+        if not args.get("annotation"):
             errs["annotation"] = "No input annotation file specified!"
 
 
@@ -142,16 +142,17 @@ class gem(Tool):
         if incoming is None:
             incoming = {}
 
-        if args.get("name", None) is None:
+        if not args.get("name"):
             errs["name"] = "No name specified!"
-        if args.get("index", None) is None:
+        if not args.get("index"):
             errs["index"] = "No index specified!"
         elif not os.path.exists(args["index"]):
             errs["index"] = "Index file not found!"
-        if args.get("quality", None) is None:
+
+        if not args.get("quality"):
             errs["quality"] = "No quality offset specified!"
 
-        if args.get("annotation", None) is not None:
+        if args.get("annotation"):
             if not os.path.exists(args["annotation"]):
                 errs["annotation"] = "Annotation file not found %s" % \
                                      (args["annotation"])
@@ -201,16 +202,16 @@ class flux(Tool):
         if incoming is None:
             incoming = {}
 
-        if args.get("name", None) is None:
+        if not args.get("name"):
             errs["name"] = "No name specified!"
-        if args.get("annotation", None) is not None:
+        if args.get("annotation"):
             if not os.path.exists(args["annotation"]):
                 errs["annotation"] = "Annotation file not found %s" % \
                                      (args["annotation"])
         else:
             errs["annotation"] = "No annotation specified!"
         if "input" not in incoming:
-            if args.get("input") is not None:
+            if args.get("input"):
                 if not os.path.exists(args["input"]):
                     errs["input"] = "Input BAM file not found %s" % \
                                     (args["input"])
