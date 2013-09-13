@@ -521,7 +521,9 @@ class Config(object):
         """
         self.path = path
         self._config_file = os.path.join(path, '.grape/config')
+        self._stat_file = os.path.join(path, '.grape/stats')
         self.data = {}
+        self.stats = {}
         if os.path.exists(self._config_file):
             self._load_config()
         else:
@@ -536,16 +538,16 @@ class Config(object):
         grape_home = os.environ.get("GRAPE_HOME")
 
         if grape_home:
-            global_config = os.path.join(grape_home,'conf','config.json')
+            global_config = os.path.join(grape_home,'conf','stats.json')
 
             if os.path.exists(global_config):
-                self.data = json.load(open(global_config,'r'))
+                self.stats = json.load(open(global_config,'r'))
 
         self.data['name'] = 'Default project'
-        self.data['user'] = pwd.getpwuid(os.getuid()).pw_name
+        self.stats['user'] = pwd.getpwuid(os.getuid()).pw_name
         if not self.data.get('group'):
-            self.data['group'] = grp.getgrgid(os.getgid()).gr_name
-        self.data['date'] = str(datetime.date.today())
+            self.stats['group'] = grp.getgrgid(os.getgid()).gr_name
+        self.stats['date'] = str(datetime.date.today())
         self.data['genome'] = ''
         self.data['index'] = ''
         self.data['annotation'] = ''
@@ -557,12 +559,16 @@ class Config(object):
         """Load the confguration information from the project config file
         """
         self.data = utils.uni_convert(json.load(open(self._config_file,'r')))
+        self.stats = utils.uni_convert(json.load(open(self._stat_file,'r')))
 
     def _write_config(self, tabs=None):
         """Write the configuration to the config file
         """
         with open(self._config_file,'w+') as config:
             json.dump(self.data, config, indent=tabs)
+
+        with open(self._stat_file,'w+') as config:
+            json.dump(self.stats, config, indent=tabs)
 
 
     def get_printable(self, tabs=4):
