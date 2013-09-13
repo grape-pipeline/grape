@@ -18,44 +18,13 @@ def get_project_and_datasets(args):
     from indexfile.index import Dataset
     import os, re
 
-    metadata = {'type':'fastq'}
     datasets = None
 
     project = Project.find()
-    if project is None or not project.exists():
+    if not project or not project.exists():
         project = Project(os.getcwd())
         project.initialize()
-        if 'genome' in args and args.genome:
-            project.config.set('genome',os.path.abspath(args.genome),
-                                commit=True)
-            #args.genome = project.config.get('genome')
-        if 'annotation' in args and args.annotation:
-            project.config.set('annotation',os.path.abspath(args.annotation),
-                                commit=True)
-            #args.annotation = project.config.get('annotation')
-        if 'quality' in args and args.quality:
-            project.config.set('quality', args.quality)
-            metadata['quality'] = args.quality
-
-        if 'read_type' in args and args.read_type:
-            metadata['readType'] = args.read_type
-
-    if 'input' in args and args.input:
-        ds = {}
-        for dataset in args.input:
-            if Project.find_dataset(dataset):
-                name, files = Project.find_dataset(dataset)
-                ds[name] = files
-        for name, files in ds.items():
-            metadata['id'] = name
-            if len(files) > 1 and not 'readType' in metadata:
-                metadata['readType'] = '2x'
-            for f in files:
-                metadata['path'] = f
-                project.index.insert(**metadata)
-            project.save()
-            project.load()
-        datasets = project.get_datasets(id=ds.keys())
+        datasets = prepare_from_commandline(project, args)
 
     if "datasets" in args and not datasets:
         datasets = args.datasets
@@ -71,8 +40,62 @@ def get_project_and_datasets(args):
 
     return (project, datasets)
 
+def prepare_from_commandline(project, args):
+    """Preapre index and configuration for running the pipeline from commandline on a new automatically created project.
 
-def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeline_parameter=True):
+     :raise grape.commands.CommandError: in case a error occured
+     :returns (project, datasets): tuple with the project and the selected
+         datasets
+    """
+    from grape.grape import Project
+    from indexfile.index import Dataset
+    import os
+
+    metadata = {'type':'fastq'}
+    datasets = None
+
+    if 'genome' in args and args.genome:
+        project.config.set('genome',os.path.abspath(args.genome),
+                               commit=True)
+        args.genome = project.config.get('genome')
+        if os.path.exists("%s.gem" % os.path.abspath(args.genome)):
+            project.config.set('index',"%s.gem" % os.path.abspath(args.genome),
+                                                   commit=True)
+    if 'annotation' in args and args.annotation:
+        project.config.set('annotation',os.path.abspath(args.annotation),
+                               commit=True)
+        args.annotation = project.config.get('annotation')
+        for t in [('t-index','gem'),('keys','keys')]:
+            if os.path.exists("%s.junctions.%s" % (os.path.abspath(args.annotation), t[1])):
+                project.config.set(t[0],"%s.junctions.%s" % (os.path.abspath(args.annotation), t[1]),
+                                                   commit=True, dest='annotations')
+    if 'quality' in args and args.quality:
+        project.config.set('quality', args.quality, commit=True)
+        metadata['quality'] = args.quality
+
+    if 'read_type' in args and args.read_type:
+        metadata['readType'] = args.read_type
+
+    if 'input' in args and args.input:
+        ds = {}
+        for dataset in args.input:
+            if Project.find_dataset(dataset):
+                name, files = Project.find_dataset(dataset)
+                ds[name] = files
+        for name, files in ds.items():
+            if len(files) > 1 and not 'readType' in metadata:
+                metadata['readType'] = '2x'
+            for f in files:
+                project.add_dataset(os.path.dirname(f), name, f, metadata, compute_stats=False, update=False)
+
+        project.save(reload=True)
+
+        datasets = project.get_datasets(id=ds.keys())
+
+    return datasets
+
+
+def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeline_parameter=True, add_dataset_parameter=True):
     """Add the default job configuration options to the given argument
     parser
 
@@ -86,6 +109,7 @@ def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeli
                                       "applied to all jobs")
     group.add_argument("-c", "--cpus", dest="threads",
                         help="Number of threads/cpus assigned to the jobs")
+
     if add_pipeline_parameter:
         pgroup = parser.add_argument_group("Pipeline",
                                           "Pipeline execution parameters")
@@ -96,6 +120,13 @@ def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeli
                            help="The genome to be used in the run")
         pgroup.add_argument("-a", "--annotation", default=None,
                            help="The annotation to be used for the run")
+
+    if add_dataset_parameter:
+
+        if not add_pipeline_parameter:
+            pgroup = parser.add_argument_group("Dataset",
+                                          "Dataset information parameters")
+
         pgroup.add_argument("--quality", default=None,
                            help="The fastq offset for datasets quality")
         pgroup.add_argument("--read-type", dest='read_type', default=None,
