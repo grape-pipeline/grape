@@ -241,6 +241,22 @@ class Project(object):
         for line in self.index.export(type=type):
             out.write('%s%s' % (line,os.linesep))
 
+    def add_dataset(self, path, id, file, file_info, link=True, compute_stats=False, update=False):
+        file_info['id'] = id
+        if link and path != os.path.join(self.path,self.data_folder):
+            dest_folder = self.folder('fastq', id)
+            # Creating link
+            Project._make_link(file, dest_folder)
+            file = os.path.join(dest_folder,os.path.basename(file))
+        file_info['path'] = file
+        if compute_stats:
+            # Computing file statistcs
+            md5,size = utils.file_stats(file)
+            file_info['md5'] = md5
+            file_info['size'] = size
+        print "Adding %r: " % (id), file
+        self.index.insert(update=update, **file_info)
+
     @property
     def formatfile(self):
         """Return the path to the json file describing the format for the project index
@@ -474,6 +490,7 @@ class Project(object):
                                                     match.group('delim'),
                                                     id, match.group('type'),
                                                     compr)]
+                files = [ os.path.abspath(f) for f in files ]
                 files.sort()
 
                 return match.group('name'), files
@@ -596,7 +613,7 @@ class Config(object):
         l.sort()
         return [x[1] for x in l]
 
-    def set(self, key, value, commit=False, make_link=True):
+    def set(self, key, value, commit=False, make_link=True, dest=None):
         """Set values into the configuration for a given key
 
         Arguments:
@@ -631,7 +648,8 @@ class Config(object):
                 self.remove(key)
             if make_link:
                 # create symlink in project destination folder and replace path
-                dest = Project._get_dest(values)
+                if not dest:
+                    dest = Project._get_dest(values)
                 symlink = Project._make_link(values, os.path.join(self.path, dest)
                                             if dest else self.path, symbolic=False)
                 values = symlink

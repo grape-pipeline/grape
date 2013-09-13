@@ -742,6 +742,7 @@ class ScanCommand(GrapeCommand):
 
         file_info = {}
         compute_stats = args.compute_stats
+        update = args.update
         if args.quality:
             file_info["quality"] = args.quality
         if args.sex:
@@ -789,40 +790,15 @@ class ScanCommand(GrapeCommand):
                     ds_id = "%s_%d" % (ds_id, counter)
                     counter += 1
             for file in files:
-                file_info['id'] = ds_id
-                if path != os.path.join(project.path,project.data_folder):
-                    dest_folder = project.folder('fastq', ds_id)
-                    print "Creating link to %s in %s" % (file, dest_folder)
-                    Project._make_link(file, dest_folder)
-                    file = os.path.join(dest_folder,os.path.basename(file))
-                file_info['path'] = file
-                if compute_stats:
-                    print "Computing file statistcs for %s" % (file)
-                    md5,size = grapeutils.file_stats(file)
-                    file_info['md5'] = md5
-                    file_info['size'] = size
-                print "Adding %r: " % (ds_id), file
-                project.index.insert(**file_info)
-
+                cli.info("Adding %r: %s" % (ds_id, file))
+                project.add_dataset(path, ds_id, file, file_info, compute_stats=compute_stats, update=update)
         # add the singletons, everything that is not in scanned
         for file in set(fastqs).difference(set(scanned)):
             ds_id = id
             if ds_id is None:
                 ds_id = os.path.basename(file)
-            file_info['id'] = ds_id
-            if path != os.path.join(project.path,project.data_folder):
-                dest_folder = project.folder('fastq', ds_id)
-                print "Creating link to %s in %s" % (file, dest_folder)
-                Project._make_link(file, dest_folder)
-                file = os.path.join(dest_folder,os.path.basename(file))
-            file_info['path'] = file
-            if compute_stats:
-                print "Computing file statistcs for %s" % (file)
-                md5,size = grapeutils.file_stats(file)
-                file_info['md5'] = md5
-                file_info['size'] = size
-            print "Adding %r: " % (ds_id), file
-            project.index.insert(**file_info)
+            cli.info("Adding %r: %s" % (ds_id, file))
+            project.add_dataset(path, ds_id, file, file_info, compute_stats=compute_stats, update=update)
 
         project.save()
 
@@ -837,6 +813,8 @@ class ScanCommand(GrapeCommand):
         parser.add_argument('--id', dest='id', metavar='<id>', help="Experiment id assigned to new datasets. "
                                                                     "NOTE that a counter value is appended if more than "
                                                                     "one new dataset is found")
+        parser.add_argument("--update", default=False, dest='update', action='store_true',
+                            help="Update existing index entries.")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False,
                                             add_pipeline_parameter=False)
