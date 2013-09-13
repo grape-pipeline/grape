@@ -222,7 +222,7 @@ class Project(object):
 
         self.index.open(path)
 
-    def save(self, path=None):
+    def save(self, path=None, reload=False):
         """Save the project.
 
         :param path: the path of the output file. If no path is passed the
@@ -231,6 +231,8 @@ class Project(object):
         if not path:
             path = self.indexfile
         self.index.save(path)
+        if reload:
+            self.load(path)
 
     def export(self, out, type='index'):
         """Export the project.
