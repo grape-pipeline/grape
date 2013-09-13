@@ -531,7 +531,21 @@ class Config(object):
     def _init_default_config(self):
         """Initialize a default configuration file for the current project
         """
+
+        import os, grp, pwd, json, datetime
+
+        grape_home = os.environ.get("GRAPE_HOME")
+
+        global_config = os.path.join(grape_home,'conf','config.json')
+
+        if os.path.exists(global_config):
+            self.data = json.load(open(global_config,'r'))
+
         self.data['name'] = 'Default project'
+        self.data['user'] = pwd.getpwuid(os.getuid()).pw_name
+        if not self.data.get('group'):
+            self.data['group'] = grp.getgrgid(os.getgid()).gr_name
+        self.data['date'] = str(datetime.date.today())
         self.data['genome'] = ''
         self.data['index'] = ''
         self.data['annotation'] = ''
