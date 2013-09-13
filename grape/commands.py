@@ -201,7 +201,10 @@ class RunCommand(GrapeCommand):
         import time, datetime
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
-        pipelines = utils.create_pipelines(_pipelines.default_pipeline,
+        if datasets == ['setup']:
+            pipelines = utils.create_pipelines(_pipelines.pre_pipeline, project, [None], vars(args))
+        else:
+            pipelines = utils.create_pipelines(_pipelines.default_pipeline,
                                            project,
                                            datasets, vars(args))
         if not pipelines:
@@ -221,7 +224,8 @@ class RunCommand(GrapeCommand):
                                                        state, step)
                 cli.info(s, newline=skip)
                 if not skip:
-                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]), args.compute_stats)
+                    if datasets != ['setup']:
+                        index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]), args.compute_stats)
                     start_time = time.time()
                     try:
                         step.run()
@@ -399,7 +403,10 @@ class SubmitCommand(GrapeCommand):
     def run(self, args):
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
-        pipelines = utils.create_pipelines(_pipelines.default_pipeline,
+        if datasets == ['setup']:
+            pipelines = utils.create_pipelines(_pipelines.pre_pipeline, project, [None], vars(args))
+        else:
+            pipelines = utils.create_pipelines(_pipelines.default_pipeline,
                                            project,
                                            datasets,
                                            vars(args))
@@ -430,10 +437,14 @@ class SubmitCommand(GrapeCommand):
                     # hard code some paramters
                     # the name is always set
                     # and we want cluster jobs to be verbose by default
-                    step.job.name = "GRP-%s" % (str(step))
+                    job_prefix = "GRP-"
+                    if datasets == ['setup']:
+                        job_prefix = "%sSET-" % (job_prefix,)
+                    step.job.name = "%s%s" % (job_prefix, str(step))
                     step.job.verbose = True
 
-                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]), args.compute_stats)
+                    if datasets != ['setup']:
+                        index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]), args.compute_stats)
                     jobs.store.prepare_tool(step._tool, project.path,
                                             pipeline.name)
 

@@ -31,6 +31,9 @@ def get_project_and_datasets(args):
     else:
         datasets = ["all"]
 
+    if 'setup' in datasets:
+        return (project, ['setup'])
+
     if datasets is None:
         raise grape.commands.CommandError("No datasets specified!")
     if datasets == ['all']:
