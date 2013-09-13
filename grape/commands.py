@@ -700,8 +700,8 @@ class ListDataCommand(GrapeCommand):
 
 
     def add(self, parser):
-        parser.add_argument('-m','--human-readable', dest='human', action='store_true', default=False,
-                        help='Output file size in a human readable format')
+        parser.add_argument('-n','--numeric', dest='human', action='store_false', default=True,
+                        help='Output numbers in full numeric format')
         pass
 
 
