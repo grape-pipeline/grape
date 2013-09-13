@@ -492,7 +492,6 @@ class Project(object):
                                                     match.group('delim'),
                                                     id, match.group('type'),
                                                     compr)]
-                files = [ os.path.abspath(f) for f in files ]
                 files.sort()
 
                 return match.group('name'), files
@@ -536,10 +535,11 @@ class Config(object):
 
         grape_home = os.environ.get("GRAPE_HOME")
 
-        global_config = os.path.join(grape_home,'conf','config.json')
+        if grape_home:
+            global_config = os.path.join(grape_home,'conf','config.json')
 
-        if os.path.exists(global_config):
-            self.data = json.load(open(global_config,'r'))
+            if os.path.exists(global_config):
+                self.data = json.load(open(global_config,'r'))
 
         self.data['name'] = 'Default project'
         self.data['user'] = pwd.getpwuid(os.getuid()).pw_name
