@@ -41,7 +41,7 @@ def human_fmt(num, size=False):
         exponent = min(int(log(num, 1024)), len(unit_list) - 1)
         quotient = float(num) / 1024**exponent
         unit, num_decimals = unit_list[exponent]
-        format_string = '{:.%sf}{}' % (num_decimals)
+        format_string = '{0:.%sf}{1}' % (num_decimals)
         out = format_string.format(quotient, unit)
     if size:
         out+='B'
