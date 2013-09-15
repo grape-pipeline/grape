@@ -34,6 +34,7 @@ bundle: downloads
 	@virtualenv -p python2.7 $(BUNDLE_ENV27)
 	@. $(BUNDLE_ENV27)/bin/activate; pip install -r bundle_requirements.txt $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV27)/bin/activate; pip install lib/jip $(PIP_OPTIONS)
+	@. $(BUNDLE_ENV27)/bin/activate; pip install lib/indexfile $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV27)/bin/activate; python setup.py install --old-and-unmanageable --prefix=$(BUNDLE_DIR)
 	
 	@echo "Bundeling for 2.6"
@@ -41,6 +42,7 @@ bundle: downloads
 	@virtualenv -p python2.6 $(BUNDLE_ENV26)
 	@. $(BUNDLE_ENV26)/bin/activate; pip install -r bundle_requirements.txt $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV26)/bin/activate; pip install lib/jip $(PIP_OPTIONS)
+	@. $(BUNDLE_ENV26)/bin/activate; pip install lib/indexfile $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV26)/bin/activate; python setup.py install --old-and-unmanageable --prefix=$(BUNDLE_DIR)
 
 	@rm $(BUNDLE_DIR)/*.rst $(BUNDLE_DIR)/bin/buildout $(BUNDLE_DIR)/bin/mako-render # remove some artifacts created during installation
