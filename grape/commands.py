@@ -460,8 +460,14 @@ class ImportCommand(GrapeCommand):
             cli.error("No grape project found")
             return False
 
+        compute_stats=args.compute_stats
 
         project.load(path=args.input,format=args.format)
+        for d in project.index.datasets.values():
+            for file in d.fastq.values():
+                if os.path.dirname(file.path) != project.folder('data'):
+                    d.rm_file(path=file.path, type='fastq')
+                    project.add_dataset(os.path.dirname(file.path), d.id, file.path, file, compute_stats=compute_stats, update=True)
         project.save()
 
         if project.index.format and not os.path.exists(project.formatfile):
@@ -472,6 +478,8 @@ class ImportCommand(GrapeCommand):
         parser.add_argument('input', nargs='?', type=argparse.FileType('r'), const=sys.stdin, default=sys.stdin,
                             metavar='<input_file>', help="path to the metadata file")
         parser.add_argument('-f', '--format', dest='format', default='', metavar='<format_string>', help='Format string')
+        parser.add_argument("--compute-stats", default=False, dest='compute_stats', action='store_true',
+                            help="Compute statistics for fastq files.")
 
 
 class ExportCommand(GrapeCommand):

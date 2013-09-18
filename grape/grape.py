@@ -165,7 +165,7 @@ class Project(object):
                is located
         """
         self.path = path
-        self.genome_folder =  "genomes"
+        self.genome_folder = "genomes"
         self.annotation_folder =  "annotations"
         self.data_folder = "data"
         if self.exists():
@@ -221,6 +221,9 @@ class Project(object):
         self.index.set_format(format)
 
         self.index.open(path)
+
+        if path != self.indexfile:
+            self.index.path = self.indexfile
 
     def save(self, path=None, reload=False):
         """Save the project.
