@@ -3,7 +3,7 @@ BUNDLE_ENV27 = $(shell pwd)/bundle/env27
 BUNDLE_ENV26 = $(shell pwd)/bundle/env26
 BUNDLE_DIR = $(shell pwd)/bundle/grape-$(VERSION)
 DOWNLOAD_CACHE = downloads
-PIP_OPTIONS = --download-cache $(DOWNLOAD_CACHE) --install-option="--prefix=$(BUNDLE_DIR)"
+PIP_OPTIONS = --download-cache $(DOWNLOAD_CACHE)
 
 .PHONY: docs docs-clean
 
@@ -35,7 +35,8 @@ bundle: downloads
 	@. $(BUNDLE_ENV27)/bin/activate; pip install -r bundle_requirements.txt $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV27)/bin/activate; pip install lib/jip $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV27)/bin/activate; pip install lib/indexfile $(PIP_OPTIONS)
-	@. $(BUNDLE_ENV27)/bin/activate; python setup.py install --old-and-unmanageable --prefix=$(BUNDLE_DIR)
+	@. $(BUNDLE_ENV27)/bin/activate; python setup.py install 
+	@cp -R $(BUNDLE_ENV27)/lib/python2.7/site-packages/* $(BUNDLE_DIR)/lib/python2.7/site-packages
 	
 	@echo "Bundeling for 2.6"
 	@mkdir -p $(BUNDLE_DIR)/lib/python2.6/site-packages
@@ -43,15 +44,18 @@ bundle: downloads
 	@. $(BUNDLE_ENV26)/bin/activate; pip install -r bundle_requirements.txt $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV26)/bin/activate; pip install lib/jip $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV26)/bin/activate; pip install lib/indexfile $(PIP_OPTIONS)
-	@. $(BUNDLE_ENV26)/bin/activate; python setup.py install --old-and-unmanageable --prefix=$(BUNDLE_DIR)
+	@. $(BUNDLE_ENV26)/bin/activate; python setup.py install
+	@cp -R $(BUNDLE_ENV26)/lib/python2.6/site-packages/* $(BUNDLE_DIR)/lib/python2.6/site-packages
 
-	@rm $(BUNDLE_DIR)/*.rst $(BUNDLE_DIR)/bin/buildout $(BUNDLE_DIR)/bin/mako-render # remove some artifacts created during installation
+
+	@mkdir -p $(BUNDLE_DIR)/bin
 	@cp dist-utils/grape.py $(BUNDLE_DIR)/bin/grape
 	@cp dist-utils/grape-buildout.py $(BUNDLE_DIR)/bin/grape-buildout
 	@cp dist-utils/README.txt $(BUNDLE_DIR)/
 	@mkdir -p $(BUNDLE_DIR)/conf
 	@cp dist-utils/cluster.json	$(BUNDLE_DIR)/conf
 	@cp dist-utils/jobs.json $(BUNDLE_DIR)/conf
+	@cp dist-utils/format.json $(BUNDLE_DIR)/conf
 
 	@tar -C bundle -czf bundle/grape-$(VERSION).tar.gz grape-$(VERSION)
 
