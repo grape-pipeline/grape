@@ -7,7 +7,7 @@
 //  - sbatch : containing the path to the sbatch command
 //  - squeue : containing the path to the squeue command
 
-//    "class": "another.cluster.Slurm",
+//    "class": "jip.cluster.Slurm",
 //    "sbatch": "/opt/perf/bin/sbatch",
 //    "squeue": "/opt/perf/bin/squeue"
 
@@ -15,5 +15,5 @@
 //  SGE/OGE integration
 //  Uncomment the lines bellow to enable SGE cluster integration
 
-//    "class": "another.cluster.SunGrid"
+//    "class": "jip.cluster.SunGrid"
 }
