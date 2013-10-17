@@ -1,0 +1,14 @@
+{
+// Default dialect for the grape index file
+  "colsep": "\t", 
+  "fileinfo": [
+    "path", 
+    "size", 
+    "md5", 
+    "type",
+    "view"
+  ], 
+  "kw_sep": " ", 
+  "sep": "=", 
+  "trail": ";"
+}

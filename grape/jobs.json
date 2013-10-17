@@ -1,0 +1,57 @@
+{
+    "default": {
+        "queue": null,
+        "tasks": 1,
+        "extra": [],
+        "max_mem": null,
+        "priority": null,
+        "header": null,
+        "threads": 1,
+        "logdir": null,
+        "max_time": null
+    },
+    "flux": {
+        "queue": null,
+        "tasks": 1,
+        "extra": [],
+        "max_mem": null,
+        "priority": null,
+        "header": null,
+        "threads": 1,
+        "logdir": null,
+        "max_time": null
+    },
+    "gem": {
+        "queue": null,
+        "tasks": 1,
+        "extra": [],
+        "max_mem": null,
+        "priority": null,
+        "header": null,
+        "threads": 1,
+        "logdir": null,
+        "max_time": null
+    },
+    "gem_index": {
+        "queue": null,
+        "tasks": 1,
+        "extra": [],
+        "max_mem": null,
+        "priority": null,
+        "header": null,
+        "threads": 1,
+        "logdir": null,
+        "max_time": null
+    },
+    "gem_t_index": {
+        "queue": null,
+        "tasks": 1,
+        "extra": [],
+        "max_mem": null,
+        "priority": null,
+        "header": null,
+        "threads": 1,
+        "logdir": null,
+        "max_time": null
+    }
+}

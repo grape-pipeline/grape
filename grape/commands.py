@@ -810,6 +810,7 @@ def main():
 
 def buildout():
     """The grape buildout"""
+    import shutil
     from .buildout import Buildout
     from . import __version__
     parser = argparse.ArgumentParser(prog="grape-buildout")
@@ -820,9 +821,21 @@ def buildout():
 
     buildout_conf = os.path.join(os.path.dirname(__file__), 'buildout.conf')
 
+    # get json files with Grape config
+    grape_config = [ os.path.join(os.path.dirname(__file__),f) for f in os.listdir(os.path.dirname(__file__)) if f.endswith(".json") ]
     try:
         buildout = Buildout(buildout_conf)
         buildout.install([])
+
+        conf_dir = os.path.join(os.getenv("GRAPE_HOME"),"conf")
+        try:
+            os.makedirs(conf_dir)
+        except:
+            pass
+        for f in grape_config:
+            shutil.copy(f, conf_dir)
+
+
     except GrapeError as e:
         cli.error('Buildout error - %s', str(e))
         sys.exit(1)
