@@ -16,7 +16,7 @@ analysys.
 ''',
     platforms=['lx64'],
     packages=['grape', 'grape.cli', 'grape.jobs'],
-    package_data={'grape': ['buildout.conf', 'jobs.json', 'cluster.json', 'format.json']},
+    package_data={'grape': ['buildout.conf', 'cluster.json', 'format.json']},
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',

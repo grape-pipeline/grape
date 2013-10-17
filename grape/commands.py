@@ -542,8 +542,17 @@ class ListToolsCommand(GrapeCommand):
                     v = getattr(i.job, k, "")
                     cfgs[i.name][k] = v
 
-            cli.puts(json.dumps(cfgs, indent=4))
+            stream = sys.stdout.write
+            if args.create:
+                jobs_conf=(os.path.join(grape.home, 'conf','jobs.json'))
+                if os.path.exists(jobs_conf) and not args.force:
+                    raise ValueError("The file %r already exists. use the force option to overwrite." % jobs_conf)
+                stream = open(jobs_conf,'w').write;
+
+            cli.puts(json.dumps(cfgs, indent=4), stream=stream)
         else:
+            if args.create:
+                raise ValueError('"--create" option can be only sepcified in combination with "--show-config"')
             cli.puts(
                 textwrap.dedent("""
                 The following tools are available for grape pipeline runs.\n
@@ -564,6 +573,8 @@ class ListToolsCommand(GrapeCommand):
 
     def add(self, parser):
         parser.add_argument('--show-config', dest='show_config', default=False, action="store_true")
+        parser.add_argument('-c','--create', dest='create', default=False, action="store_true")
+        parser.add_argument('-f','--force', dest='force', default=False, action="store_true")
 
 
 class ListDataCommand(GrapeCommand):
