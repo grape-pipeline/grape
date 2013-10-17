@@ -572,9 +572,9 @@ class ListToolsCommand(GrapeCommand):
         return True
 
     def add(self, parser):
-        parser.add_argument('--show-config', dest='show_config', default=False, action="store_true")
-        parser.add_argument('-c','--create', dest='create', default=False, action="store_true")
-        parser.add_argument('-f','--force', dest='force', default=False, action="store_true")
+        parser.add_argument('--show-config', dest='show_config', default=False, action="store_true", help="show the possible job configuration options for running the tools on a cluster")
+        parser.add_argument('-c','--create', dest='create', default=False, action="store_true", help="create a global jobs.json file with the default job configuration for all tools")
+        parser.add_argument('-f','--force', dest='force', default=False, action="store_true", help="force overwriting the existing global configuration")
 
 
 class ListDataCommand(GrapeCommand):
