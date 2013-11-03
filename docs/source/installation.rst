@@ -43,6 +43,10 @@ After the basic setup is done, there should be a grape-buildout command availabl
 - grape user config in $HOME/.grape
 - GRAPE_HOME environment variable
 
+For example:
+
+    export GRAPE_HOME="/Users/maik/temp/grape-home"
+
 The basic structure should be created::
 
     <grape_home>
