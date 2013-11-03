@@ -18,7 +18,7 @@ analysys.
     packages=['grape', 'grape.cli', 'grape.jobs'],
     package_data={'grape': ['buildout.conf']},
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: End Users/Desktop',
         'Intended Audience :: Developers',
