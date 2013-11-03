@@ -19,3 +19,16 @@ This will install all dependencies. In order to get the commands into path and
 be able to run things from command line even if you are in development mode, do
 
     make devel
+
+Documentation
+-------------
+
+Run 
+
+  make docs
+
+Then open
+
+  ./docs/build/html/index.html
+
+To see further instructions on how to use Grape.
