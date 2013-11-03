@@ -12,112 +12,100 @@ We want to be able to create a simple way to install the grape environment. The 
 - The setup.py should install to global, user or virtualenv 
 - Grape will be deployed to pypi to allow easy installation
 
-Usage
-=====
+Installation
+============
 
-When grape is deployed to pypi, this should work:
+Grape can be installed like this::
 
 .. code-block:: bash
 
+    $ mkdir grape2
+    $ cd grape2
+    $ virtualenv --no-site-packages .
+    $ source bin/activate    
     $ pip install grape
 
-or
-
-.. code-block:: bash
-    
-    $ easy_install grape
-
-Until we have something on pypi, the install strategy will be clone and install like:
+If you are a developer, you can install from source as well::
 
 .. code-block:: bash
     
     $ git clone https://github.com/grape-pipeline/grape
     $ cd grape
-    $ python setup.py install
+    $ virtualenv --no-site-packages .
+    $ source bin/activate
+    $ pip install -r requirements.txt
+    $ python setup.py devel
 
-Buildout and initialisation
-===========================
 
-After the basic setup is done, there should be a grape-buildout command available to the user. The command takes a path argument and and triggers the buildout process on that path. This path is know as **grape_home** and should be made availabe to grape by
+Configuration and Modules
+=========================
 
-- grape user config in $HOME/.grape
-- GRAPE_HOME environment variable
+The Grape configuration and modules reside in a special folder, either
+
+- in $HOME/.grape
+- or in a folder specified by the GRAPE_HOME environment variable
 
 For example:
 
     export GRAPE_HOME="/Users/maik/temp/grape-home"
 
-The basic structure should be created::
+This folder needs just one configuration file to get started:
 
     <grape_home>
       grape.conf      -- global configuration
-      modules         -- base dire for modules
+
+You can leave this file empty for the moment.
+
+Now let's install the modules. The grape-buildout command takes a path argument and and triggers the buildout process on that path.
+
+    $ grape-buildout
+    .. code-block:: bash
+
+        Installing gem.
+        Skipping module gemtools-1.6.1 - already installed
+        Installing flux.
+        Skipping module flux-1.2.3 - already installed
+        Installing fastqc.
+        Downloading http://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.10.1.zip
+        fastqc: Extracting module package to /users/rg/epalumbo/grape-test/modules/fastqc/0.10.1
+
+You will then see some modules appearing in grape_home:
+
+    <grape_home>
+      grape.conf      -- global configuration
+      modules         -- base directory for modules
         <name>        -- the module name
           <version>   -- the module version 
             activate  -- activate script to load the module into the current environment
 
-The **grape_home** contains a global grape configuration and a set of modules. Each module must provide a name and a versions and can be activated by sourcing the activate script in the module folder. This will but the modules binaries in front of the path and prepend to any other environment variables as needed (i.e. PYTHONPATH).
 
-Adding a new module to the buildout
-===================================
+Project
+=======
 
-In order to install a new module into the pipeline the buildout.conf file should be modified. A grape buildout configuration file looks like the following:
+When you start on a new project, you first create another folder for it:
 
-.. code-block:: ini
+    $ mkdir ExampleProject
+    $ cd ExampleProject
 
-    [buildout]
-    parts = gem
-            flux
- 
-    [gem]
-    recipe = grape:install_module
-    url = http://barnaserver.com/gemtools/releases/GEMTools-static-i3-1.6.1.tar.gz
-    md5sum = 6f660f2e57ded883ff1be4dc3e7ded51 
-    name = gemtools
-    version = 1.6.1
-    
-    [flux]
-    recipe = grape:install_module
-    url = http://sammeth.net/artifactory/barna/barna/barna.capacitor/1.2.3/flux-capacitor-1.2.3.tgz 
-    md5sum = f62b001bbfda9d6ac6537f2f144509e7 
-    name = flux
-    version = 1.2.3
+You then run:
 
-If a new part is required to be added, the new part should be added. As an example the fastqc programs are added to the buildout configuration:
+    $ grape init
 
-.. code-block:: ini
-    
-    [fastqc]
-    recipe = grape:install_module
-    url = http://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.10.1.zip
-    md5sum = c93815ddfc0259bd58430e52ae4fb429
-    name = fastqc
-    version = 0.10.1
+And then you have a .grape folder that contains the configuration.
 
-Then, to allow the [fastqc] part to be installed the part has to be added to the parts field in the [buildout] section:
+Let's say you have a bunch of fastq or bam files in path/to/files
 
-.. code-block:: ini
+You need to run 
 
-    [buildout]
-    parts = gem
-            flux
-            fastqc
+    $ grape scan path/to/files
 
-After this giving the command:
+which will create soft links inside your data folder.
 
-.. code-block:: bash
+Then you run Grape.
 
-    $ grape-buildout
+    $ grape run setup
+    $ grape run
 
-would install the fastqc module, producing the following output:
+See the chapter on running Grape in a cluster for more advanced usage.
 
-.. code-block:: bash
-
-    Installing gem.
-    Skipping module gemtools-1.6.1 - already installed
-    Installing flux.
-    Skipping module flux-1.2.3 - already installed
-    Installing fastqc.
-    Downloading http://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.10.1.zip
-    fastqc: Extracting module package to /users/rg/epalumbo/grape-test/modules/fastqc/0.10.1
 
