@@ -5,7 +5,7 @@ from setuptools import setup
 import grape
 
 setup(
-    name='Grape',
+    name='grape-pipeline',
     version=grape.__version__,
     description='The Grape RNASeq pipeline version 2',
     author='Emilio Palumbo, Thasso Griebel',
