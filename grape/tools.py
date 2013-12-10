@@ -157,16 +157,16 @@ class SetupPipeline(object):
     Options:
         -i, --input <genome>                    The input reference genome
         -a, --annotation <annotation            The input reference annotation
-        -o, --output-prefix <output_prefix>     The output prefix [default: ${annotation|abs|parent}/${annotation}]
+        -o, --output-dir <output_dir>     The output prefix [default: ${input|abs|parent}]
 
     """
 
     def pipeline(self):
-        out = self.output_prefix
+        out = self.output_dir
         input = self.input
         p = Pipeline()
-        index = p.run('grape_gem_index', input=self.input, output="${input|name|ext}.gem")
-        t_index = p.run('grape_gem_t_index', index=index, annotation=self.annotation, output_prefix="${out}")
+        index = p.run('grape_gem_index', input=self.input, output="${out}/${input|name|ext}.gem")
+        t_index = p.run('grape_gem_t_index', index=index, annotation=self.annotation, output_prefix="${out}/${annotation|name}")
         p.context(locals())
         return p
 

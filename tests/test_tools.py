@@ -2,7 +2,8 @@
 #
 # test basic tools
 #
-import jip, os
+import jip
+import os
 import grape.tools as tools
 
 import pytest
@@ -22,8 +23,36 @@ def test_gem_setup_pipeline():
 
     assert jobs[1].configuration['index'].get() == j(ldir, 'genome.gem')
     assert jobs[1].configuration['annotation'].get() == j(ldir, 'gencode.gtf')
-    assert jobs[1].configuration['output_prefix'].get() == j(ldir, 'gencode.gtf')
     assert jobs[1].configuration['max_length'].get() == '150'
+    assert jobs[1].configuration['output_prefix'].get() == j(ldir, 'gencode.gtf')
+    assert jobs[1].configuration['gem'].get() == j(ldir, 'gencode.gtf.junctions.gem')
+    assert jobs[1].configuration['keys'].get() == j(ldir, 'gencode.gtf.junctions.keys')
+
+
+    assert len(jobs[0].children) == 1
+    assert len(jobs[1].dependencies) == 1
+    assert jobs[0].children[0] == jobs[1]
+
+
+def test_gem_setup_pipeline_with_output_dir():
+    p = jip.Pipeline()
+    p.run('grape_gem_setup', input='genome.fa', annotation='gencode.gtf', output_dir="mydir")
+    jobs = jip.create_jobs(p, validate=False)
+    ldir = os.getcwd()
+    j = os.path.join
+    assert len(jobs) == 2
+    assert jobs[0].configuration['input'].get() == j(ldir, 'genome.fa')
+    assert jobs[0].configuration['output'].get() == j(ldir, 'mydir/genome.gem')
+    assert jobs[0].configuration['no_hash'].get() == ''
+    assert jobs[0].configuration['no_hash'].raw() is False
+
+    assert jobs[1].configuration['index'].get() == j(ldir, 'mydir/genome.gem')
+    assert jobs[1].configuration['annotation'].get() == j(ldir, 'gencode.gtf')
+    assert jobs[1].configuration['max_length'].get() == '150'
+    assert jobs[1].configuration['output_prefix'].get() == 'mydir/gencode.gtf'
+    assert jobs[1].configuration['gem'].get() == j(ldir, 'mydir/gencode.gtf.junctions.gem')
+    assert jobs[1].configuration['keys'].get() == j(ldir, 'mydir/gencode.gtf.junctions.keys')
+
 
     assert len(jobs[0].children) == 1
     assert len(jobs[1].dependencies) == 1
