@@ -17,7 +17,8 @@ def test_gem_setup_pipeline():
     assert len(jobs) == 2
     assert jobs[0].configuration['input'].get() == j(ldir, 'genome.fa')
     assert jobs[0].configuration['output'].get() == j(ldir, 'genome.gem')
-    assert jobs[0].configuration['no_hash'].get() is False
+    assert jobs[0].configuration['no_hash'].get() == ''
+    assert jobs[0].configuration['no_hash'].raw() is False
 
     assert jobs[1].configuration['index'].get() == j(ldir, 'genome.gem')
     assert jobs[1].configuration['annotation'].get() == j(ldir, 'gencode.gtf')
