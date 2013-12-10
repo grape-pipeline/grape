@@ -2,54 +2,85 @@
 #
 # test basic tools
 #
-from jip.pipelines import Pipeline
+import jip, os
 import grape.tools as tools
-from jip.tools import ValidationException
 
 import pytest
 
 
-def test_gem_paramters():
-    p = Pipeline()
-    gem = p.add(tools.gem())
-    assert gem is not None
-    gem.index = "/data/index.gem"
-    gem.annotation = "/data/annotation.gtf"
-    gem.primary = "/data/reads_1.fastq"
-    gem.quality = 33
-    cfg = gem.get_configuration()
-    assert cfg["index"] == "/data/index.gem"
-    assert cfg["annotation"] == "/data/annotation.gtf"
-    assert cfg["primary"] == "/data/reads_1.fastq"
-    assert cfg["quality"] == 33
+def test_gem_setup_pipeline():
+    p = jip.Pipeline()
+    p.run('grape_gem_setup', input='genome.fa', annotation='gencode.gtf')
+    jobs = jip.create_jobs(p, validate=False)
+    ldir = os.getcwd()
+    j = os.path.join
+    assert len(jobs) == 2
+    assert jobs[0].configuration['input'].get() == j(ldir, 'genome.fa')
+    assert jobs[0].configuration['output'].get() == j(ldir, 'genome.gem')
+    assert jobs[0].configuration['no_hash'].get() is False
+
+    assert jobs[1].configuration['index'].get() == j(ldir, 'genome.gem')
+    assert jobs[1].configuration['annotation'].get() == j(ldir, 'gencode.gtf')
+    assert jobs[1].configuration['output_prefix'].get() == j(ldir, 'gencode.gtf')
+    assert jobs[1].configuration['max_length'].get() == '150'
+
+    assert len(jobs[0].children) == 1
+    assert len(jobs[1].dependencies) == 1
+    assert jobs[0].children[0] == jobs[1]
 
 
-def test_gem_validation_no_name():
-    p = Pipeline()
-    gem = p.add(tools.gem())
+def test_gem_pipeline():
+    p = jip.Pipeline()
+    p.run('grape_gem_rnapipeline', fastq='reads_1.fastq.gz', index='index.gem', annotation='gencode.gtf')
+    jobs = jip.create_jobs(p, validate=False)
+    ldir = os.getcwd()
+    j = os.path.join
+    assert len(jobs) == 2
+    assert jobs[0].configuration['index'].get() == j(ldir, 'index.gem')
+    assert jobs[0].configuration['fastq'].get() == j(ldir, 'reads_1.fastq.gz')
+    assert jobs[0].configuration['annotation'].get() == j(ldir, 'gencode.gtf')
+    assert jobs[0].configuration['quality'].get() == '33'
+    assert jobs[0].configuration['output_dir'].get() == ldir
+    assert jobs[0].configuration['name'].get() == 'reads'
+    assert jobs[0].configuration['bam'].get() == j(ldir, 'reads.bam')
+    assert jobs[0].configuration['bai'].get() == j(ldir, 'reads.bam.bai')
+    assert jobs[0].configuration['map'].get() == j(ldir, 'reads.map.gz')
 
-    with pytest.raises(ValidationException) as err:
-        gem.validate()
-    ex = err.value
-    assert ex.errors["name"] == "No name specified!"
+    assert jobs[1].configuration['input'].get() == j(ldir, 'reads.bam')
+    assert jobs[1].configuration['name'].get() == 'reads'
+    assert jobs[1].configuration['annotation'].get() == j(ldir, 'gencode.gtf')
+    assert jobs[1].configuration['output_dir'].get() == ldir
+    assert jobs[1].configuration['gtf'].get() == j(ldir, 'reads.gtf')
+
+    assert len(jobs[0].children) == 1
+    assert len(jobs[1].dependencies) == 1
+    assert jobs[0].children[0] == jobs[1]
 
 
-def test_gem_validation_no_quality():
-    p = Pipeline()
-    gem = p.add(tools.gem())
+def test_gem_pipeline_with_output_dir():
+    p = jip.Pipeline()
+    p.run('grape_gem_rnapipeline', fastq='reads_1.fastq.gz', index='index.gem',
+          annotation='gencode.gtf', output_dir="mydir")
+    jobs = jip.create_jobs(p, validate=False)
+    ldir = os.getcwd()
+    j = os.path.join
+    assert len(jobs) == 2
+    assert jobs[0].configuration['index'].get() == j(ldir, 'index.gem')
+    assert jobs[0].configuration['fastq'].get() == j(ldir, 'reads_1.fastq.gz')
+    assert jobs[0].configuration['annotation'].get() == j(ldir, 'gencode.gtf')
+    assert jobs[0].configuration['quality'].get() == '33'
+    assert jobs[0].configuration['output_dir'].get() == "mydir"
+    assert jobs[0].configuration['name'].get() == 'reads'
+    assert jobs[0].configuration['bam'].get() == j(ldir, 'mydir/reads.bam')
+    assert jobs[0].configuration['bai'].get() == j(ldir, 'mydir/reads.bam.bai')
+    assert jobs[0].configuration['map'].get() == j(ldir, 'mydir/reads.map.gz')
 
-    with pytest.raises(ValidationException) as err:
-        gem.validate()
-    ex = err.value
-    assert ex.errors["quality"] == "No quality offset specified!"
+    assert jobs[1].configuration['input'].get() == j(ldir, 'mydir/reads.bam')
+    assert jobs[1].configuration['name'].get() == 'reads'
+    assert jobs[1].configuration['annotation'].get() == j(ldir, 'gencode.gtf')
+    assert jobs[1].configuration['output_dir'].get() == "mydir"
+    assert jobs[1].configuration['gtf'].get() == j(ldir, 'mydir/reads.gtf')
 
-
-def test_gem_validation_no_transcript_index():
-    p = Pipeline()
-    gem = p.add(tools.gem())
-    gem.annotation = "/data/annotations/annotation.gtf"
-
-    with pytest.raises(ValidationException) as err:
-        gem.validate()
-    ex = err.value
-    assert ex.errors["transcript-index"] == "No transcript index found at /data/annotations/annotation.gtf.junctions.gem"
+    assert len(jobs[0].children) == 1
+    assert len(jobs[1].dependencies) == 1
+    assert jobs[0].children[0] == jobs[1]
