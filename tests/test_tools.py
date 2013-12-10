@@ -4,7 +4,7 @@
 #
 import jip
 import os
-import grape.tools as tools
+import grape.tools
 
 import pytest
 
