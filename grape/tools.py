@@ -4,42 +4,10 @@ and manage modules
 """
 
 from jip import *
+from buildout import module
 
 
-class modules(object):
-    """The @modules decorator allows to decorate tool
-    classes to add module dependencies
-    """
-    def __init__(self, modules):
-        self.modules = modules
-
-    def _load_modules(self, mods):
-        from . import buildout
-        # laod modules
-        for m in self.modules:
-            name = m[0]
-            version = None
-            if len(m) > 1:
-                version = m[1]
-            mods.append(buildout.find(name, version))
-
-    def __call__(self, clazz):
-        if self.modules is not None:
-            # patch the run method
-            old_run = clazz.run
-            clazz.modules = self.modules
-            clazz._load_modules = self._load_modules
-
-            def patched(self, args):
-                mods = []
-                self._load_modules(mods)
-                for m in mods:
-                    m.activate()
-                old_run(self, args)
-            clazz.run = patched
-        return clazz
-
-
+@module([("gemtools", "1.6.1")])
 @tool('grape_gem_index')
 class GemIndex(object):
     """
