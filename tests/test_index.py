@@ -8,7 +8,7 @@ import pytest
 def test_index():
     i = Index()
     i.insert(id='test', type='fastq', path='/data/fastq/test_1.fq')
-    assert i.datasets['test'].type == 'fastq'
+    assert len(i.datasets['test'].fastq) == 1
     del i
     i = Index()
     i.format = {'fileinfo': ['type','path']}
