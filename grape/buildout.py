@@ -43,35 +43,7 @@ class Buildout(Bout):
                 os.removedirs(dir)
 
 
-class Modules(object):
-    """A grape buildout module that can be activated in the current
-    environment.
-    """
-
-    def __init__(self, directory):
-        self.directory = directory
-
-    def activate(self):
-        """Activate this module and load its configuration into the current
-        environment.
-        """
-        # the default implementation simply puts the bin folder in path
-        bin_path = os.path.join(self.directory, "bin")
-        if os.path.exists(bin_path):
-            Modules.__prepend_environment("PATH", bin_path)
-
-    @staticmethod
-    def __prepend_environment(source, value, delim=":"):
-        """Prepend the given value to the source environment variable
-        using the given delimiter
-        """
-        current = ""
-        if source in os.environ:
-            current = delim + os.environ[source]
-        os.environ[source] = "%s%s" % (value, current)
-
-
-def find(name, version=None, grape_home=None):
+def find_path(name, version=None, grape_home=None):
     """Using the grape home in teh given :class:grape.Grape instance,
     this searches for the module with the given name and version. If no
     version is specified, all detected versions are sorted alpha-numerically
@@ -100,20 +72,18 @@ def find(name, version=None, grape_home=None):
     version_dir = None
     if version is not None:
         version_dir = os.path.join(module_dir, version)
-        ret_version = version
     else:
         # scan version
         sorted_version = sorted(os.listdir(module_dir))
         if len(sorted_version) == 0:
             raise ValueError("No versions found for %s" % (name))
         version_dir = os.path.join(module_dir, sorted_version[0])
-        ret_version = sorted_version[0]
 
     if not os.path.exists(version_dir):
         raise ValueError("Module %s/%s not found in %s" % (name,
                                                            version,
                                                            grape_home))
-    return ret_version
+    return version_dir
 
 
 class module(object):
@@ -123,35 +93,35 @@ class module(object):
     def __init__(self, modules):
         self.modules = modules
 
-    def _load_modules(self, mods):
-        # laod modules
+    def _load_modules(self):
+        mods = []
+        # load modules
         for m in self.modules:
             name = m[0]
             version = None
             if len(m) > 1:
                 version = m[1]
-            mods.append(find(name, version))
-
-
+            mods.append(find_path(name, version))
+            return mods
 
     def __call__(self, *args):
         cl = args[0]
-        old_command = cl.get_command
+        old_validate = cl.validate
         cl.modules = self.modules
         cl._load_modules = self._load_modules
 
-        def get_grape_command(self):
-            c = old_command(self)
-            grape_home = Grape().home or '/'
-            new_c = os.path.join(grape_home,'modules',self.modules[0][0],self.modules[0][1])
+        def validate(self):
+            old_validate(self)
+            if not self.job.env:
+                self.job.env = {}
+            path = [p for p in self.job.env.get('PATH', '').split(':') if p is not '']
+            modules_path = self._load_modules()
+            for module_path in modules_path:
+                if module_path not in path:
+                    path.insert(0, module_path)
+            self.job.env['PATH'] = ':'.join(path)
 
-            if len(c) > 1:
-                c = (c[0],os.path.join(new_c,c[1]))
-            else:
-                c = os.path.join(new_c,c)
-            return c
-
-        cl.get_command = get_grape_command
+        cl.validate = validate
 
         return cl
 

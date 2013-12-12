@@ -42,9 +42,11 @@ def test_module_decorator():
 
     assert len(jobs) == 1
     assert jobs[0] is not None
-    assert jobs[0].command.split()[0] == path
+    assert jobs[0].env['PATH'].split(':')[0] == path
 
 def test_module_decorator_with_grape_home():
+    os.environ['GRAPE_HOME'] = os.getcwd() + '/test_data/home'
+
     @module([("gemtools", "1.6.1")])
     @jip.tool('gemtools_test')
     class gemtools(object):
@@ -76,12 +78,10 @@ def test_module_decorator_with_grape_home():
     p = jip.Pipeline()
     p.run('gemtools_test', input='genome.fa')
 
-    os.environ['GRAPE_HOME'] = '/home/grape'
-
-    path = j(Grape().home,'modules','gemtools','1.6.1','gemtools')
+    path = j(Grape().home,'modules','gemtools','1.6.1')
 
     jobs = jip.create_jobs(p, validate=False)
 
     assert len(jobs) == 1
     assert jobs[0] is not None
-    assert jobs[0].command.split()[0] == path
+    assert jobs[0].env['PATH'].split(':')[0] == path
