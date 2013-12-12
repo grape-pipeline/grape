@@ -117,11 +117,11 @@ class module(object):
             old_validate(self)
             if not self.job.env:
                 self.job.env = {}
-            path = [p for p in self.job.env.get('PATH', '').split(':') if p is not '']
+            path = [p for p in self.job.env.get('PATH', '${PATH}').split(':') if p is not '']
             modules_path = self._load_modules()
             for module_path in modules_path:
                 if module_path not in path:
-                    path.insert(0, module_path)
+                    path.insert(0, os.path.join(module_path,'bin'))
             self.job.env['PATH'] = ':'.join(path)
 
         cl.validate = validate

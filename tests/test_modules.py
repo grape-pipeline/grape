@@ -5,6 +5,8 @@ from grape.grape import Grape
 import jip
 
 def test_module_decorator():
+    del os.environ['GRAPE_HOME']
+
     @module([("gemtools", "1.6.1")])
     @jip.tool('gemtools_test')
     class gemtools(object):
@@ -75,7 +77,7 @@ def test_module_decorator_with_grape_home():
     p = jip.Pipeline()
     p.run('gemtools_test', input='genome.fa')
 
-    path = j(Grape().home,'modules','gemtools','1.6.1')
+    path = j(Grape().home,'modules','gemtools','1.6.1','bin')
 
     jobs = jip.create_jobs(p, validate=False)
 
@@ -114,7 +116,7 @@ def test_module_decorator_with_grape_home_no_validate():
     p = jip.Pipeline()
     p.run('gemtools_test', input='genome.fa')
 
-    path = j(Grape().home,'modules','gemtools','1.6.1')
+    path = j(Grape().home,'modules','gemtools','1.6.1','bin')
 
     jobs = jip.create_jobs(p, validate=False)
 
