@@ -1,7 +1,6 @@
 """Grape command line utilities
 """
 from clint.textui import colored, puts, columns
-from jip.pipelines import PipelineException
 import grape.commands
 from grape.grape import Grape
 
@@ -44,7 +43,7 @@ def get_project_and_datasets(args):
     return (project, datasets)
 
 def prepare_from_commandline(project, args):
-    """Preapre index and configuration for running the pipeline from commandline on a new automatically created project.
+    """Prepare index and configuration for running the pipeline from commandline on a new automatically created project.
 
      :raise grape.commands.CommandError: in case a error occured
      :returns (project, datasets): tuple with the project and the selected
@@ -147,86 +146,3 @@ def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeli
     else:
         group.add_argument("--verbose", default=False, action="store_true",
                             dest="verbose", help="Verbose job output")
-
-def _prepare_pipeline(pipeline):
-    """Validate the pipeline and prints
-    the validation errors in case there are any.
-    """
-    import logging
-    log = logging.getLogger("grape")
-    log.info("Preparing pipeline: %s", pipeline)
-    try:
-        pipeline.validate()
-        return True
-    except PipelineException, e:
-        # print error messages and return false
-        puts(colored.red("Error while validating pipeline"))
-        for step, errs in e.validation_errors.items():
-            puts(colored.red("Validation error in step: %s" % (step)))
-            for field, desc in errs.items():
-                puts("\t" + columns([colored.red(field), 30], [desc, None]))
-        return False
-
-
-def create_pipelines(pipeline_fun, project, datasets, configuration):
-    """Create a pipeline for each dataset using the passed pipeline_fun
-    functions. The pipeline_fun function must be a function that
-    takes a :py:class:`grape.Dataset` and a configuration dict
-    and return a :py:class:jip.pipelines.Pipeline.
-
-    :param pipeline_fun: the pipeline creation function
-    :type pipeline_fun: function
-    :param datasets: list of datasets
-    :type datasets: list
-    :param project: the grape project
-    :type project: grape.Project
-    :param configuration: additional configuration dictionary
-    :type configuration: dict
-    :returns pipelines: list of pipelines
-    :rtype pipelines: list
-    """
-    from grape.grape import Grape
-    pipelines = []
-    grp = Grape()
-
-    genome = configuration.get('genome')
-    annotation = configuration.get('annotation')
-    quality = configuration.get('quality')
-    index =  configuration.get('index')
-
-    if not genome:
-        genome = project.config.get('genome')
-        configuration['genome'] = genome
-    if not annotation:
-        annotation = project.config.get('annotation')
-        configuration['annotation'] = annotation
-    if not quality:
-        quality = project.config.get('quality')
-        configuration['quality'] = quality
-    if not index:
-        index = project.config.get('index')
-        if not index and genome:
-            index = "%s.gem" % genome
-        configuration['index'] = index
-
-    for d in datasets:
-        if d:
-            if not configuration.get('genome') and hasattr(d,'genome'):
-               configuration['genome'] = d.genome
-            if not configuration.get('annotation') and hasattr(d,'annotation'):
-               configuration['annotation'] = d.annotation
-            if not configuration.get('quality') and hasattr(d,'quality'):
-                configuration['quality'] = d.quality
-            pipeline = pipeline_fun(project, d, configuration)
-        else:
-            pipeline = pipeline_fun(configuration)
-        # validate the pipeline
-        if not _prepare_pipeline(pipeline):
-            return False
-        pipelines.append(pipeline)
-        # update job params
-        if configuration is not None:
-            for step in pipeline.tools.values():
-                grp.configure_job(step, project, d, configuration)
-
-    return pipelines
