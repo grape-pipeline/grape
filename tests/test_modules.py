@@ -36,13 +36,10 @@ def test_module_decorator():
     p = jip.Pipeline()
     p.run('gemtools_test', input='genome.fa')
 
-    path = j('/','modules','gemtools','1.6.1','gemtools')
+    with pytest.raises(jip.ValidationError) as excinfo:
+        jip.create_jobs(p)
 
-    jobs = jip.create_jobs(p, validate=False)
-
-    assert len(jobs) == 1
-    assert jobs[0] is not None
-    assert jobs[0].env['PATH'].split(':')[0] == path
+    assert excinfo.value.message == 'GRAPE_HOME not defined. Please set the GRAPE_HOME environment variable!'
 
 def test_module_decorator_with_grape_home():
     os.environ['GRAPE_HOME'] = os.getcwd() + '/test_data/home'
@@ -68,6 +65,45 @@ def test_module_decorator_with_grape_home():
 
         def validate(self):
             return True
+
+        def get_command(self):
+            return "bash", "gemtools index ${options()}"
+
+
+    j = os.path.join
+
+    p = jip.Pipeline()
+    p.run('gemtools_test', input='genome.fa')
+
+    path = j(Grape().home,'modules','gemtools','1.6.1')
+
+    jobs = jip.create_jobs(p, validate=False)
+
+    assert len(jobs) == 1
+    assert jobs[0] is not None
+    assert jobs[0].env['PATH'].split(':')[0] == path
+
+def test_module_decorator_with_grape_home_no_validate():
+    os.environ['GRAPE_HOME'] = os.getcwd() + '/test_data/home'
+
+    @module([("gemtools", "1.6.1")])
+    @jip.tool('gemtools_test')
+    class gemtools(object):
+        """
+        The GEM Indexer tool
+
+        Usage:
+            gem_index -i <genome> [-o <genome_index>] [-t <threads>] [--no-hash]
+
+        Options:
+            --help  Show this help message
+            -o, --output <genome_index>  The output GEM index file [default: ${input|ext}.gem]
+            -t, --threads <threads>  The number of execution threads [default: 1]
+            --no-hash  Do not produce the hash file [default: false]
+
+        Inputs:
+            -i, --input <genome>  The fasta file for the genome
+        """
 
         def get_command(self):
             return "bash", "gemtools index ${options()}"

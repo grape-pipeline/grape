@@ -106,7 +106,10 @@ class module(object):
 
     def __call__(self, *args):
         cl = args[0]
-        old_validate = cl.validate
+        try:
+            old_validate = cl.validate
+        except:
+            old_validate = lambda x: True
         cl.modules = self.modules
         cl._load_modules = self._load_modules
 
