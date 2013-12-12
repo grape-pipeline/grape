@@ -42,7 +42,8 @@ class Buildout(Bout):
                 logger.warn('Removing directory %r.', dir)
                 os.removedirs(dir)
 
-class Module(object):
+
+class Modules(object):
     """A grape buildout module that can be activated in the current
     environment.
     """
@@ -57,7 +58,7 @@ class Module(object):
         # the default implementation simply puts the bin folder in path
         bin_path = os.path.join(self.directory, "bin")
         if os.path.exists(bin_path):
-            Module.__prepend_environment("PATH", bin_path)
+            Modules.__prepend_environment("PATH", bin_path)
 
     @staticmethod
     def __prepend_environment(source, value, delim=":"):
@@ -76,7 +77,7 @@ def find(name, version=None, grape_home=None):
     version is specified, all detected versions are sorted alpha-numerically
     and the latest one is returned.
 
-    Paramter
+    Parameter
     --------
     grape_home   - the grape home folder used to search for modules
     name         - the name of the module
@@ -99,15 +100,59 @@ def find(name, version=None, grape_home=None):
     version_dir = None
     if version is not None:
         version_dir = os.path.join(module_dir, version)
+        ret_version = version
     else:
         # scan version
         sorted_version = sorted(os.listdir(module_dir))
         if len(sorted_version) == 0:
             raise ValueError("No versions found for %s" % (name))
         version_dir = os.path.join(module_dir, sorted_version[0])
+        ret_version = sorted_version[0]
 
     if not os.path.exists(version_dir):
         raise ValueError("Module %s/%s not found in %s" % (name,
                                                            version,
                                                            grape_home))
-    return Module(version_dir)
+    return ret_version
+
+
+class module(object):
+    """The @module decorator allows to decorate tool
+    classes to add module dependencies
+    """
+    def __init__(self, modules):
+        self.modules = modules
+
+    def _load_modules(self, mods):
+        # laod modules
+        for m in self.modules:
+            name = m[0]
+            version = None
+            if len(m) > 1:
+                version = m[1]
+            mods.append(find(name, version))
+
+
+
+    def __call__(self, *args):
+        cl = args[0]
+        old_command = cl.get_command
+        cl.modules = self.modules
+        cl._load_modules = self._load_modules
+
+        def get_grape_command(self):
+            c = old_command(self)
+            grape_home = Grape().home or '/'
+            new_c = os.path.join(grape_home,'modules',self.modules[0][0],self.modules[0][1])
+
+            if len(c) > 1:
+                c = (c[0],os.path.join(new_c,c[1]))
+            else:
+                c = os.path.join(new_c,c)
+            return c
+
+        cl.get_command = get_grape_command
+
+        return cl
+
+
