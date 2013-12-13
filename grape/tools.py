@@ -66,7 +66,7 @@ class gem(object):
     The GEMTools RNAseq Mapping Pipeline
 
     Usage:
-        gem -f <fastq_file>... -i <genome_index> -a <annotation> -q <quality> [-n <name>] [-o <output_dir>] [-t <threads>]
+        gem -f <fastq_file> -i <genome_index> -a <annotation> -q <quality> [-n <name>] [-o <output_dir>] [-t <threads>] [--single-end]
 
     Options:
         --help  Show this help message
@@ -74,15 +74,14 @@ class gem(object):
         -n, --name <name>  The output prefix name [default: ${fastq.raw()[0]|name|ext|ext|re("_[12]","")}]
         -o, --output-dir <output_dir>  The output folder
         -t, --threads <threads>  The number of execution threads [default: 1]
+        -s, --single-end    Run the single-end pipeline
 
     Inputs:
-        -f, --fastq <fastq_file>...  The input fastq
+        -f, --fastq <fastq_file>  The input fastq
         -i, --index <genome_index>  The GEM index file for the genome
         -a, --annotation <annotation>  The reference annotation in GTF format
     """
     def validate(self):
-        if len(self.fastq) == 1:
-            self.add_option('single_end', True, long="--single-end", hidden=False)
         self.add_output('map', "${output_dir}/${name}.map.gz")
         self.add_output('bam', "${output_dir}/${name}.bam")
         self.add_output('bai', "${output_dir}/${name}.bam.bai")
@@ -154,7 +153,7 @@ class GrapePipeline(object):
     Run the default RNAseq pipeline
 
     usage:
-        rnaseq -f <fastq_file_1> -f <fastq_file_2> -q <quality> -i <genome_index> -a <annotation> [-o <output_dir>]
+        rnaseq -f <fastq_file_1> -f <fastq_file_2> -q <quality> -i <genome_index> -a <annotation> [-o <output_dir>] [--single-end]
 
     Inputs:
         -f, --fastq <fastq_file>        The input reference genome
@@ -163,12 +162,13 @@ class GrapePipeline(object):
 
     Options:
         -q, --quality <quality>         The fastq offset quality [default: 33]
+        -s, --single-end                Run the single-end pipeline
         -o, --output-dir <output_dir>   The output prefix [default: ${fastq|abs|parent}]
 
     """
     def pipeline(self):
         p = Pipeline()
-        gem = p.run('grape_gem_rnatool', index=self.index, annotation=self.annotation, fastq=self.fastq, quality=self.quality, output_dir=self.output_dir)
+        gem = p.run('grape_gem_rnatool', index=self.index, single_end=self.single_end, annotation=self.annotation, fastq=self.fastq, quality=self.quality, output_dir=self.output_dir)
         flux = p.run('grape_flux', input=gem.bam, annotation=self.annotation, output_dir=self.output_dir)
         p.context(locals())
         return p

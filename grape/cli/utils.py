@@ -20,6 +20,12 @@ def jip_prepare(args):
         p.run('grape_gem_setup', **jargs)
         jobs = jip.jobs.create_jobs(p)
     else:
+        input = []
+        for d in datasets:
+            fqs = d.fastq.keys()
+            input.append(fqs[0])
+            if len(fqs) == 1:
+                jargs['single-end'] == True
         jargs['fastq'] = [d.fastq.keys()[0] for d in datasets]
         jargs['annotation'] = project.config.get('annotation')
         jargs['index'] = project.config.get('genome')+'.gem'
