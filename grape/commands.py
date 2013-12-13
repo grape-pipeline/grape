@@ -25,7 +25,6 @@ from . import utils as grapeutils
 from .grape import Grape, Project, GrapeError
 from .cli import utils
 from .jobs.store import PipelineStore
-from jip.tools import ToolException
 
 
 
@@ -105,50 +104,66 @@ class RunCommand(GrapeCommand):
     description = """Run the pipeline on a set of data"""
 
     def run(self, args):
-        import time, datetime
+        import tools
+        import jip
+        from datetime import datetime, timedelta
+        # jip parameters
+        silent = False
+        profiler = False
+        force = False
+
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
+        jip_db_file = project.config.get('jip.db')
+        if jip_db_file:
+            # setup jip db
+            jip.db.init(jip_db_file)
+        p = jip.Pipeline()
+        jargs = {}
         if datasets == ['setup']:
-            pipelines = utils.create_pipelines(_pipelines.pre_pipeline, project, [None], vars(args))
+            jargs['input'] = project.config.get('genome')
+            jargs['annotation'] = project.config.get('annotation')
+            p.run('grape_gem_setup', **jargs)
+            jobs = jip.jobs.create_jobs(p)
         else:
-            pipelines = utils.create_pipelines(_pipelines.default_pipeline,
-                                           project,
-                                           datasets, vars(args))
-        if not pipelines:
+            jargs['fastq'] = [d.fastq.keys()[0] for d in datasets]
+            jargs['annotation'] = project.config.get('annotation')
+            jargs['index'] = project.config.get('genome')+'.gem'
+            p.run('grape_gem_rnapipeline', **jargs)
+            jobs = jip.jobs.create_jobs(p)
+        if not jobs:
             return False
 
-        # all created and validated, time to run
-        for pipeline in pipelines:
-            cli.info("Starting pipeline run: %s" % pipeline)
-            steps = pipeline.get_sorted_tools()
-            for i, step in enumerate(steps):
-                skip = step.is_done() or args.force
-                state = "Running"
-                if skip:
-                    state = cli.yellow("Skipped")
-                s = "({0:3d}/{1}) | {2} {3:20}".format(i + 1,
-                                                       len(steps),
-                                                       state, step)
-                cli.info(s, newline=skip)
-                if not skip:
-                    if datasets != ['setup']:
-                        index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]), args.compute_stats)
-                    start_time = time.time()
-                    try:
-                        step.run()
-                    except ToolException, err:
-                        if err.termination_signal == signal.SIGINT:
-                            cli.info(" : " + cli.yellow("CANCELED"))
-                        else:
-                            cli.info(" : " + cli.red("FAILED " + str(err.exit_value)))
-                        return False
-                    end = datetime.timedelta(seconds=int(time.time() - start_time))
-                    cli.info(" : " + cli.green("DONE") + " [%s]" % end)
+        if args.dry:
+            from jip.cli import show_commands, show_dry
+            show_dry(jobs)
+            show_commands(jobs)
+            return
 
+        # all created and validated, time to run
+        for exe in jip.jobs.create_executions(jobs):
+            if exe.completed and not force:
+                if not silent:
+                    cli.warn("Skipping " + exe.name)
+            else:
+                if not silent:
+                    cli.warn("Running {name:30}".format(name=exe.name))
+                start = datetime.now()
+                success = jip.jobs.run_job(exe.job, profiler=profiler)
+                end = timedelta(seconds=(datetime.now() - start).seconds)
+                if success:
+                    if not silent:
+                        cli.info(exe.job.state + " [%s]" % (end))
+                else:
+                    if not silent:
+                        cli.error(exe.job.state)
+                    sys.exit(1)
         return True
 
     def add(self, parser):
         parser.add_argument("datasets", default=["all"], nargs="*")
+        parser.add_argument("--dry", default=False, action="store_true",
+                            help="Show the pipeline graph and commands and exit")
         parser.add_argument("--force", default=False, action="store_true",
                             help="Force computation of all jobs")
         parser.add_argument("--compute-stats", default=False, action="store_true",
@@ -162,135 +177,20 @@ class JobsCommand(GrapeCommand):
     description = """List and modify grape jobs"""
 
     def run(self, args):
-        grp = Grape()
-        cluster = grp.get_cluster()
-
-        # list jobs
-        self._list_jobs(args, cluster)
-
-    def _get_stores(self, project, check=False, cluster=None):
-        """Iterates over all project job stores and collects
-        the data. If check is set to True and a cluster is
-        specified, the cluster jobs are listed and the states
-        are updated.
-        """
-        stores = []
-        job_states = None
-        for store in jobs.store.list(project.path):
-            try:
-                store.lock()
-                data = store.get()
-                if check:
-                    changed = False
-                    # check job status
-                    for k, v in data.items():
-                        if k in ["name"]:
-                            continue
-                        if v.get("state", None) in [jobs.STATE_QUEUED,
-                                                    jobs.STATE_RUNNING]:
-                            if job_states is None:
-                                job_states = cluster.list()
-                            if v["id"] not in job_states:
-                                v["state"] = jobs.STATE_FAILED
-                                changed = True
-                    if changed:
-                        store.save(data)
-                stores.append(data)
-            finally:
-                store.release()
-        return stores
-
-    def _list_jobs(self, args, cluster):
-        """List grape jobs
-
-        :param cluster: the cluster instance
-        :type cluster: jip.cluster.Cluster
-        """
+        import jip
         project, datasets = utils.get_project_and_datasets(args)
-
-        stores = self._get_stores(project, check=args.check, cluster=cluster)
-
-        if args.verbose:
-            self._list_verbose(stores)
-            return True
-
-        names = []
-        states = []
-        bars = []
-        for data in stores:
-            raw_states = []
-            for k, v in data.items():
-                if k not in ["name"]:
-                    raw_states.append(v["state"])
-
-            # print overview
-            counts = {}
-            def _count(k):
-                counts[k] = counts.get(k, 0) + 1
-            map(_count, raw_states)
-
-            pipeline_state = cli.green(jobs.STATE_DONE)
-            if counts.get(jobs.STATE_FAILED, 0) > 0:
-                pipeline_state = cli.red(jobs.STATE_FAILED)
-            if counts.get(jobs.STATE_RUNNING, 0) > 0:
-                pipeline_state = cli.white(jobs.STATE_RUNNING)
-            if counts.get(jobs.STATE_QUEUED, 0) > 0:
-                pipeline_state = cli.yellow(jobs.STATE_QUEUED)
-
-            BAR_TEMPLATE = '[%s%s] %i/%i'
-            bar = None
-            count = len(raw_states)
-            width = 32
-            i = counts.get(jobs.STATE_DONE, 0)
-            x = int(width * i / count)
-            bar = BAR_TEMPLATE % (
-                '#' * x,
-                ' ' * (width - x),
-                i,
-                count
-            )
-            names.append(data["name"])
-            states.append(pipeline_state),
-            bars.append(bar)
-
-        max_names = max(map(len, names)) + 2
-        max_state = max(map(len, states)) + 2
-        for i, name in enumerate(names):
-            cli.info(cli.columns(
-                [name, max_names],
-                [states[i], max_state],
-                [bars[i], None]))
-
-
-
-    def _list_verbose(self, stores):
-        for data in stores:
-            names = []
-            states = []
-            ids = []
-            for k, v in data.items():
-                if k not in ["name"]:
-                    names.append(k)
-                    ids.append(str(v.get("id", "")))
-                    s = v.get("state", "")
-                    if s == jobs.STATE_QUEUED:
-                        states.append(cli.yellow(s))
-                    elif s == jobs.STATE_RUNNING:
-                        states.append(cli.white(s))
-                    elif s == jobs.STATE_DONE:
-                        states.append(cli.green(s))
-                    else:
-                        states.append(cli.red(s))
-
-            max_names = max(map(len, names)) + 2
-            max_ids = max(map(len, ids)) + 2
-            cli.info("Pipeline: " + data["name"])
-            for i, name in enumerate(names):
-                cli.info(cli.columns(
-                    [name, max_names],
-                    [ids[i], max_ids],
-                    [states[i], None]))
-
+        jip_db_file = project.config.get('jip.db')
+        if jip_db_file:
+            # setup jip db
+            jip.db.init(jip_db_file)
+        try:
+            import runpy
+            argv = ["jip-jobs"]
+            sys.argv = argv  # reset options
+            runpy.run_module("jip.cli.jip_jobs", run_name="__main__")
+        except ImportError:
+            cli.error("Import error. Here is the exception:",
+                      exc_info=True)
 
     def add(self, parser):
         parser.add_argument("--check", default=False, action="store_true",
@@ -299,8 +199,6 @@ class JobsCommand(GrapeCommand):
         parser.add_argument("-v", "--verbose", default=False,
                             action="store_true",
                             dest="verbose", help="Print job details")
-        pass
-        #parser.add_argument("datasets", default="all", nargs="*")
 
 
 class SubmitCommand(GrapeCommand):
@@ -308,76 +206,51 @@ class SubmitCommand(GrapeCommand):
     description = """Submit the pipeline on a set of data"""
 
     def run(self, args):
+        import time
+        import tools
+        import jip
+        from datetime import datetime, timedelta
+        # jip parameters
+        force = False
+
         # get the project and the selected datasets
         project, datasets = utils.get_project_and_datasets(args)
+        jip_db_file = project.config.get('jip.db')
+        if jip_db_file:
+            # setup jip db
+            jip.db.init(jip_db_file)
         if datasets == ['setup']:
-            pipelines = utils.create_pipelines(_pipelines.pre_pipeline, project, [None], vars(args))
+            args['input'] = project.config.get('genome', '')
+            args['annotation'] = project.config.get('annotation', '')
+            args['output_dir'] = project.genome_folder
+            jobs = jip.jobs.create_jobs('grape_gem_setup', args=args)
         else:
-            pipelines = utils.create_pipelines(_pipelines.default_pipeline,
-                                           project,
-                                           datasets,
-                                           vars(args))
-
-        if not pipelines:
+            jobs = jip.jobs.create_jobs('grape_gem_rnapipeline', args=args)
+        if not jobs:
             return False
 
-        # all created and validated, time to run
-        grp = Grape()
-        cluster = grp.get_cluster()
-
-        for pipeline in pipelines:
-            cli.info("Submitting pipeline run: %s" % pipeline)
-            store = PipelineStore(project.path, pipeline.name)
-
-            steps = pipeline.get_sorted_tools()
-            for i, step in enumerate(steps):
-                skip = step.is_done()
-                if skip:
-                    state = cli.yellow("Skipped")
-                    jobid = ""
+        try:
+            #####################################################
+            # Iterate the executions and submit
+            #####################################################
+            for exe in jip.jobs.create_executions(jobs, save=True,
+                                                  check_outputs=not force,
+                                                  check_queued=not force):
+                if exe.completed and not force:
+                    cli.warn("Skipping %s" % exe.name)
                 else:
-                    state = cli.green("Submitted")
-
-                    # apply job configutration
-                    grp.configure_job(step._tool)
-
-                    # hard code some paramters
-                    # the name is always set
-                    # and we want cluster jobs to be verbose by default
-                    job_prefix = "GRP-"
-                    if datasets == ['setup']:
-                        job_prefix = "%sSET-" % (job_prefix,)
-                    step.job.name = "%s%s" % (job_prefix, str(step))
-                    step.job.verbose = True
-
-                    if datasets != ['setup']:
-                        index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]), args.compute_stats)
-                    jobs.store.prepare_tool(step._tool, project.path,
-                                            pipeline.name)
-
-                    # we need to explicitly lock the store here as the
-                    # job is already on the cluster and we need to make
-                    # sure the cluster jobs does not updated the entry before
-                    # we actually set it
-                    store.lock()
-                    feature = cluster.submit(step,
-                                             step.get_configuration())
-                    jobid = feature.jobid
-                    store_entry = {
-                        "id": jobid,
-                        "stderr": feature.stderr,
-                        "stdout": feature.stdout,
-                        "state": jobs.STATE_QUEUED
-                    }
-                    store.set(str(step), store_entry)
-                    store.release()
-
-                s = "({0:3d}/{1}) | {2} {3:20} {4}".format(i + 1,
-                                                           len(steps),
-                                                           state, step,
-                                                           jobid)
-                cli.info(s)
-        return True
+                    if jip.jobs.submit_job(exe.job, force=force):
+                        cli.info("Submitted %s with remote id %s" % (
+                            exe.job.id, exe.job.job_id
+                        ))
+            return True
+        except Exception as err:
+            cli.error("Submission error: %s", err, exc_info=True)
+            cli.error("Error while submitting job: %s" % str(err))
+            ##################################################
+            # delete all submitted jobs
+            ##################################################
+            jip.jobs.delete(jobs, clean_logs=True)
 
 
     def add(self, parser):
