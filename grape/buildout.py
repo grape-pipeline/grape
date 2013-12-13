@@ -120,8 +120,9 @@ class module(object):
             path = [p for p in self.job.env.get('PATH', '${PATH}').split(':') if p is not '']
             modules_path = self._load_modules()
             for module_path in modules_path:
+                module_path = os.path.join(module_path,'bin')
                 if module_path not in path:
-                    path.insert(0, os.path.join(module_path,'bin'))
+                    path.insert(0, module_path)
             self.job.env['PATH'] = ':'.join(path)
 
         cl.validate = validate
