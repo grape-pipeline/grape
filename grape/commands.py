@@ -112,25 +112,8 @@ class RunCommand(GrapeCommand):
         profiler = False
         force = False
 
-        # get the project and the selected datasets
-        project, datasets = utils.get_project_and_datasets(args)
-        jip_db_file = project.config.get('jip.db')
-        if jip_db_file:
-            # setup jip db
-            jip.db.init(jip_db_file)
-        p = jip.Pipeline()
-        jargs = {}
-        if datasets == ['setup']:
-            jargs['input'] = project.config.get('genome')
-            jargs['annotation'] = project.config.get('annotation')
-            p.run('grape_gem_setup', **jargs)
-            jobs = jip.jobs.create_jobs(p)
-        else:
-            jargs['fastq'] = [d.fastq.keys()[0] for d in datasets]
-            jargs['annotation'] = project.config.get('annotation')
-            jargs['index'] = project.config.get('genome')+'.gem'
-            p.run('grape_gem_rnapipeline', **jargs)
-            jobs = jip.jobs.create_jobs(p)
+        jobs = utils.jip_prepare(args)
+
         if not jobs:
             return False
 
@@ -172,35 +155,6 @@ class RunCommand(GrapeCommand):
                                             add_cluster_parameter=False)
 
 
-class JobsCommand(GrapeCommand):
-    name = "jobs"
-    description = """List and modify grape jobs"""
-
-    def run(self, args):
-        import jip
-        project, datasets = utils.get_project_and_datasets(args)
-        jip_db_file = project.config.get('jip.db')
-        if jip_db_file:
-            # setup jip db
-            jip.db.init(jip_db_file)
-        try:
-            import runpy
-            argv = ["jip-jobs"]
-            sys.argv = argv  # reset options
-            runpy.run_module("jip.cli.jip_jobs", run_name="__main__")
-        except ImportError:
-            cli.error("Import error. Here is the exception:",
-                      exc_info=True)
-
-    def add(self, parser):
-        parser.add_argument("--check", default=False, action="store_true",
-                            dest="check", help="Check the jobs status by "
-                                               "querying the cluster")
-        parser.add_argument("-v", "--verbose", default=False,
-                            action="store_true",
-                            dest="verbose", help="Print job details")
-
-
 class SubmitCommand(GrapeCommand):
     name = "submit"
     description = """Submit the pipeline on a set of data"""
@@ -213,21 +167,16 @@ class SubmitCommand(GrapeCommand):
         # jip parameters
         force = False
 
-        # get the project and the selected datasets
-        project, datasets = utils.get_project_and_datasets(args)
-        jip_db_file = project.config.get('jip.db')
-        if jip_db_file:
-            # setup jip db
-            jip.db.init(jip_db_file)
-        if datasets == ['setup']:
-            args['input'] = project.config.get('genome', '')
-            args['annotation'] = project.config.get('annotation', '')
-            args['output_dir'] = project.genome_folder
-            jobs = jip.jobs.create_jobs('grape_gem_setup', args=args)
-        else:
-            jobs = jip.jobs.create_jobs('grape_gem_rnapipeline', args=args)
+        jobs = utils.jip_prepare(args)
+
         if not jobs:
             return False
+
+        if args.dry:
+            from jip.cli import show_commands, show_dry
+            show_dry(jobs)
+            show_commands(jobs)
+            return
 
         try:
             #####################################################
@@ -254,12 +203,38 @@ class SubmitCommand(GrapeCommand):
 
 
     def add(self, parser):
+        parser.add_argument("--dry", default=False, action="store_true",
+                            help="Show the pipeline graph and commands and exit")
         parser.add_argument("--compute-stats", default=False, action="store_true",
                             help="Compute md5 sums and size for jobs output files")
         parser.add_argument("datasets", default=["all"], nargs="*")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=True)
 
+
+class JobsCommand(GrapeCommand):
+    name = "jobs"
+    description = """List and modify grape jobs"""
+
+    def run(self, args):
+        import jip
+        project, datasets = utils.get_project_and_datasets(args)
+        jip_db_file = project.config.get('jip.db')
+        if jip_db_file:
+            # setup jip db
+            jip.db.init(jip_db_file)
+        try:
+            import runpy
+            argv = ["jip-jobs"] + ['--expand'] if args.expand else []
+            sys.argv = argv # reset options
+            runpy.run_module("jip.cli.jip_jobs", run_name="__main__")
+        except ImportError:
+            cli.error("Import error. Here is the exception:",
+                      exc_info=True)
+
+    def add(self, parser):
+        parser.add_argument("--expand", default=False, action="store_true",
+                            dest="expand", help="Do not collapse pipeline jobs")
 
 class ConfigCommand(GrapeCommand):
     name = "config"
