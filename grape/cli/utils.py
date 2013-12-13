@@ -2,8 +2,30 @@
 """
 from clint.textui import colored, puts, columns
 import grape.commands
+import jip
 from grape.grape import Grape
 
+def jip_prepare(args):
+    # get the project and the selected datasets
+    project, datasets = get_project_and_datasets(args)
+    jip_db_file = project.config.get('jip.db')
+    if jip_db_file:
+        # setup jip db
+        jip.db.init(jip_db_file)
+    p = jip.Pipeline()
+    jargs = {}
+    if datasets == ['setup']:
+        jargs['input'] = project.config.get('genome')
+        jargs['annotation'] = project.config.get('annotation')
+        p.run('grape_gem_setup', **jargs)
+        jobs = jip.jobs.create_jobs(p)
+    else:
+        jargs['fastq'] = [d.fastq.keys()[0] for d in datasets]
+        jargs['annotation'] = project.config.get('annotation')
+        jargs['index'] = project.config.get('genome')+'.gem'
+        p.run('grape_gem_rnapipeline', **jargs)
+        jobs = jip.jobs.create_jobs(p)
+    return jobs
 
 def get_project_and_datasets(args):
     """Get the current project and the selected datasets using the command
