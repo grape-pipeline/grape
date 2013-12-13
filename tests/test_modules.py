@@ -124,7 +124,7 @@ def test_module_decorator_with_grape_home_no_validate():
     assert jobs[0] is not None
     assert jobs[0].env['PATH'].split(':')[0] == path
 
-def test_module_decorator_pipeline():
+def test_module_decorator_pipeline_env():
     os.environ['GRAPE_HOME'] = os.getcwd() + '/test_data/home'
 
     @module([("gemtools", "1.6.1")])
@@ -205,3 +205,6 @@ def test_module_decorator_pipeline():
     assert len(jobs) == 2
     assert jobs[0] is not None
     assert jobs[0].env['PATH'].split(':')[0] == path
+
+    assert jobs[1] is not None
+    assert jobs[1].env['PATH'].split(':')[0] == path
