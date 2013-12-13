@@ -1,5 +1,4 @@
 {
-// Default dialect for the grape index file
   "colsep": "\t", 
   "fileinfo": [
     "path", 
