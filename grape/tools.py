@@ -125,18 +125,24 @@ class SetupPipeline(object):
         setup -i <genome> -a <annotation> [-o <output_prefix>]
 
     Options:
-        -i, --input <genome>                    The input reference genome
-        -a, --annotation <annotation            The input reference annotation
-        -o, --output-dir <output_dir>     The output prefix [default: ${input|abs|parent}]
+        -i, --input <genome>              The input reference genome
+        -a, --annotation <annotation      The input reference annotation
+        -o, --output-dir <output_dir>     The output prefix
 
     """
 
     def pipeline(self):
         out = self.output_dir
+        if not out:
+            out_genome = "${input|ext}.gem"
+            out_tx = "${annotation}"
+        else:
+            out_genome = out_tx = out
         input = self.input
         p = Pipeline()
-        index = p.run('grape_gem_index', input=self.input, output="${out}/${input|name|ext}.gem")
-        t_index = p.run('grape_gem_t_index', index=index, annotation=self.annotation, output_prefix="${out}/${annotation|name}")
+
+        index = p.run('grape_gem_index', input=self.input, output=out_genome)
+        t_index = p.run('grape_gem_t_index', index=index, annotation=self.annotation, output_prefix=out_tx)
         p.context(locals())
         return p
 
@@ -148,16 +154,16 @@ class GrapePipeline(object):
     Run the default RNAseq pipeline
 
     usage:
-        rnaseq -f <fastq_file>... -q <quality> -i <genome_index> -a <annotation> [-o <output_dir>]
+        rnaseq -f <fastq_file_1> -f <fastq_file_2> -q <quality> -i <genome_index> -a <annotation> [-o <output_dir>]
 
     Inputs:
-        -f, --fastq <fastq_file>...   The input reference genome
-        -i, --index <genome_index>    The input reference genome
-        -a, --annotation <annotation  The input reference annotation
+        -f, --fastq <fastq_file>        The input reference genome
+        -i, --index <genome_index>      The input reference genome
+        -a, --annotation <annotation    The input reference annotation
 
     Options:
-        -q, --quality <quality>  The fatq offset quality [default: 33]
-        -o, --output-dir <output_dir>  The output prefix [default: ${fastq.raw()[0]|abs|parent}]
+        -q, --quality <quality>         The fastq offset quality [default: 33]
+        -o, --output-dir <output_dir>   The output prefix [default: ${fastq|abs|parent}]
 
     """
     def pipeline(self):
