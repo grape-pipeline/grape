@@ -101,7 +101,7 @@ class flux(object):
 
     Options:
         --help  Show this help message
-        -o, --output-dir <output_dir>  The output folder
+        -o, --output-dir <output_dir>  The output folder [default: ${input|parent}]
 
     Inputs:
         -i, --input <input>  The input file with mappings
