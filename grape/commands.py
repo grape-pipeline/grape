@@ -361,63 +361,18 @@ class ListToolsCommand(GrapeCommand):
 
     def run(self, args):
         import jip
-        import json
-        import textwrap
 
-        tool_classes = jip.discover()
-        if args.show_config:
-            grape = Grape()
-            cfgs = {}
-
-            # do not include these paramters
-            excludes = set(["verbose", "template", "jobid",
-                            "working_dir", "dependencies", "name"])
-
-            # default config
-            cfgs["default"] = {}
-            default_job = jip.tools.Job()
-            grape.configure_job(default_job)
-            for k in filter(lambda x: x not in excludes, vars(default_job)):
-                v = getattr(default_job, k, "")
-                cfgs["default"][k] = v
-
-            # all registered tools by name
-            for tc in tool_classes:
-                i = tc()
-                grape.configure_job(i)
-                cfgs[i.name] = {}
-                for k in filter(lambda x: x not in excludes, vars(i.job)):
-                    v = getattr(i.job, k, "")
-                    cfgs[i.name][k] = v
-
-            stream = sys.stdout.write
-            if args.create:
-                jobs_conf=(os.path.join(grape.home, 'conf','jobs.json'))
-                if os.path.exists(jobs_conf) and not args.force:
-                    raise ValueError("The file %r already exists. use the force option to overwrite." % jobs_conf)
-                stream = open(jobs_conf,'w').write;
-
-            cli.puts(json.dumps(cfgs, indent=4), stream=stream)
-        else:
-            if args.create:
-                raise ValueError('"--create" option can be only sepcified in combination with "--show-config"')
-            cli.puts(
-                textwrap.dedent("""
-                The following tools are available for grape pipeline runs.\n
-                You can get the available configuration options that can be applied for each tool
-                globally in your jobs.json configuration file with the --show-config option.
-                """)
-            )
-            cli.puts(cli.columns(["Tool Name", 20], ["Description", 60]))
-            cli.puts("-" * 80)
-            for tc in tool_classes:
-                i = tc()
-                description = i.short_description
-                if description is None:
-                    description = ""
-
-                cli.puts(cli.columns([i.name, 20], [description, 60]))
-        return True
+        rows = []
+        jip.scanner.scan_modules()
+        for name, cls in jip.scanner.registry.iteritems():
+            help = cls.help()
+            description = "-"
+            if help is not None:
+                description = help.split("\n")[0]
+            if len(description) > 60:
+                description = "%s ..." % description[:46]
+            rows.append((name, description))
+        print jip.cli.render_table(["Tool", "Description"], rows)
 
     def add(self, parser):
         parser.add_argument('--show-config', dest='show_config', default=False, action="store_true", help="show the possible job configuration options for running the tools on a cluster")
