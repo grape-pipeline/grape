@@ -71,7 +71,7 @@ class gem(object):
     Options:
         --help  Show this help message
         -q, --quality <quality>  The fastq offset quality
-        -n, --name <name>  The output prefix name [default: ${fastq.raw()[0]|name|ext|ext|re("_[12]","")}]
+        -n, --name <name>  The output prefix name [default: ${fastq|name|ext|ext|re("_[12]","")}]
         -o, --output-dir <output_dir>  The output folder
         -t, --threads <threads>  The number of execution threads [default: 1]
         -s, --single-end    Run the single-end pipeline
