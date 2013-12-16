@@ -10,7 +10,7 @@ from buildout import module
 @module([("gemtools", "1.6.1")])
 @tool('grape_gem_index')
 class GemIndex(object):
-    """
+    """\
     The GEM Indexer tool
 
     Usage:
@@ -35,7 +35,7 @@ class GemIndex(object):
 @module([("gemtools", "1.6.1")])
 @tool('grape_gem_t_index')
 class GemTranscriptomeIndex(object):
-    """
+    """\
     The GEM Transcrptome Indexer tool
 
     Usage:
@@ -62,8 +62,8 @@ class GemTranscriptomeIndex(object):
 @module([("gemtools", "1.6.1")])
 @tool('grape_gem_rnatool')
 class gem(object):
-    """
-    The GEMTools RNAseq Mapping Pipeline
+    """\
+    The GEMtools RNAseq Mapping Pipeline
 
     Usage:
         gem -f <fastq_file> -i <genome_index> -a <annotation> -q <quality> [-n <name>] [-o <output_dir>] [-t <threads>] [--single-end]
@@ -93,8 +93,8 @@ class gem(object):
 @module([("flux", "1.2.3")])
 @tool('grape_flux')
 class flux(object):
-    """
-    The Flux Capacitor
+    """\
+    The Flux Capacitor tool
 
     Usage:
         flux -i <input> -a <annotation> [-o <output_dir>]
@@ -118,7 +118,7 @@ class flux(object):
 @pipeline('grape_gem_setup')
 class SetupPipeline(object):
     """\
-    Run GEM indexers
+    The GEM indexes setup pipeline
 
     usage:
         setup -i <genome> -a <annotation> [-o <output_prefix>]
@@ -149,8 +149,8 @@ class SetupPipeline(object):
 @pipeline('grape_gem_rnapipeline')
 class GrapePipeline(object):
 #-o, --output-dir <output_dir>  The output prefix [default: ${fastq.raw()[0]|abs|parent}]
-    """
-    Run the default RNAseq pipeline
+    """\
+    The default GRAPE RNAseq pipeline
 
     usage:
         rnaseq -f <fastq_file_1> -f <fastq_file_2> -q <quality> -i <genome_index> -a <annotation> [-o <output_dir>] [--single-end]

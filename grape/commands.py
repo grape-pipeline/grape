@@ -363,12 +363,14 @@ class ListToolsCommand(GrapeCommand):
         import jip
         from jip.cli import render_table
 
-        print "Tools implemented in Python modules"
-        print "-----------------------------------"
-        print ""
+        print "GRAPE implemented tools"
+        print "-----------------------"
+        # print ""
         rows = []
         jip.scanner.scan_modules()
         for name, cls in jip.scanner.registry.iteritems():
+            if name in ['bash','cleanup']:
+                continue
             help = cls.help()
             description = "-"
             if help is not None:
