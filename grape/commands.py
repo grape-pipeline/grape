@@ -361,6 +361,7 @@ class ListToolsCommand(GrapeCommand):
 
     def run(self, args):
         import jip
+        from jip.cli import render_table
 
         rows = []
         jip.scanner.scan_modules()
@@ -372,7 +373,7 @@ class ListToolsCommand(GrapeCommand):
             if len(description) > 60:
                 description = "%s ..." % description[:46]
             rows.append((name, description))
-        print jip.cli.render_table(["Tool", "Description"], rows)
+        print render_table(["Tool", "Description"], rows)
 
     def add(self, parser):
         parser.add_argument('--show-config', dest='show_config', default=False, action="store_true", help="show the possible job configuration options for running the tools on a cluster")
