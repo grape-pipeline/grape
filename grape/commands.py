@@ -363,6 +363,9 @@ class ListToolsCommand(GrapeCommand):
         import jip
         from jip.cli import render_table
 
+        print "Tools implemented in Python modules"
+        print "-----------------------------------"
+        print ""
         rows = []
         jip.scanner.scan_modules()
         for name, cls in jip.scanner.registry.iteritems():
