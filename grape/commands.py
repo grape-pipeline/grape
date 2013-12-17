@@ -27,15 +27,6 @@ from .cli import utils
 from .jobs.store import PipelineStore
 
 
-
-
-class CommandError(Exception):
-    """Exception raised by command line tools. This exception
-    is catched in the main call and no stack trace is printed, just
-    the error message"""
-    pass
-
-
 class GrapeCommand(object):
     """Base class for grape commands. A grape command implementation
     must provide a name and a description attribute.
@@ -178,33 +169,42 @@ class SubmitCommand(GrapeCommand):
             show_commands(jobs)
             return
 
-        try:
+        if args.hold:
             #####################################################
-            # Iterate the executions and submit
+            # Only save the jobs and let them stay on hold
             #####################################################
-            for exe in jip.jobs.create_executions(jobs, save=True,
-                                                  check_outputs=not force,
-                                                  check_queued=not force):
-                if exe.completed and not force:
-                    cli.warn("Skipping %s" % exe.name)
-                else:
-                    if jip.jobs.submit_job(exe.job, force=force):
-                        cli.info("Submitted %s with remote id %s" % (
-                            exe.job.id, exe.job.job_id
-                        ))
-            return True
-        except Exception as err:
-            cli.error("Submission error: %s", err, exc_info=True)
-            cli.error("Error while submitting job: %s" % str(err))
-            ##################################################
-            # delete all submitted jobs
-            ##################################################
-            jip.jobs.delete(jobs, clean_logs=True)
+            jip.db.save(jobs)
+            print "Jobs stored and put on hold"
+        else:
+            try:
+                #####################################################
+                # Iterate the executions and submit
+                #####################################################
+                for exe in jip.jobs.create_executions(jobs, save=True,
+                                                      check_outputs=not force,
+                                                      check_queued=not force):
+                    if exe.completed and not force:
+                        cli.warn("Skipping %s" % exe.name)
+                    else:
+                        if jip.jobs.submit_job(exe.job, force=force):
+                            cli.info("Submitted %s with remote id %s" % (
+                                exe.job.id, exe.job.job_id
+                            ))
+                return True
+            except Exception as err:
+                cli.error("Submission error: %s", err, exc_info=True)
+                cli.error("Error while submitting job: %s" % str(err))
+                ##################################################
+                # delete all submitted jobs
+                ##################################################
+                jip.jobs.delete(jobs, clean_logs=True)
 
 
     def add(self, parser):
         parser.add_argument("--dry", default=False, action="store_true",
                             help="Show the pipeline graph and commands and exit")
+        parser.add_argument("--hold", default=False, action="store_true",
+                            help="Submit and hold the jobs")
         parser.add_argument("--compute-stats", default=False, action="store_true",
                             help="Compute md5 sums and size for jobs output files")
         parser.add_argument("datasets", default=["all"], nargs="*")
@@ -614,7 +614,7 @@ def main():
             sys.exit(1)
     except KeyboardInterrupt:
         pass
-    except CommandError, ce:
+    except cli.utils.CommandError, ce:
         cli.error(str(ce))
         sys.exit(1)
     except ValueError, e:
