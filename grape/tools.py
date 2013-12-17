@@ -110,7 +110,7 @@ class flux(object):
     def validate(self):
         self.output_dir.hidden = True
         self.add_option('name',"${input|name|ext}")
-        self.add_output('output', "${output_dir}/${name}.gtf", hidden=False, long='output')
+        self.add_output('output', "${output_dir}/${name}.gtf", hidden=False, long='--output')
 
     def get_command(self):
         return 'bash', 'flux-capacitor ${options()}'
