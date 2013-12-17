@@ -108,8 +108,9 @@ class flux(object):
         -a, --annotation <annotation>  The reference annotation in GTF format
     """
     def validate(self):
+        self.output_dir.hidden = True
         self.add_option('name',"${input|name|ext}")
-        self.add_output('gtf', "${output_dir}/${name}.gtf")
+        self.add_output('output', "${output_dir}/${name}.gtf", hidden=False, long='output')
 
     def get_command(self):
         return 'bash', 'flux-capacitor ${options()}'
