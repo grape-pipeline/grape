@@ -66,7 +66,7 @@ class gem(object):
     The GEMtools RNAseq Mapping Pipeline
 
     Usage:
-        gem -f <fastq_file> -i <genome_index> -a <annotation> -q <quality> [-n <name>] [-o <output_dir>] [-t <threads>] [--single-end]
+        gem -f <fastq_file> -i <genome_index> -r <transcript_index> -q <quality> [-n <name>] [-o <output_dir>] [-t <threads>] [--single-end]
 
     Options:
         --help  Show this help message
@@ -79,7 +79,7 @@ class gem(object):
     Inputs:
         -f, --fastq <fastq_file>  The input fastq
         -i, --index <genome_index>  The GEM index file for the genome
-        -a, --annotation <annotation>  The reference annotation in GTF format
+        -r, --transcript-index <trascript_index>  The GEM index file for the transcriptome
     """
     def validate(self):
         self.add_output('map', "${output_dir}/${name}.map.gz")
@@ -130,19 +130,22 @@ class SetupPipeline(object):
         -o, --output-dir <output_dir>     The output prefix
 
     """
-
-    def pipeline(self):
+    def validate(self):
         out = self.output_dir
         if not out:
-            out_genome = "${input|ext}.gem"
-            out_tx = "${annotation}"
+            index = "${input|ext}.gem"
+            t_out = "${annotation}"
         else:
-            out_genome = out_tx = out
+            index = t_out = out
+        self.add_output('index', index)
+        self.add_output('t_out', t_out)
+        self.add_output('t_index', t_out+'.gem')
+
+    def pipeline(self):
         input = self.input
         p = Pipeline()
-
-        index = p.run('grape_gem_index', input=self.input, output=out_genome)
-        t_index = p.run('grape_gem_t_index', index=index, annotation=self.annotation, output_prefix=out_tx)
+        index = p.run('grape_gem_index', input=self.input, output=self.index)
+        t_index = p.run('grape_gem_t_index', index=index, annotation=self.annotation, output_prefix=self.t_out)
         p.context(locals())
         return p
 
@@ -154,11 +157,11 @@ class GrapePipeline(object):
     The default GRAPE RNAseq pipeline
 
     usage:
-        rnaseq -f <fastq_file_1> -f <fastq_file_2> -q <quality> -i <genome_index> -a <annotation> [-o <output_dir>] [--single-end]
+        rnaseq -f <fastq_file> -q <quality> -g <genome> -a <annotation> [-o <output_dir>] [--single-end]
 
     Inputs:
         -f, --fastq <fastq_file>        The input reference genome
-        -i, --index <genome_index>      The input reference genome
+        -g, --genome <genome_index>      The input reference genome
         -a, --annotation <annotation    The input reference annotation
 
     Options:
@@ -169,7 +172,8 @@ class GrapePipeline(object):
     """
     def pipeline(self):
         p = Pipeline()
-        gem = p.run('grape_gem_rnatool', index=self.index, single_end=self.single_end, annotation=self.annotation, fastq=self.fastq, quality=self.quality, output_dir=self.output_dir)
-        flux = p.run('grape_flux', input=gem.bam, annotation=self.annotation, output_dir=self.output_dir)
+        gem_setup = p.run('grape_gem_setup', input=self.genome, annotation=self.annotation)
+        gem = p.run('grape_gem_rnatool', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, output_dir=self.output_dir)
+        #flux = p.run('grape_flux', input=gem.bam, annotation=self.annotation, output_dir=self.output_dir)
         p.context(locals())
         return p
