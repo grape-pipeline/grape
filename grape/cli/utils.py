@@ -1,9 +1,15 @@
 """Grape command line utilities
 """
 from clint.textui import colored, puts, columns
-import grape.commands
 import jip
 from grape.grape import Grape
+
+
+class CommandError(Exception):
+    """Exception raised by command line tools. This exception
+    is catched in the main call and no stack trace is printed, just
+    the error message"""
+    pass
 
 def jip_prepare(args):
     # get the project and the selected datasets
@@ -28,7 +34,7 @@ def jip_prepare(args):
                 jargs['single-end'] == True
         jargs['fastq'] = [d.fastq.keys()[0] for d in datasets]
         jargs['annotation'] = project.config.get('annotation')
-        jargs['index'] = project.config.get('genome')+'.gem'
+        jargs['genome'] = project.config.get('genome')
         p.run('grape_gem_rnapipeline', **jargs)
         jobs = jip.jobs.create_jobs(p)
     return jobs
@@ -62,7 +68,7 @@ def get_project_and_datasets(args):
         return (project, ['setup'])
 
     if datasets is None:
-        raise grape.commands.CommandError("No datasets specified!")
+        raise CommandError("No datasets specified!")
     if datasets == ['all']:
         datasets = []
 
