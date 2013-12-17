@@ -25,12 +25,9 @@ class GemIndex(object):
     Inputs:
         -i, --input <genome>  The fasta file for the genome
     """
-
-    def validate(self):
-        return True
-
     def get_command(self):
         return "bash", "gemtools index ${options()}"
+
 
 @module([("gemtools", "1.6.1")])
 @tool('grape_gem_t_index')
@@ -51,9 +48,9 @@ class GemTranscriptomeIndex(object):
         -i, --index <genome_index>  The GEM index file for the genome
         -a, --annotation <annotation>  The reference annotation in GTF format
     """
-    def validate(self):
-        self.add_output('gem', "%s.junctions.gem" % self.output_prefix)
-        self.add_output('keys', "%s.junctions.keys" % self.output_prefix)
+    def init(self):
+        self.add_output('gem', "${output_prefix}.junctions.gem")
+        self.add_output('keys', "${output_prefix}")
 
     def get_command(self):
         return 'bash', 'gemtools t-index ${options()}'
@@ -81,7 +78,7 @@ class gem(object):
         -i, --index <genome_index>  The GEM index file for the genome
         -r, --transcript-index <trascript_index>  The GEM index file for the transcriptome
     """
-    def validate(self):
+    def init(self):
         self.add_output('map', "${output_dir}/${name}.map.gz")
         self.add_output('bam', "${output_dir}/${name}.bam")
         self.add_output('bai', "${output_dir}/${name}.bam.bai")
@@ -107,10 +104,12 @@ class flux(object):
         -i, --input <input>  The input file with mappings
         -a, --annotation <annotation>  The reference annotation in GTF format
     """
-    def validate(self):
-        self.output_dir.hidden = True
+    def init(self):
         self.add_option('name',"${input|name|ext}")
         self.add_output('output', "${output_dir}/${name}.gtf", hidden=False, long='--output', short='-o')
+
+    def setup(self):
+        self.output_dir.hidden = True
 
     def get_command(self):
         return 'bash', 'flux-capacitor ${options()}'
@@ -130,16 +129,21 @@ class SetupPipeline(object):
         -o, --output-dir <output_dir>     The output prefix
 
     """
-    def validate(self):
+    def init(self):
+        self.add_output('index','')
+        self.add_output('t_out','')
+        self.add_output('t_index','')
+
+    def setup(self):
         out = self.output_dir
         if not out:
             index = "${input|ext}.gem"
             t_out = "${annotation}"
         else:
             index = t_out = out
-        self.add_output('index', index)
-        self.add_output('t_out', t_out)
-        self.add_output('t_index', t_out+'.gem')
+        self.index = index
+        self.t_out = t_out
+        self.t_index = t_out+'.gem'
 
     def pipeline(self):
         input = self.input
@@ -174,6 +178,6 @@ class GrapePipeline(object):
         p = Pipeline()
         gem_setup = p.run('grape_gem_setup', input=self.genome, annotation=self.annotation)
         gem = p.run('grape_gem_rnatool', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, output_dir=self.output_dir)
-        #flux = p.run('grape_flux', input=gem.bam, annotation=self.annotation, output_dir=self.output_dir)
+        flux = p.run('grape_flux', input=gem.bam, annotation=self.annotation, output_dir=self.output_dir)
         p.context(locals())
         return p
