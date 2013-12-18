@@ -155,10 +155,8 @@ class SubmitCommand(GrapeCommand):
         import tools
         import jip
         from datetime import datetime, timedelta
-        # jip parameters
-        force = False
 
-        jobs = utils.jip_prepare(args)
+        jobs = utils.jip_prepare(args, submit=True)
 
         if not jobs:
             return False
@@ -192,7 +190,6 @@ class SubmitCommand(GrapeCommand):
                             ))
                 return True
             except Exception as err:
-                cli.error("Submission error: %s", err, exc_info=True)
                 cli.error("Error while submitting job: %s" % str(err))
                 ##################################################
                 # delete all submitted jobs
@@ -205,6 +202,8 @@ class SubmitCommand(GrapeCommand):
                             help="Show the pipeline graph and commands and exit")
         parser.add_argument("--hold", default=False, action="store_true",
                             help="Submit and hold the jobs")
+        parser.add_argument("--force", default=False, action="store_true",
+                            help="Force job submission")
         parser.add_argument("--compute-stats", default=False, action="store_true",
                             help="Compute md5 sums and size for jobs output files")
         parser.add_argument("datasets", default=["all"], nargs="*")
