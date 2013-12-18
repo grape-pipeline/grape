@@ -156,6 +156,8 @@ class SubmitCommand(GrapeCommand):
         import jip
         from datetime import datetime, timedelta
 
+        force = args.force
+
         jobs = utils.jip_prepare(args, submit=True)
 
         if not jobs:
