@@ -2,6 +2,7 @@
 """
 from clint.textui import colored, puts, columns
 import jip
+from grape.cli import *
 from grape.grape import Grape
 
 
@@ -11,7 +12,7 @@ class CommandError(Exception):
     the error message"""
     pass
 
-def jip_prepare(args):
+def jip_prepare(args, submit=False):
     # get the project and the selected datasets
     project, datasets = get_project_and_datasets(args)
     jip_db_file = project.config.get('jip.db')
@@ -37,7 +38,30 @@ def jip_prepare(args):
         jargs['genome'] = project.config.get('genome')
         p.run('grape_gem_rnapipeline', **jargs)
         jobs = jip.jobs.create_jobs(p)
+    #if submit:
+    #    jobs = check_jobs_dependencies(jobs)
     return jobs
+
+def check_jobs_dependencies(jobs):
+    for j in jobs:
+        print j, j.dependencies
+
+def get_setup_jobs(job):
+    setup_jobs = []
+    if job.name == 'index':
+        if job.state == jip.db.STATE_DONE:
+            return []
+        query = jip.db.query_by_files(job.tool.input.value,job.tool.output.value)
+    if job.name == 't_index':
+        if job.state == jip.db.STATE_DONE:
+            return []
+        query = jip.db.query_by_files(job.tool.index.value,job.tool.gem.value)
+    job_list = query.all()
+    if job_list:
+        setup_jobs = [job_list[0]]
+    for j in job.dependencies:
+        setup_jobs += get_setup_jobs(j)
+    return [j for j in setup_jobs if j]
 
 def get_project_and_datasets(args):
     """Get the current project and the selected datasets using the command
