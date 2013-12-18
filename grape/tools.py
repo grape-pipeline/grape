@@ -141,9 +141,9 @@ class SetupPipeline(object):
             t_out = "${annotation}"
         else:
             index = t_out = out
-        self.index = index
-        self.t_out = t_out
-        self.t_index = t_out+'.gem'
+        self.options['index'] = index
+        self.options['t_out'] = t_out
+        self.options['t_index'] = t_out+'.gem'
 
     def pipeline(self):
         input = self.input
