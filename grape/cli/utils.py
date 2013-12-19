@@ -38,25 +38,39 @@ def jip_prepare(args, submit=False):
         jargs['genome'] = project.config.get('genome')
         p.run('grape_gem_rnapipeline', **jargs)
         jobs = jip.jobs.create_jobs(p)
-    #if submit:
-    #    jobs = check_jobs_dependencies(jobs)
+    if submit:
+        jobs = check_jobs_dependencies(jobs)
     return jobs
 
 def check_jobs_dependencies(jobs):
+    out_jobs = []
     for j in jobs:
-        print j, j.dependencies
+        add_job = True
+        js = get_setup_jobs(j)
+        for job in js:
+            if job.name == j.name:
+                add_job = False
+                break
+            if job.name in [o.name for o in j.dependencies]:
+                list = [ dep for dep in j.dependencies if dep.name != job.name]
+                j.dependencies = list + [job]
+        if add_job:
+            out_jobs.append(j)
+    return out_jobs
+
 
 def get_setup_jobs(job):
     setup_jobs = []
-    if job.name == 'index':
+    query = None
+    if str(job._tool) == 'grape_gem_index':
         if job.state == jip.db.STATE_DONE:
             return []
         query = jip.db.query_by_files(job.tool.input.value,job.tool.output.value)
-    if job.name == 't_index':
+    if str(job._tool) == 'grape_gem_t_index':
         if job.state == jip.db.STATE_DONE:
             return []
         query = jip.db.query_by_files(job.tool.index.value,job.tool.gem.value)
-    job_list = query.all()
+    job_list = query.all() if query else None
     if job_list:
         setup_jobs = [job_list[0]]
     for j in job.dependencies:
