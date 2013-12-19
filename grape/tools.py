@@ -6,6 +6,7 @@ and manage modules
 from jip import *
 from buildout import module
 
+r = jip.templates.render_template
 
 @module([("gemtools", "1.6.1")])
 @tool('grape_gem_index')
@@ -25,6 +26,9 @@ class GemIndex(object):
     Inputs:
         -i, --input <genome>  The fasta file for the genome
     """
+    def setup(self):
+        self.name('index.${input|name|ext}')
+
     def get_command(self):
         return "bash", "gemtools index ${options()}"
 
@@ -52,6 +56,9 @@ class GemTranscriptomeIndex(object):
         self.add_output('gem', "${output_prefix}.junctions.gem")
         self.add_output('keys', "${output_prefix}")
 
+    def setup(self):
+        self.name('t_index.${index|name|ext}')
+
     def get_command(self):
         return 'bash', 'gemtools t-index ${options()}'
 
@@ -68,7 +75,7 @@ class gem(object):
     Options:
         --help  Show this help message
         -q, --quality <quality>  The fastq offset quality
-        -n, --name <name>  The output prefix name [default: ${fastq|name|ext|ext|re("_[12]","")}]
+        -n, --name <name>  The output prefix name [default: ${fastq|name|ext|ext|re("[_-][12]","")}]
         -o, --output-dir <output_dir>  The output folder
         -t, --threads <threads>  The number of execution threads [default: 1]
         -s, --single-end    Run the single-end pipeline
@@ -82,6 +89,9 @@ class gem(object):
         self.add_output('map', "${output_dir}/${name}.map.gz")
         self.add_output('bam', "${output_dir}/${name}.bam")
         self.add_output('bai', "${output_dir}/${name}.bam.bai")
+
+    def setup(self):
+        self.name("gem.${name}")
 
     def get_command(self):
         return 'bash','gemtools rna-pipeline ${options()}'
@@ -105,10 +115,11 @@ class flux(object):
         -a, --annotation <annotation>  The reference annotation in GTF format
     """
     def init(self):
-        self.add_option('name',"${input|name|ext}")
+        self.add_option('name', "${input|name|ext}")
         self.add_output('output', "${output_dir}/${name}.gtf", hidden=False, long='--output', short='-o')
 
     def setup(self):
+        self.name("flux.${input|name|ext}")
         self.output_dir.hidden = True
 
     def get_command(self):
@@ -130,11 +141,12 @@ class SetupPipeline(object):
 
     """
     def init(self):
-        self.add_output('index','')
-        self.add_output('t_out','')
-        self.add_output('t_index','')
+        self.add_output('index', '')
+        self.add_output('t_out', '')
+        self.add_output('t_index', '')
 
     def setup(self):
+        self.name(r('gem.setup'))
         out = self.output_dir
         if not out:
             index = "${input|ext}.gem"
@@ -146,11 +158,9 @@ class SetupPipeline(object):
         self.options['t_index'] = t_out+'.gem'
 
     def pipeline(self):
-        input = self.input
         p = Pipeline()
         index = p.run('grape_gem_index', input=self.input, output=self.index)
-        t_index = p.run('grape_gem_t_index', index=index, annotation=self.annotation, output_prefix=self.t_out)
-        p.context(locals())
+        p.run('grape_gem_t_index', index=index, annotation=self.annotation, output_prefix=self.t_out)
         return p
 
 
@@ -174,10 +184,12 @@ class GrapePipeline(object):
         -o, --output-dir <output_dir>   The output prefix [default: ${fastq|abs|parent}]
 
     """
+    def setup(self):
+        self.name(r('gem.pipeline'))
+
     def pipeline(self):
         p = Pipeline()
         gem_setup = p.run('grape_gem_setup', input=self.genome, annotation=self.annotation)
         gem = p.run('grape_gem_rnatool', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, output_dir=self.output_dir)
-        flux = p.run('grape_flux', input=gem.bam, annotation=self.annotation, output_dir=self.output_dir)
-        p.context(locals())
+        p.run('grape_flux', input=gem.bam, annotation=self.annotation, output_dir=self.output_dir)
         return p
