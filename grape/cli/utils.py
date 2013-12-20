@@ -12,9 +12,10 @@ class CommandError(Exception):
     the error message"""
     pass
 
-def jip_prepare(args, submit=False):
+def jip_prepare(args, submit=False, project=None, datasets=[]):
     # get the project and the selected datasets
-    project, datasets = get_project_and_datasets(args)
+    if not project and not datasets:
+        project, datasets = get_project_and_datasets(args)
     jip_db_file = project.config.get('jip.db')
     if jip_db_file:
         # setup jip db
@@ -46,14 +47,22 @@ def check_jobs_dependencies(jobs):
     out_jobs = []
     for j in jobs:
         add_job = True
+        list = []
         js = get_setup_jobs(j)
         for job in js:
             if job.name == j.name:
                 add_job = False
                 break
             if job.name in [o.name for o in j.dependencies]:
-                list = [ dep for dep in j.dependencies if dep.name != job.name]
-                j.dependencies = list + [job]
+                j.state = jip.db.STATE_QUEUED
+                for c in j.children:
+                    c.state = jip.db.STATE_QUEUED
+                if not job in list:
+                    list += [job]
+        if list:
+            names = [job.name for job in list]
+            old_deps = [d for d in j.dependencies if d.name not in names]
+            j.dependencies = list + old_deps
         if add_job:
             out_jobs.append(j)
     return out_jobs
@@ -63,19 +72,26 @@ def get_setup_jobs(job):
     setup_jobs = []
     query = None
     if str(job._tool) == 'grape_gem_index':
-        if job.state == jip.db.STATE_DONE:
-            return []
-        query = jip.db.query_by_files(job.tool.input.value,job.tool.output.value)
+        query = jip.db.query_by_files(job.tool.input.value,job.tool.output.value, and_query=True)
     if str(job._tool) == 'grape_gem_t_index':
-        if job.state == jip.db.STATE_DONE:
-            return []
-        query = jip.db.query_by_files(job.tool.index.value,job.tool.gem.value)
+        query = jip.db.query_by_files(job.tool.index.value, job.tool.gem.value, and_query=True)
     job_list = query.all() if query else None
     if job_list:
-        setup_jobs = [job_list[0]]
+        s_job = job_list[0]
+        if s_job.state == jip.db.STATE_FAILED:
+            remove_job(s_job)
+            return []
+        setup_jobs = [s_job]
     for j in job.dependencies:
         setup_jobs += get_setup_jobs(j)
     return [j for j in setup_jobs if j]
+
+def remove_job(job):
+    for j in job.children:
+        remove_job(j)
+    jip.jobs.delete(job, clean_logs=True)
+    warn('Removed job %s[%s]' % (job.name, job.id))
+    return True
 
 def get_project_and_datasets(args):
     """Get the current project and the selected datasets using the command
