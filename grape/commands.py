@@ -183,7 +183,8 @@ class SubmitCommand(GrapeCommand):
                 for exe in jip.jobs.create_executions(jobs, save=True,
                                                       check_outputs=not force,
                                                       check_queued=not force):
-                    if exe.completed and not force:
+
+                    if exe.job.state == jip.db.STATE_DONE and not force:
                         cli.warn("Skipping %s" % exe.name)
                     else:
                         if jip.jobs.submit_job(exe.job, force=force):
