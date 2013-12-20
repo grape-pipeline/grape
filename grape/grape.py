@@ -212,11 +212,8 @@ class Project(object):
         """
         if not path:
             path = self.indexfile
-        if not format:
-            if os.path.exists(self.formatfile):
-                format = self.formatfile
-            else:
-                format = os.path.join(os.environ.get('GRAPE_HOME'),'conf','format.json')
+        if not format and os.path.exists(self.formatfile):
+            format = self.formatfile
 
         self.index.set_format(format)
 
