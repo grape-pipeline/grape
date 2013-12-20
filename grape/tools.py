@@ -116,7 +116,7 @@ class flux(object):
     """
     def init(self):
         self.add_option('name', "${input|name|ext}")
-        self.add_output('output', "${output_dir}/${name}.gtf", hidden=False, long='--output', short='-o')
+        self.add_output('output', "${output_dir|abs}/${name}.gtf", hidden=False, long='--output', short='-o')
 
     def setup(self):
         self.name("flux.${input|name|ext}")
@@ -152,7 +152,8 @@ class SetupPipeline(object):
             index = "${input|ext}.gem"
             t_out = "${annotation}"
         else:
-            index = t_out = out
+            index = "%s/${input|name|ext}.gem" % out
+            t_out = "%s/${annotation|name}" % out
         self.options['index'] = index
         self.options['t_out'] = t_out
         self.options['t_index'] = t_out+'.gem'
