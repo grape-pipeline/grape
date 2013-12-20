@@ -146,7 +146,7 @@ class SetupPipeline(object):
         self.add_output('t_index', '')
 
     def setup(self):
-        self.name(r('gem.setup'))
+        self.name('gem.setup')
         out = self.output_dir
         if not out:
             index = "${input|ext}.gem"
@@ -185,7 +185,7 @@ class GrapePipeline(object):
 
     """
     def setup(self):
-        self.name(r('gem.pipeline'))
+        self.name('gem.pipeline')
 
     def pipeline(self):
         p = Pipeline()
