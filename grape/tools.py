@@ -54,7 +54,7 @@ class GemTranscriptomeIndex(object):
     """
     def init(self):
         self.add_output('gem', "${output_prefix}.junctions.gem")
-        self.add_output('keys', "${output_prefix}")
+        self.add_output('keys', "${output_prefix}.junctions.keys")
 
     def setup(self):
         self.name('t_index.${index|name|ext}')
