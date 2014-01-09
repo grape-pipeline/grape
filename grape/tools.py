@@ -104,7 +104,7 @@ class gem(object):
 @tool('grape_gem_quality')
 class gem_quality(object):
     """\
-    The GEMtools quality program
+    The GEMtools quality filter program
 
     Usage:
         gem.quality -i <input> -o <output> [-n name] [-t <threads>]
@@ -131,7 +131,7 @@ class gem_quality(object):
 @tool('grape_gem_filter')
 class gem_filter(object):
     """\
-    The GEMtools filter program
+    The GEMtools general filter program
 
     Usage:
         gem.filter -i <input> -o <output> [-n name] [-t <threads>] [--max-levenshtein-error <error>] [--max-matches <matches>]
