@@ -191,7 +191,7 @@ class gem_sam(object):
     The GEMtools SAM conversion program
 
     Usage:
-        gem.sam -f <input> -o <output> -i <genome_index> -q <quality> [-l] [--expect-single-end-reads] [--expect-paired-end-reads] [-n name] [-t <threads>]
+        gem.sam -f <input> -o <output> -i <genome_index> -q <quality> [-l] [--read-group <read_group>][--expect-single-end-reads] [--expect-paired-end-reads] [-n name] [-t <threads>]
 
     Options:
         --help  Show this help message
@@ -201,6 +201,7 @@ class gem_sam(object):
         -t, --threads <threads>  The number of execution threads [default: 1]
         -q, --quality <quality>  The quality offset
         -l, --sequence-lengths  Add sequence length to SAM header
+        --read-group <read_group>  Add read group information
         --expect-single-end-reads  Override automatic SE/PE detection
         --expect-paired-end-reads  Override automatic SE/PE detection
     Inputs:
@@ -248,7 +249,7 @@ class pigz(object):
         self.options['threads'].short = '-p'
 
     def get_command(self):
-        return 'bash','pigz ${input|arg("")|suf(" -c ")}${decompress|arg|suf(" ")}${name|arg|suf(" ")}${threads|arg|suf(" ")}${output|arg("> ")}'
+        return 'bash','pigz ${threads|arg|suf(" ")}${decompress|arg|suf(" ")}${input|arg("-c ")|suf(" ")}${output|arg("> ")}'
 
 
 @module([("crgtools","0.1")])
@@ -284,10 +285,12 @@ class samtools(object):
     The SAMtools view program
 
     Usage:
-        sam.view -i <input> -o <output> [-n <name>] [-t <threads>]
+        sam.view -i <input> -o <output> [-s] [-b] [-n <name>] [-t <threads>]
 
     Options:
         --help  Show this help message
+        -s, --input-sam  Read input in SAM format
+        -b, --output-bam  Output BAM format
         -n, --name <name>  The output prefix name
         -o, --output <output>  The output file [default: stdout]
         -t, --threads <threads>  The number of execution threads
@@ -300,9 +303,10 @@ class samtools(object):
             self.name("sam.view.${name}")
             self.options['name'].hidden = True
         self.options['threads'].short = "-@"
+        self.options['input_sam'].short = "-S"
 
     def get_command(self):
-        return 'bash','samtools view ${input|arg("")|else("-")|suf(" ")}${threads|arg|suf(" ")}${output|arg("> ")}'
+        return 'bash','samtools view ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}'
 
 
 @module([("samtools","0.1.19")])
@@ -331,7 +335,7 @@ class samtools(object):
         self.options['threads'].short = "-@"
 
     def get_command(self):
-        return 'bash','samtools sort ${input|arg("")|else("-")|suf(" ")}${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${output|arg("> ")}'
+        return 'bash','samtools sort ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}'
 
 
 @module([("samtools","0.1.19")])
@@ -353,12 +357,12 @@ class samtools(object):
     """
     def setup(self):
         if self.options['name']:
-            self.name("sam.sort.${name}")
+            self.name("sam.index.${name}")
             self.options['name'].hidden = True
 
 
     def get_command(self):
-        return 'bash','samtools sort ${input|arg("")|suf(" ")}${output|arg("")}'
+        return 'bash','samtools index ${input|arg("")|suf(" ")}${output|arg("")}'
 
 
 @module([("flux", "1.2.4")])
@@ -396,11 +400,12 @@ class SetupPipeline(object):
     The GEM indexes setup pipeline
 
     usage:
-        setup -i <genome> -a <annotation> [-o <output_prefix>]
+        setup -i <genome> -a <annotation> [-o <output_prefix>] [-t <threads>]
 
     Options:
         -i, --input <genome>              The input reference genome
         -a, --annotation <annotation      The input reference annotation
+        -t, --threads <threads>  The numebr of execution threads
         -o, --output-dir <output_dir>     The output prefix
 
     """
@@ -435,7 +440,7 @@ class GrapePipeline(object):
     The default GRAPE RNAseq pipeline
 
     usage:
-        rnaseq -f <fastq_file> -q <quality> -g <genome> -a <annotation> [-o <output_dir>] [--single-end]
+        rnaseq -f <fastq_file> -q <quality> -g <genome> -a <annotation> [-t <threads>] [-o <output_dir>] [--single-end] [--max-mismatches <mismatches>] [--max-matches <matches>]
 
     Inputs:
         -f, --fastq <fastq_file>        The input reference genome
@@ -445,7 +450,10 @@ class GrapePipeline(object):
     Options:
         -q, --quality <quality>         The fastq offset quality [default: 33]
         -s, --single-end                Run the single-end pipeline
+        -m, --max-mismatches <mismatches>  The maximum number of mismatches allowed
+        -n, --max-matches <matches>  The maximum number of matches allowed (multimaps)
         -o, --output-dir <output_dir>   The output prefix [default: ${fastq|abs|parent}]
+        -t, --threads <threads>  The number of execution threads
 
     """
     def setup(self):
@@ -453,9 +461,12 @@ class GrapePipeline(object):
 
     def pipeline(self):
         p = Pipeline()
-        gem_setup = p.run('grape_gem_setup', input=self.genome, annotation=self.annotation)
-        gem = p.run('grape_gem_rnatool', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, output_dir=self.output_dir)
-        p.run('grape_flux', input=gem.bam, annotation=self.annotation, output_dir=self.output_dir)
+        gem_setup = p.run('grape_gem_setup', input=self.genome, annotation=self.annotation, threads=self.threads)
+        gem = p.run('grape_gem_rnatool', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, no_bam=True, no_stats=True, output_dir=self.output_dir, threads=self.threads)
+        name = '${input|name|ext|ext|re("[_-][12]","")}'
+        gem_filter = p.run('grape_gem_filter_p', input=gem.map, max_mismatches=self.max_mismatches, max_matches=self.max_matches, threads=self.threads, name=name)
+        gem_bam = p.run('grape_gem_bam_p', input=gem_filter.output, index=gem_setup.index, quality=self.quality, threads=self.threads, single_end=self.single_end, sequence_lengths=True, name=name)
+        p.run('grape_flux', input=gem_bam.bam, annotation=self.annotation, output_dir=self.output_dir)
         return p
 
 
@@ -465,16 +476,17 @@ class FilterPipeline(object):
     The GEM filter pipeline
 
     usage:
-         gem.filter.pipeline -i <map_file> --max-levenshtein-error <error> --max-matches <matches> -o <output> [-t <threads>]
+         gem.filter.pipeline -i <map_file> --max-mismatches <mismatches> --max-matches <matches> -o <output> [-l <name>] [-t <threads>]
 
     Inputs:
         -i, --input <map_file>        The input MAP file
 
     Options:
-        -o, --output <output>  The output file [default: ${input|ext|ext}_m${max_levenshtein_error}_n${max_matches}.map.gz]
+        -l, --name <name>  Prefix name
+        -o, --output <output>  The output file [default: ${input|ext|ext}_m${max_mismatches}_n${max_matches}.map.gz]
         -t, --threads <threads>  The number of execution threads [default: 1]
-        --max-levenshtein-error <error>  The maximum number of edit operations allowed
-        --max-matches <matches>  The maximum number of matches allowed
+        -m, --max-mismatches <mismatches>  The maximum number of edit operations allowed
+        -n, --max-matches <matches>  The maximum number of matches allowed
 
     """
     def setup(self):
@@ -482,7 +494,8 @@ class FilterPipeline(object):
 
     def pipeline(self):
         p = Pipeline()
-        p.run('grape_gem_quality', input=self.input, threads=self.threads) | p.run('grape_gem_filter', max_levenshtein_error=self.max_levenshtein_error, threads=self.threads) |  p.run('grape_gem_filter', max_matches=self.max_matches, threads=self.threads) | p.run('grape_pigz', threads=self.threads, output=self.output)
+        name=self.options['name']
+        gem_filter_pipeline = p.run('grape_gem_quality', input=self.input, threads=self.threads, name=name) | p.run('grape_gem_filter', max_levenshtein_error=self.max_mismatches, threads=self.threads, name=name) |  p.run('grape_gem_filter', max_matches=self.max_matches, threads=self.threads, name=name) | p.run('grape_pigz', threads=self.threads, output=self.output, name=name)
         return p
 
 @pipeline('grape_gem_bam_p')
@@ -491,21 +504,36 @@ class Gem2BamPipeline(object):
     The GEM to BAM conversion pipeline
 
     usage:
-         gem2bam.pipeline -i <map_file> -g <gem_index> -q quality -o <output> [-t <threads>] [--read-group <read_group>]
+         gem2bam.pipeline -f <map_file> -i <gem_index> -q quality -o <output> [-s] [-l] [-t <threads>] [--read-group <read_group>] [-n <name>]
 
     Inputs:
-        -i, --input <map_file>        The input MAP file
-        -g, --genome <gem_index>        The gem index for the genome
+        -f, --input <map_file>        The input MAP file
+        -i, --index <gem_index>        The gem index for the genome
 
     Options:
-        -o, --output <output>  The output file [default: ${input|ext|ext}_m${max_levenshtein_error}_n${max_matches}.map.gz]
+        -n, --name <name>  Prefix name
+        -s, --single-end  Expect single end input
+        -q, --quality <quality>  The quality offset
+        -l, --sequence-lengths  Add sequence lengths information to SAM header
+        -o, --output <output>  The output file [default: ${input|ext|ext}.bam]
         -t, --threads <threads>  The number of execution threads [default: 1]
 
     """
+    def init(self):
+        self.add_output('bam', '${output}')
+        self.add_output('bai', '${output}.bai')
+
     def setup(self):
         self.name('gem.to.bam.pipeline')
 
     def pipeline(self):
         p = Pipeline()
-        p.run('grape_pigz', input=self.input, threads=self.threads)
+        i_threads = int(self.threads.raw())
+        hthreads = i_threads/2 if i_threads > 1 else 1
+        name=self.options['name']
+        gem_bam = p.run('grape_pigz', input=self.input, threads=self.threads, decompress=True, name=name) | \
+        p.run('grape_gem_sam', threads=hthreads, index=self.index, read_group=self.read_group, quality=self.quality, sequence_lengths=self.sequence_lengths, expect_paired_end_reads=not self.single_end, expect_single_end_reads=self.single_end, name=name) | \
+        p.run('grape_samtools_view', threads=self.threads, input_sam=True, output_bam=True, name=name) | \
+        p.run('grape_samtools_sort', threads=self.threads, output=self.output, name=name)
+        gem_bai = p.run('grape_samtools_index', input=gem_bam.output, name=name)
         return p
