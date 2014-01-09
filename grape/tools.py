@@ -8,7 +8,7 @@ from buildout import module
 
 r = jip.templates.render_template
 
-@module([("gemtools", "1.6.1")])
+@module([("gemtools", "1.6.2")])
 @tool('grape_gem_index')
 class GemIndex(object):
     """\
@@ -33,7 +33,7 @@ class GemIndex(object):
         return "bash", "gemtools index ${options()}"
 
 
-@module([("gemtools", "1.6.1")])
+@module([("gemtools", "1.6.2")])
 @tool('grape_gem_t_index')
 class GemTranscriptomeIndex(object):
     """\
@@ -63,14 +63,14 @@ class GemTranscriptomeIndex(object):
         return 'bash', 'gemtools t-index ${options()}'
 
 
-@module([("gemtools", "1.6.1")])
+@module([("gemtools", "1.6.2")])
 @tool('grape_gem_rnatool')
 class gem(object):
     """\
     The GEMtools RNAseq Mapping Pipeline
 
     Usage:
-        gem -f <fastq_file> -i <genome_index> -r <transcript_index> -q <quality> [-n <name>] [-o <output_dir>] [-t <threads>] [--single-end]
+        gem -f <fastq_file> -i <genome_index> -r <transcript_index> -q <quality> [-n <name>] [-o <output_dir>] [-t <threads>] [--single-end] [--no-bam] [--no-stats]
 
     Options:
         --help  Show this help message
@@ -79,6 +79,8 @@ class gem(object):
         -o, --output-dir <output_dir>  The output folder
         -t, --threads <threads>  The number of execution threads [default: 1]
         -s, --single-end    Run the single-end pipeline
+        --no-bam  Do not generate the BAM file
+        --no-stats  Do not generate mapping statistics
 
     Inputs:
         -f, --fastq <fastq_file>  The input fastq
@@ -87,17 +89,279 @@ class gem(object):
     """
     def init(self):
         self.add_output('map', "${output_dir}/${name}.map.gz")
-        self.add_output('bam', "${output_dir}/${name}.bam")
-        self.add_output('bai', "${output_dir}/${name}.bam.bai")
 
     def setup(self):
         self.name("gem.${name}")
+        if not self.options['no_bam']:
+            self.add_output('bam', "${output_dir}/${name}.bam")
+            self.add_output('bai', "${output_dir}/${name}.bam.bai")
 
     def get_command(self):
         return 'bash','gemtools rna-pipeline ${options()}'
 
 
-@module([("flux", "1.2.3")])
+@module([("crgtools","0.1")])
+@tool('grape_gem_quality')
+class gem_quality(object):
+    """\
+    The GEMtools quality program
+
+    Usage:
+        gem.quality -i <input> -o <output> [-n name] [-t <threads>]
+
+    Options:
+        --help  Show this help message
+        -n, --name <name>  The output prefix name
+        -o, --output <output>  The output file [default: stdout]
+        -t, --threads <threads>  The number of execution threads [default: 1]
+
+    Inputs:
+        -i, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name']:
+            self.name("gem.quality.${name}")
+            self.options['name'].hidden = True
+
+    def get_command(self):
+        return 'bash','gt.quality ${options()}'
+
+
+@module([("crgtools","0.1")])
+@tool('grape_gem_filter')
+class gem_filter(object):
+    """\
+    The GEMtools filter program
+
+    Usage:
+        gem.filter -i <input> -o <output> [-n name] [-t <threads>] [--max-levenshtein-error <error>] [--max-matches <matches>]
+
+    Options:
+        --help  Show this help message
+        -n, --name <name>  The output prefix name
+        -o, --output <output>  The output file [default: stdout]
+        -t, --threads <threads>  The number of execution threads [default: 1]
+        --max-levenshtein-error <error>  The maximum number of edit operations allowed
+        --max-matches <matches>  The maximum number of matches allowed
+
+    Inputs:
+        -i, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name']:
+            self.name("gem.filter.${name}")
+            self.options['name'].hidden = True
+
+    def get_command(self):
+        return 'bash','gt.filter ${options()}'
+
+
+@module([("gemtools","1.6.2")])
+@tool('grape_gem_stats')
+class gem_stats(object):
+    """\
+    The GEMtools stats program
+
+    Usage:
+        gem.stats -i <input> [-a] [-p] [-n name] [-t <threads>]
+
+    Options:
+        --help  Show this help message
+        -n, --name <name>  The output prefix name
+        -a, --all-tests  Perform all tests
+        -p, --paired-end  Use paired-end information
+        -t, --threads <threads>  The number of execution threads [default: 1]
+
+    Inputs:
+        -i, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name'].value:
+            self.name("gem.stats.${name}")
+            self.options['name'].hidden = True
+
+    def get_command(self):
+        return 'bash','gt.stats ${options()}'
+
+
+@module([("gemtools","1.6.2")])
+@tool('grape_gem_sam')
+class gem_sam(object):
+    """\
+    The GEMtools SAM conversion program
+
+    Usage:
+        gem.sam -f <input> -o <output> -i <genome_index> -q <quality> [-l] [--expect-single-end-reads] [--expect-paired-end-reads] [-n name] [-t <threads>]
+
+    Options:
+        --help  Show this help message
+        -o, --output <output>  The output file [default: stdout]
+        -n, --name <name>  The output prefix name
+        -i, --index <genome_index>  The gem index for the genome
+        -t, --threads <threads>  The number of execution threads [default: 1]
+        -q, --quality <quality>  The quality offset
+        -l, --sequence-lengths  Add sequence length to SAM header
+        --expect-single-end-reads  Override automatic SE/PE detection
+        --expect-paired-end-reads  Override automatic SE/PE detection
+    Inputs:
+        -f, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name'].value:
+            self.name("gem.sam.${name}")
+            self.options['name'].hidden = True
+        self.options['index'].short = '-I'
+        self.options['threads'].short = '-T'
+        try:
+            int(self.options['quality'].raw())
+            self.options['quality'] = 'offset-%s' % self.options['quality'].raw()
+        except:
+            pass
+
+    def get_command(self):
+        return 'bash','gem-2-sam ${options()}'
+
+
+@module([("crgtools","0.1")])
+@tool('grape_pigz')
+class pigz(object):
+    """\
+    The parallel gzip program
+
+    Usage:
+        pigz -i <input> -o <output> [-d] [-n name] [-t <threads>]
+
+    Options:
+        --help  Show this help message
+        -n, --name <name>  The output prefix name
+        -o, --output <output>  The output file [default: stdout]
+        -t, --threads <threads>  The number of execution threads [default: 1]
+        -d, --decompress  Decompress
+
+    Inputs:
+        -i, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name']:
+            self.name("pigz.${name}")
+            self.options['name'].hidden = True
+        self.options['threads'].short = '-p'
+
+    def get_command(self):
+        return 'bash','pigz ${input|arg("")|suf(" -c ")}${decompress|arg|suf(" ")}${name|arg|suf(" ")}${threads|arg|suf(" ")}${output|arg("> ")}'
+
+
+@module([("crgtools","0.1")])
+@tool('grape_fix_se')
+class awk_fix_se(object):
+    """\
+    An AWK script to fix SAM flags for single-end data
+
+    Usage:
+        fix_se -i <input> -o <output> [-n <name>]
+
+    Options:
+        --help  Show this help message
+        -n, --name <name>  The output prefix name
+        -o, --output <output>  The output file [default: stdout]
+
+    Inputs:
+        -i, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name']:
+            self.name("awk_fix_se.${name}")
+            self.options['name'].hidden = True
+
+    def get_command(self):
+        command = "\'BEGIN{OFS=FS=\"\\t\"}$0!~/^@/{split(\"1_2_8_32_64_128\",a,\"_\");for(i in a){if(and($2,a[i])>0){$2=xor($2,a[i])}}}{print}\'"
+        return 'bash','awk %s ${input|arg("")|suf(" ")}${output|arg("> ")}' % command
+
+@module([("samtools","0.1.19")])
+@tool('grape_samtools_view')
+class samtools(object):
+    """\
+    The SAMtools view program
+
+    Usage:
+        sam.view -i <input> -o <output> [-n <name>] [-t <threads>]
+
+    Options:
+        --help  Show this help message
+        -n, --name <name>  The output prefix name
+        -o, --output <output>  The output file [default: stdout]
+        -t, --threads <threads>  The number of execution threads
+
+    Inputs:
+        -i, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name']:
+            self.name("sam.view.${name}")
+            self.options['name'].hidden = True
+        self.options['threads'].short = "-@"
+
+    def get_command(self):
+        return 'bash','samtools view ${input|arg("")|else("-")|suf(" ")}${threads|arg|suf(" ")}${output|arg("> ")}'
+
+
+@module([("samtools","0.1.19")])
+@tool('grape_samtools_sort')
+class samtools(object):
+    """\
+    The SAMtools sort program
+
+    Usage:
+        sam.sort -i <input> -o <output> [-m <max_memory>] [-n <name>] [-t <threads>]
+
+    Options:
+        --help  Show this help message
+        -m, --max-memory <max_memory>  The maximum amount of RAM to use for sorting (per thread)
+        -n, --name <name>  The output prefix name
+        -o, --output <output>  The output file [default: stdout]
+        -t, --threads <threads>  The number of execution threads
+
+    Inputs:
+        -i, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name']:
+            self.name("sam.sort.${name}")
+            self.options['name'].hidden = True
+        self.options['threads'].short = "-@"
+
+    def get_command(self):
+        return 'bash','samtools sort ${input|arg("")|else("-")|suf(" ")}${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${output|arg("> ")}'
+
+
+@module([("samtools","0.1.19")])
+@tool('grape_samtools_index')
+class samtools(object):
+    """\
+    The SAMtools index program
+
+    Usage:
+        sam.index -i <input> -o <output> [-n <name>]
+
+    Options:
+        --help  Show this help message
+        -n, --name <name>  The output prefix name
+        -o, --output <output>  The output file [default: ${input|abs}.bai]
+
+    Inputs:
+        -i, --input <input>  The input map file
+    """
+    def setup(self):
+        if self.options['name']:
+            self.name("sam.sort.${name}")
+            self.options['name'].hidden = True
+
+
+    def get_command(self):
+        return 'bash','samtools sort ${input|arg("")|suf(" ")}${output|arg("")}'
+
+
+@module([("flux", "1.2.4")])
 @tool('grape_flux')
 class flux(object):
     """\
@@ -167,7 +431,6 @@ class SetupPipeline(object):
 
 @pipeline('grape_gem_rnapipeline')
 class GrapePipeline(object):
-#-o, --output-dir <output_dir>  The output prefix [default: ${fastq.raw()[0]|abs|parent}]
     """\
     The default GRAPE RNAseq pipeline
 
@@ -193,4 +456,56 @@ class GrapePipeline(object):
         gem_setup = p.run('grape_gem_setup', input=self.genome, annotation=self.annotation)
         gem = p.run('grape_gem_rnatool', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, output_dir=self.output_dir)
         p.run('grape_flux', input=gem.bam, annotation=self.annotation, output_dir=self.output_dir)
+        return p
+
+
+@pipeline('grape_gem_filter_p')
+class FilterPipeline(object):
+    """\
+    The GEM filter pipeline
+
+    usage:
+         gem.filter.pipeline -i <map_file> --max-levenshtein-error <error> --max-matches <matches> -o <output> [-t <threads>]
+
+    Inputs:
+        -i, --input <map_file>        The input MAP file
+
+    Options:
+        -o, --output <output>  The output file [default: ${input|ext|ext}_m${max_levenshtein_error}_n${max_matches}.map.gz]
+        -t, --threads <threads>  The number of execution threads [default: 1]
+        --max-levenshtein-error <error>  The maximum number of edit operations allowed
+        --max-matches <matches>  The maximum number of matches allowed
+
+    """
+    def setup(self):
+        self.name('gem.filter.pipeline')
+
+    def pipeline(self):
+        p = Pipeline()
+        p.run('grape_gem_quality', input=self.input, threads=self.threads) | p.run('grape_gem_filter', max_levenshtein_error=self.max_levenshtein_error, threads=self.threads) |  p.run('grape_gem_filter', max_matches=self.max_matches, threads=self.threads) | p.run('grape_pigz', threads=self.threads, output=self.output)
+        return p
+
+@pipeline('grape_gem_bam_p')
+class Gem2BamPipeline(object):
+    """\
+    The GEM to BAM conversion pipeline
+
+    usage:
+         gem2bam.pipeline -i <map_file> -g <gem_index> -q quality -o <output> [-t <threads>] [--read-group <read_group>]
+
+    Inputs:
+        -i, --input <map_file>        The input MAP file
+        -g, --genome <gem_index>        The gem index for the genome
+
+    Options:
+        -o, --output <output>  The output file [default: ${input|ext|ext}_m${max_levenshtein_error}_n${max_matches}.map.gz]
+        -t, --threads <threads>  The number of execution threads [default: 1]
+
+    """
+    def setup(self):
+        self.name('gem.to.bam.pipeline')
+
+    def pipeline(self):
+        p = Pipeline()
+        p.run('grape_pigz', input=self.input, threads=self.threads)
         return p
