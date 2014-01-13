@@ -404,6 +404,32 @@ class flux(object):
         return 'bash', '%s ${options()}' % bin_path(self, 'flux-capacitor')
 
 
+@module([("crgtools","0.1")])
+@tool('grape_flux_split_features')
+class awk_split_features(object):
+    """\
+    An AWK script to split the Flux Capacitor output by features
+
+    Usage:
+        split_features -i <input> [-n <name>]
+
+    Options:
+        --help  Show this help message
+        -n, --name <name>  The output prefix name
+
+    Inputs:
+        -i, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name']:
+            self.name("awk_split_flux_features.${name}")
+            self.options['name'].hidden = True
+
+    def get_command(self):
+        command = "\'BEGIN{OFS=FS=\"\\t\"}{print > input\".\"$3\".gtf\"}\'"
+        return 'bash','awk -v input=${input|arg("")|suf(" ")|ext} %s ${input|arg("")|suf(" ")}' % command
+
+
 @pipeline('grape_gem_setup')
 class SetupPipeline(object):
     """\
@@ -476,7 +502,8 @@ class GrapePipeline(object):
         name = '${input|name|ext|ext|re("[_-][12]","")}'
         gem_filter = p.run('grape_gem_filter_p', input=gem.map, max_mismatches=self.max_mismatches, max_matches=self.max_matches, threads=self.threads, name=name)
         gem_bam = p.run('grape_gem_bam_p', input=gem_filter.output, index=gem_setup.index, quality=self.quality, threads=self.threads, single_end=self.single_end, sequence_lengths=True, name=name)
-        p.run('grape_flux', input=gem_bam.bam, annotation=self.annotation, output_dir=self.output_dir)
+        flux = p.run('grape_flux', input=gem_bam.bam, annotation=self.annotation, output_dir=self.output_dir, name=name)
+        p.run('grape_flux_split_features', input=flux.output, name=name)
         return p
 
 
