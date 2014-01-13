@@ -382,23 +382,24 @@ class flux(object):
     The Flux Capacitor tool
 
     Usage:
-        flux -i <input> -a <annotation> [-o <output_dir>]
+        flux -i <input> -a <annotation> [-o <output_dir>] [-n <name>]
 
     Options:
         --help  Show this help message
         -o, --output-dir <output_dir>  The output folder [default: ${input|parent}]
+        -n, --name <name>  The output prefix name
 
     Inputs:
         -i, --input <input>  The input file with mappings
         -a, --annotation <annotation>  The reference annotation in GTF format
     """
     def init(self):
-        self.add_option('name', "${input|name|ext}")
         self.add_output('output', "${output_dir|abs}/${name}.gtf", hidden=False, long='--output', short='-o')
 
     def setup(self):
-        self.name("flux.${input|name|ext}")
+        self.name("flux.${name}")
         self.output_dir.hidden = True
+        self.name.hidden = True
 
     def get_command(self):
         return 'bash', '%s ${options()}' % bin_path(self, 'flux-capacitor')
@@ -420,6 +421,11 @@ class awk_split_features(object):
     Inputs:
         -i, --input <input>  The input map file [default: stdin]
     """
+    def init(self):
+        self.add_output('transcript', '${input}.transcript.gtf')
+        self.add_output('junction', '${input}.junction.gtf')
+        self.add_output('intron', '${input}.intron.gtf')
+
     def setup(self):
         if self.options['name']:
             self.name("awk_split_flux_features.${name}")
@@ -428,6 +434,35 @@ class awk_split_features(object):
     def get_command(self):
         command = "\'BEGIN{OFS=FS=\"\\t\"}{print > input\".\"$3\".gtf\"}\'"
         return 'bash','awk -v input=${input|arg("")|suf(" ")|ext} %s ${input|arg("")|suf(" ")}' % command
+
+
+@module([("crgtools","0.1")])
+@tool('grape_idxtools_index')
+class idxtools_index(object):
+    """\
+    The IDXtools add program
+
+    Usage:
+        idxtools.add -i <input> -o <output> [-m <max_memory>] [-n <name>] [-t <threads>]
+
+    Options:
+        --help  Show this help message
+        -m, --max-memory <max_memory>  The maximum amount of RAM to use for sorting (per thread)
+        -n, --name <name>  The output prefix name
+        -o, --output <output>  The output file [default: stdout]
+        -t, --threads <threads>  The number of execution threads
+
+    Inputs:
+        -i, --input <input>  The input map file [default: stdin]
+    """
+    def setup(self):
+        if self.options['name']:
+            self.name("sam.sort.${name}")
+            self.options['name'].hidden = True
+        self.options['threads'].short = "-@"
+
+    def get_command(self):
+        return 'bash','%s ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}' % bin_path(self, 'samtools sort')
 
 
 @pipeline('grape_gem_setup')
@@ -494,16 +529,17 @@ class GrapePipeline(object):
     """
     def setup(self):
         self.name('gem.pipeline')
+        self.add_option('sample','${fastq|name|ext|ext|re("[_-][12]","")}')
 
     def pipeline(self):
         p = Pipeline()
         gem_setup = p.run('grape_gem_setup', input=self.genome, annotation=self.annotation, threads=self.threads)
         gem = p.run('grape_gem_rnatool', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, no_bam=True, no_stats=True, output_dir=self.output_dir, threads=self.threads)
-        name = '${input|name|ext|ext|re("[_-][12]","")}'
-        gem_filter = p.run('grape_gem_filter_p', input=gem.map, max_mismatches=self.max_mismatches, max_matches=self.max_matches, threads=self.threads, name=name)
-        gem_bam = p.run('grape_gem_bam_p', input=gem_filter.output, index=gem_setup.index, quality=self.quality, threads=self.threads, single_end=self.single_end, sequence_lengths=True, name=name)
-        flux = p.run('grape_flux', input=gem_bam.bam, annotation=self.annotation, output_dir=self.output_dir, name=name)
-        p.run('grape_flux_split_features', input=flux.output, name=name)
+        sample = self.sample
+        gem_filter = p.run('grape_gem_filter_p', input=gem.map, max_mismatches=self.max_mismatches, max_matches=self.max_matches, threads=self.threads, name=sample)
+        gem_bam = p.run('grape_gem_bam_p', input=gem_filter.output, index=gem_setup.index, quality=self.quality, threads=self.threads, single_end=self.single_end, sequence_lengths=True, name=sample)
+        flux = p.run('grape_flux', input=gem_bam.bam, annotation=self.annotation, output_dir=self.output_dir, name=sample)
+        p.run('grape_flux_split_features', input=flux.output, name=sample)
         return p
 
 
@@ -531,8 +567,8 @@ class FilterPipeline(object):
 
     def pipeline(self):
         p = Pipeline()
-        name=self.options['name']
-        gem_filter_pipeline = p.run('grape_gem_quality', input=self.input, threads=self.threads, name=name) | p.run('grape_gem_filter', max_levenshtein_error=self.max_mismatches, threads=self.threads, name=name) |  p.run('grape_gem_filter', max_matches=self.max_matches, threads=self.threads, name=name) | p.run('grape_pigz', threads=self.threads, output=self.output, name=name)
+        sample=self.options['name']
+        gem_filter_pipeline = p.run('grape_gem_quality', input=self.input, threads=self.threads, name=sample) | p.run('grape_gem_filter', max_levenshtein_error=self.max_mismatches, threads=self.threads, name=sample) |  p.run('grape_gem_filter', max_matches=self.max_matches, threads=self.threads, name=sample) | p.run('grape_pigz', threads=self.threads, output=self.output, name=sample)
         return p
 
 @pipeline('grape_gem_bam_p')
@@ -567,10 +603,10 @@ class Gem2BamPipeline(object):
         p = Pipeline()
         i_threads = int(self.threads.raw())
         hthreads = i_threads/2 if i_threads > 1 else 1
-        name=self.options['name']
-        gem_bam = p.run('grape_pigz', input=self.input, threads=self.threads, decompress=True, name=name) | \
-        p.run('grape_gem_sam', threads=hthreads, index=self.index, read_group=self.read_group, quality=self.quality, sequence_lengths=self.sequence_lengths, expect_paired_end_reads=not self.single_end, expect_single_end_reads=self.single_end, name=name) | \
-        p.run('grape_samtools_view', threads=self.threads, input_sam=True, output_bam=True, name=name) | \
-        p.run('grape_samtools_sort', threads=self.threads, output=self.output, name=name)
-        gem_bai = p.run('grape_samtools_index', input=gem_bam.output, name=name)
+        sample=self.options['name']
+        gem_bam = p.run('grape_pigz', input=self.input, threads=self.threads, decompress=True, name=sample) | \
+        p.run('grape_gem_sam', threads=hthreads, index=self.index, read_group=self.read_group, quality=self.quality, sequence_lengths=self.sequence_lengths, expect_paired_end_reads=not self.single_end, expect_single_end_reads=self.single_end, name=sample) | \
+        p.run('grape_samtools_view', threads=self.threads, input_sam=True, output_bam=True, name=sample) | \
+        p.run('grape_samtools_sort', threads=self.threads, output=self.output, name=sample)
+        gem_bai = p.run('grape_samtools_index', input=gem_bam.output, name=sample)
         return p
