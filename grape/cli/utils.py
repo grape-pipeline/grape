@@ -37,6 +37,9 @@ def jip_prepare(args, submit=False, project=None, datasets=[]):
         jargs['fastq'] = [d.fastq.keys()[0] for d in datasets]
         jargs['annotation'] = project.config.get('annotation')
         jargs['genome'] = project.config.get('genome')
+        jargs['max_mismatches'] = args.max_mismatches
+        jargs['max_matches'] = args.max_matches
+        jargs['threads'] = args.threads
         p.run('grape_gem_rnapipeline', **jargs)
         jobs = jip.jobs.create_jobs(p)
     if submit:
@@ -210,6 +213,10 @@ def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeli
                            help="The genome to be used in the run")
         pgroup.add_argument("-a", "--annotation", default=None,
                            help="The annotation to be used for the run")
+        pgroup.add_argument("-m", "--max-mismatches", default=4,
+                           help="The maximum number of mismatches allowed")
+        pgroup.add_argument("-n", "--max-matches", default=10,
+                           help="The maximum number of matches allowed (multimaps)")
 
     if add_dataset_parameter:
 
@@ -229,7 +236,7 @@ def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeli
                             help="The cluster queue")
         group.add_argument("-p", "--priority", dest="priority",
                             help="The cluster priority")
-        group.add_argument("-m", "--max-mem", dest="max_mem",
+        group.add_argument("-e", "--max-mem", dest="max_mem",
                             help="Maximum memory per job")
     else:
         group.add_argument("--verbose", default=False, action="store_true",
