@@ -8,6 +8,14 @@ from buildout import module
 
 r = jip.templates.render_template
 
+def bin_path(module, bin=''):
+    """ Return the absolute path of a module binary """
+    import os
+    module_path = module._load_modules()[0]
+    path = os.path.join(module_path, 'bin', bin)
+    return path
+
+
 @module([("gemtools", "1.6.2")])
 @tool('grape_gem_index')
 class GemIndex(object):
@@ -30,7 +38,7 @@ class GemIndex(object):
         self.name('index.${input|name|ext}')
 
     def get_command(self):
-        return "bash", "gemtools index ${options()}"
+        return "bash", "%s ${options()}" % bin_path(self, 'gemtools index')
 
 
 @module([("gemtools", "1.6.2")])
@@ -60,7 +68,7 @@ class GemTranscriptomeIndex(object):
         self.name('t_index.${index|name|ext}')
 
     def get_command(self):
-        return 'bash', 'gemtools t-index ${options()}'
+        return 'bash', '%s ${options()}' % bin_path(self, 'gemtools t-index')
 
 
 @module([("gemtools", "1.6.2")])
@@ -97,7 +105,8 @@ class gem(object):
             self.add_output('bai', "${output_dir}/${name}.bam.bai")
 
     def get_command(self):
-        return 'bash','gemtools rna-pipeline ${options()}'
+        from grape import Grape
+        return 'bash','%s ${options()}' % bin_path(self, 'gemtools rna-pipeline')
 
 
 @module([("crgtools","0.1")])
@@ -124,7 +133,7 @@ class gem_quality(object):
             self.options['name'].hidden = True
 
     def get_command(self):
-        return 'bash','gt.quality ${options()}'
+        return 'bash','%s ${options()}' % bin_path(self, 'gt.quality')
 
 
 @module([("crgtools","0.1")])
@@ -153,7 +162,8 @@ class gem_filter(object):
             self.options['name'].hidden = True
 
     def get_command(self):
-        return 'bash','gt.filter ${options()}'
+        from grape import Grape
+        return 'bash','%s ${options()}' % bin_path(self, 'gt.filter')
 
 
 @module([("gemtools","1.6.2")])
@@ -181,7 +191,7 @@ class gem_stats(object):
             self.options['name'].hidden = True
 
     def get_command(self):
-        return 'bash','gt.stats ${options()}'
+        return 'bash','%s ${options()}' % bin_path(self, 'gt.stats')
 
 
 @module([("gemtools","1.6.2")])
@@ -220,7 +230,7 @@ class gem_sam(object):
             pass
 
     def get_command(self):
-        return 'bash','gem-2-sam ${options()}'
+        return 'bash','%s ${options()}' % bin_path(self, 'gem-2-sam')
 
 
 @module([("crgtools","0.1")])
@@ -249,7 +259,7 @@ class pigz(object):
         self.options['threads'].short = '-p'
 
     def get_command(self):
-        return 'bash','pigz ${threads|arg|suf(" ")}${decompress|arg|suf(" ")}${input|arg("-c ")|suf(" ")}${output|arg("> ")}'
+        return 'bash','%s ${threads|arg|suf(" ")}${decompress|arg|suf(" ")}${input|arg("-c ")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'pigz')
 
 
 @module([("crgtools","0.1")])
@@ -306,7 +316,7 @@ class samtools(object):
         self.options['input_sam'].short = "-S"
 
     def get_command(self):
-        return 'bash','samtools view ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}'
+        return 'bash','%s ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'samtools view')
 
 
 @module([("samtools","0.1.19")])
@@ -335,7 +345,7 @@ class samtools(object):
         self.options['threads'].short = "-@"
 
     def get_command(self):
-        return 'bash','samtools sort ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}'
+        return 'bash','%s ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}' % bin_path(self, 'samtools sort')
 
 
 @module([("samtools","0.1.19")])
@@ -362,7 +372,7 @@ class samtools(object):
 
 
     def get_command(self):
-        return 'bash','samtools index ${input|arg("")|suf(" ")}${output|arg("")}'
+        return 'bash','%s ${input|arg("")|suf(" ")}${output|arg("")}' % bin_path(self, 'samtools index')
 
 
 @module([("flux", "1.2.4")])
@@ -391,7 +401,7 @@ class flux(object):
         self.output_dir.hidden = True
 
     def get_command(self):
-        return 'bash', 'flux-capacitor ${options()}'
+        return 'bash', '%s ${options()}' % bin_path(self, 'flux-capacitor')
 
 
 @pipeline('grape_gem_setup')
