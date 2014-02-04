@@ -1,7 +1,7 @@
 from distribute_setup import use_setuptools
 use_setuptools()
-
 from setuptools import setup
+
 import grape
 
 setup(
@@ -16,7 +16,7 @@ analysys.
 ''',
     platforms=['lx64'],
     packages=['grape', 'grape.cli', 'grape.jobs'],
-    package_data={'grape': ['buildout.conf', 'cluster.json', 'format.json']},
+    package_data={'grape': ['buildout.conf']},
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -28,10 +28,10 @@ analysys.
         'Topic :: Scientific/Engineering :: Bio-Informatics',
     ],
     install_requires=["argparse==1.2.1",
-                      "zc.buildout==2.1.0",
-                      "mako==0.8.0",
                       "clint==0.3.1",
-                      "lockfile==0.9.1"],
+                      "lockfile==0.9.1",
+                      "pyjip==0.4",
+                      "idxtools==0.9.1"],
     entry_points={
         'console_scripts': [
             'grape = grape.commands:main',

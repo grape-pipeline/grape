@@ -4,6 +4,8 @@ BUNDLE_ENV26 = $(shell pwd)/bundle/env26
 BUNDLE_DIR = $(shell pwd)/bundle/grape-$(VERSION)
 DOWNLOAD_CACHE = downloads
 PIP_OPTIONS = --download-cache $(DOWNLOAD_CACHE)
+INSTALL_DIR = $(shell pwd)/env
+INSTALL_LOG = $(shell pwd)/install.log
 
 .PHONY: docs docs-clean
 
@@ -14,6 +16,20 @@ devel:
 	cd lib/jip/; python setup.py develop
 	cd lib/indexfile; python setup.py develop
 	python setup.py develop
+
+install:
+	@if [ ! -d ${INSTALL_DIR} ]; then virtualenv --no-site-packages ${INSTALL_DIR};fi
+	@echo "Installing Grape 2 into ${INSTALL_DIR}..."
+	@. env/bin/activate;pip install -r install_requirements.txt > ${INSTALL_LOG} 2>&1
+	@. env/bin/activate;python setup.py install > ${INSTALL_LOG} 2>&1
+	@echo "Install completed."
+	@echo ""
+	@echo "------------------------------------------------------"
+	@echo "Please remember that each time you want to use Grape 2"
+	@echo "you will have to run the folowing command:"
+	@echo ""
+	@echo ". env/bin/activate"
+	@echo "------------------------------------------------------"
 
 test:
 	@echo -n "Running pytest"
