@@ -46,23 +46,23 @@ bundle: downloads
 	@rm -rf $(BUNDLE_ENV27)
 	@rm -rf $(BUNDLE_ENV26)
 
+ifneq ($(shell which python2.7),) 
 	@echo "Bundeling for 2.7"
 	@mkdir -p $(BUNDLE_DIR)/lib/python2.7/site-packages
 	@virtualenv -p python2.7 $(BUNDLE_ENV27)
-	@. $(BUNDLE_ENV27)/bin/activate; pip install -r bundle_requirements.txt $(PIP_OPTIONS)
-	@. $(BUNDLE_ENV27)/bin/activate; pip install lib/jip $(PIP_OPTIONS)
-	@. $(BUNDLE_ENV27)/bin/activate; pip install lib/indexfile $(PIP_OPTIONS)
+	@. $(BUNDLE_ENV27)/bin/activate; pip install -r install_requirements.txt $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV27)/bin/activate; python setup.py install 
 	@cp -R $(BUNDLE_ENV27)/lib/python2.7/site-packages/* $(BUNDLE_DIR)/lib/python2.7/site-packages
+endif
 	
+ifneq ($(shell which python2.6),)
 	@echo "Bundeling for 2.6"
 	@mkdir -p $(BUNDLE_DIR)/lib/python2.6/site-packages
 	@virtualenv -p python2.6 $(BUNDLE_ENV26)
-	@. $(BUNDLE_ENV26)/bin/activate; pip install -r bundle_requirements.txt $(PIP_OPTIONS)
-	@. $(BUNDLE_ENV26)/bin/activate; pip install lib/jip $(PIP_OPTIONS)
-	@. $(BUNDLE_ENV26)/bin/activate; pip install lib/indexfile $(PIP_OPTIONS)
+	@. $(BUNDLE_ENV26)/bin/activate; pip install -r install_requirements.txt $(PIP_OPTIONS)
 	@. $(BUNDLE_ENV26)/bin/activate; python setup.py install
 	@cp -R $(BUNDLE_ENV26)/lib/python2.6/site-packages/* $(BUNDLE_DIR)/lib/python2.6/site-packages
+endif
 
 
 	@mkdir -p $(BUNDLE_DIR)/bin
@@ -70,9 +70,6 @@ bundle: downloads
 	@cp dist-utils/grape-buildout.py $(BUNDLE_DIR)/bin/grape-buildout
 	@cp dist-utils/README.txt $(BUNDLE_DIR)/
 	@mkdir -p $(BUNDLE_DIR)/conf
-	@cp dist-utils/cluster.json	$(BUNDLE_DIR)/conf
-	@cp dist-utils/jobs.json $(BUNDLE_DIR)/conf
-	@cp dist-utils/format.json $(BUNDLE_DIR)/conf
 
 	@tar -C bundle -czf bundle/grape-$(VERSION).tar.gz grape-$(VERSION)
 
