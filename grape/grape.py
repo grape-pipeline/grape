@@ -215,7 +215,8 @@ class Project(object):
         if not format and os.path.exists(self.formatfile):
             format = self.formatfile
 
-        self.index.set_format(format)
+        if format:
+            self.index.set_format(format)
 
         self.index.open(path)
 
