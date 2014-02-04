@@ -28,7 +28,7 @@ class Recipe(object):
     def __init__(self, buildout, name, options):
         self.options = options
         self.buildout = buildout
-        self.name = name
+        self.name = 'zc.buildout'
 
         options.setdefault('strip-top-level-dir', 'false')
         options.setdefault('ignore-existing', 'false')
@@ -182,5 +182,4 @@ class Recipe(object):
             finally:
                 if is_temp:
                     os.unlink(path)
-
         return parts
