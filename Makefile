@@ -4,7 +4,8 @@ BUNDLE_ENV26 = $(shell pwd)/bundle/env26
 BUNDLE_DIR = $(shell pwd)/bundle/grape-$(VERSION)
 DOWNLOAD_CACHE = downloads
 PIP_OPTIONS = --download-cache $(DOWNLOAD_CACHE)
-INSTALL_DIR = $(shell pwd)/env
+DEVEL_ENV = $(shell pwd)/env
+INSTALL_DIR = $(shell pwd)/grape-env
 INSTALL_LOG = $(shell pwd)/install.log
 
 .PHONY: docs docs-clean
@@ -13,15 +14,15 @@ all:
 	python setup.py build
 
 devel:
-	cd lib/jip/; python setup.py develop
-	cd lib/indexfile; python setup.py develop
-	python setup.py develop
+	@if [ ! -d $(DEVEL_ENV) ]; then virtualenv --no-site-packages $(DEVEL_ENV);fi
+	@. $(DEVEL_ENV)/bin/activate;pip install -r requirements.txt $(PIP_OPTIONS)
+	@. $(DEVEL_ENV)/bin/activate;python setup.py develop
 
 install:
-	@if [ ! -d ${INSTALL_DIR} ]; then virtualenv --no-site-packages ${INSTALL_DIR};fi
-	@echo "Installing Grape 2 into ${INSTALL_DIR}..."
-	@. env/bin/activate;pip install -r install_requirements.txt > ${INSTALL_LOG} 2>&1
-	@. env/bin/activate;python setup.py install > ${INSTALL_LOG} 2>&1
+	@if [ ! -d $(INSTALL_DIR) ]; then virtualenv --no-site-packages $(INSTALL_DIR);fi
+	@echo "Installing Grape 2 into $(INSTALL_DIR)..."
+	@. $(INSTALL_DIR)/bin/activate;pip install -r install_requirements.txt $(PIP_OPTIONS) > $(INSTALL_LOG) 2>&1
+	@. $(INSTALL_DIR)/bin/activate;python setup.py install > $(INSTALL_LOG) 2>&1
 	@echo "Install completed."
 	@echo ""
 	@echo "------------------------------------------------------"
