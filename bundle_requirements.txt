@@ -1,6 +1,5 @@
-Mako==0.8.0
 argparse==1.2.1
-clint==0.3.1
-lockfile==0.9.1
 zc.buildout==2.1.0
-distribute==0.7.3
+clint==0.3.1
+pyjip==0.4
+idxtools==0.9.1
