@@ -364,7 +364,7 @@ class Project(object):
     @staticmethod
     def _rm_link(path):
         if not os.path.exists(path):
-            #raise GrapeError("The file %s does not exists" % (path))
+            # the file does not exists
             return
 
         if os.path.islink(path):
@@ -372,10 +372,14 @@ class Project(object):
         else:
             stat = os.stat(path)
             if stat.st_nlink > 1:
-                os.remove(path)
+                # more than one copy - remove
+                try:
+                    os.remove(path)
+                except OSError,e:
+                    raise e
             else:
-                raise GrapeError("Only one copy of %s is present. The file won't be deleted." % (path))
-
+                # only one copy of the file - do not delete
+                pass
 
     @staticmethod
     def _get_dest(path):
@@ -637,7 +641,7 @@ class Config(object):
         l.sort()
         return [x[1] for x in l]
 
-    def set(self, key, value, commit=False, make_link=True, dest=None):
+    def set(self, key, value, commit=False, make_link=True, dest=None, absolute=False):
         """Set values into the configuration for a given key
 
         Arguments:
@@ -676,7 +680,8 @@ class Config(object):
                     dest = Project._get_dest(values)
                 symlink = Project._make_link(values, os.path.join(self.path, dest)
                                             if dest else self.path, symbolic=False)
-                values = symlink
+                if absolute:
+                    values = symlink
 
         d[keys[-1]] = values
 

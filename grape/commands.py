@@ -253,7 +253,7 @@ class ConfigCommand(GrapeCommand):
             return True
         if args.set:
             info = args.set
-            project.config.set(info[0],info[1],commit=True)
+            project.config.set(info[0],info[1], absolute=args.absolute, commit=True)
             return True
         if args.remove:
             key = args.remove
@@ -287,6 +287,8 @@ class ConfigCommand(GrapeCommand):
 
 
     def add(self, parser):
+        parser.add_argument('--absolute-path', dest='absolute', action='store_true', default=False,
+                        help='Use absolute path for files. Default: use path relative to the project folder')
         parser.add_argument('--hidden', action='store_true', default=False,
                         help='Include hidden information')
         parser.add_argument('--empty', action='store_true', default=False,
