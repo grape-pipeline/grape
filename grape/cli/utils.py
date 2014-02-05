@@ -12,7 +12,7 @@ class CommandError(Exception):
     the error message"""
     pass
 
-def jip_prepare(args, submit=False, project=None, datasets=[]):
+def jip_prepare(args, submit=False, project=None, datasets=[], validate=True):
     # get the project and the selected datasets
     if not project and not datasets:
         project, datasets = get_project_and_datasets(args)
@@ -41,7 +41,7 @@ def jip_prepare(args, submit=False, project=None, datasets=[]):
         jargs['max_matches'] = args.max_matches
         jargs['threads'] = args.threads
         p.run('grape_gem_rnapipeline', **jargs)
-        jobs = jip.jobs.create_jobs(p)
+        jobs = jip.jobs.create_jobs(p, validate=validate)
     if submit:
         jobs = check_jobs_dependencies(jobs)
     return jobs
