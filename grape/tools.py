@@ -399,8 +399,8 @@ class flux(object):
 
     def setup(self):
         self.name("flux.${name}")
-        self.output_dir.hidden = True
-        self.name.hidden = True
+        self.options['output_dir'].hidden = True
+        self.options['name'].hidden = True
 
     def get_command(self):
         return 'bash', '%s ${options()}' % bin_path(self, 'flux-capacitor')
