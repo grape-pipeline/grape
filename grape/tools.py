@@ -288,7 +288,7 @@ class awk_fix_se(object):
         command = "\'BEGIN{OFS=FS=\"\\t\"}$0!~/^@/{split(\"1_2_8_32_64_128\",a,\"_\");for(i in a){if(and($2,a[i])>0){$2=xor($2,a[i])}}}{print}\'"
         return 'bash','awk %s ${input|arg("")|suf(" ")}${output|arg("> ")}' % command
 
-@module([("crgtools","0.1")])
+@module([("samtools","0.1.19")])
 @tool('grape_samtools_view')
 class samtools(object):
     """\
@@ -319,8 +319,7 @@ class samtools(object):
         return 'bash','%s ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'samtools view')
 
 
-#@module([("samtools","0.1.19")])
-@module([("crgtools","0.1")])
+@module([("samtools","0.1.19")])
 @tool('grape_samtools_sort')
 class samtools(object):
     """\
@@ -349,7 +348,7 @@ class samtools(object):
         return 'bash','%s ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}' % bin_path(self, 'samtools sort')
 
 
-@module([("crgtools","0.1")])
+@module([("samtools","0.1.19")])
 @tool('grape_samtools_index')
 class samtools(object):
     """\
@@ -509,9 +508,9 @@ class GrapePipeline(object):
         gem = p.run('grape_gem_rnatool', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, no_bam=True, no_stats=True, output_dir=self.output_dir, threads=self.threads)
         sample = self.sample
         gem_filter = p.run('grape_gem_filter_p', input=gem.map, max_mismatches=self.max_mismatches, max_matches=self.max_matches, threads=self.threads, name=sample)
-        #gem_bam = p.run('grape_gem_bam_p', input=gem_filter.output, index=gem_setup.index, quality=self.quality, threads=self.threads, single_end=self.single_end, sequence_lengths=True, name=sample)
-        #flux = p.run('grape_flux', input=gem_bam.bam, annotation=self.annotation, output_dir=self.output_dir, name=sample)
-        #p.run('grape_flux_split_features', input=flux.output, name=sample)
+        gem_bam = p.run('grape_gem_bam_p', input=gem_filter.output, index=gem_setup.index, quality=self.quality, threads=self.threads, single_end=self.single_end, sequence_lengths=True, name=sample)
+        flux = p.run('grape_flux', input=gem_bam.bam, annotation=self.annotation, output_dir=self.output_dir, name=sample)
+        p.run('grape_flux_split_features', input=flux.output, name=sample)
         return p
 
 
