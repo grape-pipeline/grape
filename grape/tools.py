@@ -288,7 +288,7 @@ class awk_fix_se(object):
         command = "\'BEGIN{OFS=FS=\"\\t\"}$0!~/^@/{split(\"1_2_8_32_64_128\",a,\"_\");for(i in a){if(and($2,a[i])>0){$2=xor($2,a[i])}}}{print}\'"
         return 'bash','awk %s ${input|arg("")|suf(" ")}${output|arg("> ")}' % command
 
-@module([("samtools","0.1.19")])
+@module([("crgtools","0.1")])
 @tool('grape_samtools_view')
 class samtools(object):
     """\
@@ -319,7 +319,8 @@ class samtools(object):
         return 'bash','%s ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'samtools view')
 
 
-@module([("samtools","0.1.19")])
+#@module([("samtools","0.1.19")])
+@module([("crgtools","0.1")])
 @tool('grape_samtools_sort')
 class samtools(object):
     """\
@@ -348,7 +349,7 @@ class samtools(object):
         return 'bash','%s ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}' % bin_path(self, 'samtools sort')
 
 
-@module([("samtools","0.1.19")])
+@module([("crgtools","0.1")])
 @tool('grape_samtools_index')
 class samtools(object):
     """\
@@ -434,35 +435,6 @@ class awk_split_features(object):
     def get_command(self):
         command = "\'BEGIN{OFS=FS=\"\\t\"}{print > input\".\"$3\".gtf\"}\'"
         return 'bash','awk -v input=${input|arg("")|suf(" ")|ext} %s ${input|arg("")|suf(" ")}' % command
-
-
-@module([("crgtools","0.1")])
-@tool('grape_idxtools_index')
-class idxtools_index(object):
-    """\
-    The IDXtools add program
-
-    Usage:
-        idxtools.add -i <input> -o <output> [-m <max_memory>] [-n <name>] [-t <threads>]
-
-    Options:
-        --help  Show this help message
-        -m, --max-memory <max_memory>  The maximum amount of RAM to use for sorting (per thread)
-        -n, --name <name>  The output prefix name
-        -o, --output <output>  The output file [default: stdout]
-        -t, --threads <threads>  The number of execution threads
-
-    Inputs:
-        -i, --input <input>  The input map file [default: stdin]
-    """
-    def setup(self):
-        if self.options['name']:
-            self.name("sam.sort.${name}")
-            self.options['name'].hidden = True
-        self.options['threads'].short = "-@"
-
-    def get_command(self):
-        return 'bash','%s ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}' % bin_path(self, 'samtools sort')
 
 
 @pipeline('grape_gem_setup')
