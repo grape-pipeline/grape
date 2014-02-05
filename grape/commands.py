@@ -221,10 +221,8 @@ class JobsCommand(GrapeCommand):
     def run(self, args):
         import jip
         project, datasets = utils.get_project_and_datasets(args)
-        jip_db_file = project.config.get('jip.db')
-        if jip_db_file:
-            # setup jip db
-            jip.db.init(jip_db_file)
+        # setup jip db
+        jip.db.init(project.jip_db)
         try:
             import runpy
             argv = ["jip-jobs"] + ['--expand'] if args.expand else []

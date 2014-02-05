@@ -16,10 +16,8 @@ def jip_prepare(args, submit=False, project=None, datasets=[], validate=True):
     # get the project and the selected datasets
     if not project and not datasets:
         project, datasets = get_project_and_datasets(args)
-    jip_db_file = project.config.get('jip.db')
-    if jip_db_file:
-        # setup jip db
-        jip.db.init(jip_db_file)
+    # setup jip db
+    jip.db.init(project.jip_db)
     p = jip.Pipeline()
     jargs = {}
     if datasets == ['setup']:

@@ -261,6 +261,13 @@ class Project(object):
         self.index.insert(update=update, **file_info)
 
     @property
+    def jip_db(self):
+        jip_db_file = self.config.get('jip.db')
+        if not jip_db_file:
+            jip_db_file = os.path.join(self.path, '.grape', 'grape_jp.db')
+        return jip_db_file
+
+    @property
     def formatfile(self):
         """Return the path to the json file describing the format for the project index
         """
