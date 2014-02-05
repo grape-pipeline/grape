@@ -41,7 +41,6 @@ def test_gem_setup_pipeline_with_output_dir():
     ldir = os.getcwd()
     j = os.path.join
     assert len(jobs) == 2
-    print jobs[0].configuration
     assert jobs[0].configuration['input'].get() == j(ldir, 'genome.fa')
     assert jobs[0].configuration['output'].get() == j(ldir, 'mydir/genome.gem')
     assert jobs[0].configuration['no_hash'].get() == ''
@@ -62,7 +61,7 @@ def test_gem_setup_pipeline_with_output_dir():
 
 def test_gem_pipeline():
     p = jip.Pipeline()
-    p.run('grape_gem_rnapipeline', fastq='reads_1.fastq.gz', genome='index.fa', annotation='gencode.gtf')
+    p.run('grape_gem_rnapipeline', fastq='reads_1.fastq.gz', genome='index.fa', annotation='gencode.gtf', max_matches='10', max_mismatches='4')
     jobs = jip.create_jobs(p, validate=False)
     ldir = os.getcwd()
     j = os.path.join
@@ -93,7 +92,7 @@ def test_gem_pipeline():
 def test_gem_pipeline_with_output_dir():
     p = jip.Pipeline()
     p.run('grape_gem_rnapipeline', fastq='reads_1.fastq.gz', genome='index.fa',
-          annotation='gencode.gtf', output_dir="mydir")
+          annotation='gencode.gtf', output_dir="mydir", max_matches='10', max_mismatches='4')
     jobs = jip.create_jobs(p, validate=False)
     ldir = os.getcwd()
     j = os.path.join

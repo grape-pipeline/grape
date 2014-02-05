@@ -5,7 +5,8 @@ from grape.grape import Grape
 import jip
 
 def test_module_decorator():
-    del os.environ['GRAPE_HOME']
+    if os.environ.get('GRAPE_HOME'):
+        del os.environ['GRAPE_HOME']
 
     @module([("gemtools", "1.6.1")])
     @jip.tool('gemtools_test')
