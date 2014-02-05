@@ -356,7 +356,8 @@ class Project(object):
                 if e.errno == errno.EXDEV:
                     os.symlink(src_path, dst_path)
                 else:
-                    raise e
+                    # do not create the link and continue
+                    pass
 
         return dst_path
 
