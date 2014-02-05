@@ -201,7 +201,7 @@ class gem_sam(object):
     The GEMtools SAM conversion program
 
     Usage:
-        gem.sam -f <input> -o <output> -i <genome_index> -q <quality> [-l] [--read-group <read_group>][--expect-single-end-reads] [--expect-paired-end-reads] [-n name] [-t <threads>]
+        gem.sam -f <input> -o <output> -i <genome_index> -q <quality> [-l] [--read-group <read_group>] [--expect-single-end-reads] [--expect-paired-end-reads] [-n name] [-t <threads>]
 
     Options:
         --help  Show this help message
@@ -333,7 +333,7 @@ class samtools(object):
         --help  Show this help message
         -m, --max-memory <max_memory>  The maximum amount of RAM to use for sorting (per thread)
         -n, --name <name>  The output prefix name
-        -o, --output <output>  The output file [default: stdout]
+        -o, --output <output>  The output file [default: ${input|ext}_sorted.bam]
         -t, --threads <threads>  The number of execution threads
 
     Inputs:
@@ -509,9 +509,9 @@ class GrapePipeline(object):
         gem = p.run('grape_gem_rnatool', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, no_bam=True, no_stats=True, output_dir=self.output_dir, threads=self.threads)
         sample = self.sample
         gem_filter = p.run('grape_gem_filter_p', input=gem.map, max_mismatches=self.max_mismatches, max_matches=self.max_matches, threads=self.threads, name=sample)
-        gem_bam = p.run('grape_gem_bam_p', input=gem_filter.output, index=gem_setup.index, quality=self.quality, threads=self.threads, single_end=self.single_end, sequence_lengths=True, name=sample)
-        flux = p.run('grape_flux', input=gem_bam.bam, annotation=self.annotation, output_dir=self.output_dir, name=sample)
-        p.run('grape_flux_split_features', input=flux.output, name=sample)
+        #gem_bam = p.run('grape_gem_bam_p', input=gem_filter.output, index=gem_setup.index, quality=self.quality, threads=self.threads, single_end=self.single_end, sequence_lengths=True, name=sample)
+        #flux = p.run('grape_flux', input=gem_bam.bam, annotation=self.annotation, output_dir=self.output_dir, name=sample)
+        #p.run('grape_flux_split_features', input=flux.output, name=sample)
         return p
 
 
@@ -540,7 +540,10 @@ class FilterPipeline(object):
     def pipeline(self):
         p = Pipeline()
         sample=self.options['name']
-        gem_filter_pipeline = p.run('grape_gem_quality', input=self.input, threads=self.threads, name=sample) | p.run('grape_gem_filter', max_levenshtein_error=self.max_mismatches, threads=self.threads, name=sample) |  p.run('grape_gem_filter', max_matches=self.max_matches, threads=self.threads, name=sample) | p.run('grape_pigz', threads=self.threads, output=self.output, name=sample)
+        gem_filter = p.run('grape_gem_quality', input=self.input, threads=self.threads, name=sample) | \
+        p.run('grape_gem_filter', max_levenshtein_error=self.max_mismatches, threads=self.threads, name=sample) | \
+        p.run('grape_gem_filter', max_matches=self.max_matches, threads=self.threads, name=sample) | \
+        p.run('grape_pigz', threads=self.threads, output=self.output, name=sample)
         return p
 
 @pipeline('grape_gem_bam_p')
