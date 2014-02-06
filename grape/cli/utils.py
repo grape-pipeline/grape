@@ -29,10 +29,11 @@ def jip_prepare(args, submit=False, project=None, datasets=[], validate=True):
         input = []
         for d in datasets:
             fqs = d.fastq.keys()
+            fqs.sort()
             input.append(fqs[0])
             if len(fqs) == 1:
                 jargs['single-end'] == True
-        jargs['fastq'] = [d.fastq.keys()[0] for d in datasets]
+        jargs['fastq'] = input
         jargs['annotation'] = project.config.get('annotation')
         jargs['genome'] = project.config.get('genome')
         jargs['max_mismatches'] = args.max_mismatches
