@@ -11,8 +11,10 @@ Grape 2.0 provides an extensive pipeline for RNA-Seq analyses. It allows the cre
 
 .. include:: quickstart.rst
 
+Contents:
+
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    adminguide
    userguide
