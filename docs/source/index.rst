@@ -3,17 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-=======================
-Grape 2.0 documentation
-=======================
+=========
+Grape 2.0
+=========
 
-Grape RNAseq Analysis Pipeline Environment is an automated workflow integrating the management, analysis and visualization of RNA-Seq data.
+Grape 2.0 provides an extensive pipeline for RNA-Seq analyses. It allows the creation of an automated and integrated workflow to manage, analyse and visualize RNA-Seq data.
+
+.. include:: quickstart.rst
 
 .. toctree::
    :maxdepth: 1
 
    adminguide
-   quickstart
    userguide
 
 
