@@ -18,13 +18,10 @@ import argparse
 
 
 from . import cli
-from . import jobs
 from . import grapeindex as index
-from . import pipelines as _pipelines
 from . import utils as grapeutils
 from .grape import Grape, Project, GrapeError
 from .cli import utils
-from .jobs.store import PipelineStore
 
 
 class GrapeCommand(object):
@@ -590,9 +587,7 @@ def main():
     line tool"""
 
     from . import __version__
-    import warnings
 
-    warnings.simplefilter("ignore")
     parser = argparse.ArgumentParser(prog="grape")
     parser.add_argument('-v', '--version', action='version',
                         version='grape %s' % (__version__))
@@ -635,6 +630,10 @@ def buildout():
     import shutil
     from .buildout import Buildout
     from . import __version__
+
+    import logging
+    logging.root.handlers = []
+
     parser = argparse.ArgumentParser(prog="grape-buildout")
     parser.add_argument('-v', '--version', action='version',
                         version='grape %s' % (__version__))
@@ -646,7 +645,7 @@ def buildout():
     # get json files with Grape config
     grape_config = [ os.path.join(os.path.dirname(__file__),f) for f in os.listdir(os.path.dirname(__file__)) if f.endswith(".json") ]
     try:
-        buildout = Buildout(buildout_conf)
+        buildout = Buildout(buildout_conf, [('buildout','directory', os.getenv("GRAPE_HOME"))])
         buildout.install([])
 
         conf_dir = os.path.join(os.getenv("GRAPE_HOME"),"conf")
