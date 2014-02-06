@@ -678,7 +678,7 @@ class Config(object):
         if len(values) == 1:
             values = values[0]
 
-        if os.path.exists(value):
+        if os.path.exists(values):
             if os.path.commonprefix([self.path, self.get(key)]) == self.path:
                 self.remove(key)
             if make_link:
@@ -687,8 +687,9 @@ class Config(object):
                     dest = Project._get_dest(values)
                 symlink = Project._make_link(values, os.path.join(self.path, dest)
                                             if dest else self.path, symbolic=False)
-                if absolute:
-                    values = symlink
+                values = symlink
+                if not absolute:
+                    values = values.replace(self.path,"").lstrip("/")
 
         d[keys[-1]] = values
 
