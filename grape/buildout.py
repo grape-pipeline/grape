@@ -8,25 +8,26 @@ from .grape import GrapeError, Grape
 
 import os
 import logging
+import shutil
 
 class Buildout(Bout):
     """A grape buildout class extending the zc.buildout
     """
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, clopts):
         #if not os.path.exists(buildout_conf):
         #    raise GrapeError("No buildout configuration file found!")
         #else:
         try:
-            Bout.__init__(self,config_file,[])
+            Bout.__init__(self,config_file, clopts)
         except UserError as e:
             raise GrapeError(str(e))
         self['buildout']['installed'] = ''
         self._type = 'tar'
 
-    def _setup_directories(self):
-        if self._type == 'egg':
-            Bout._setup_directories(self)
+    #def _setup_directories(self):
+    #    if self._type == 'egg':
+    #        Bout._setup_directories(self)
 
     def install(self, install_args):
         Bout.install(self,install_args)
@@ -36,11 +37,12 @@ class Buildout(Bout):
     def cleanup(self):
         """ Cleanup method to remove the directories created by buildout """
         for name in ('bin', 'develop-eggs', 'eggs', 'parts'):
-            logger = logging.getLogger('buildout')
+
             dir = self['buildout'][name+'-directory']
             if os.path.isdir(dir):
-                logger.warn('Removing directory %r.', dir)
-                os.removedirs(dir)
+                self._logger.warn('Removing directory %r.', dir)
+                #os.removedirs(dir)
+                shutil.rmtree(dir)
 
 
 def find_path(name, version=None, grape_home=None):
