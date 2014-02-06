@@ -1,3 +1,0 @@
-[submodule "lib/jip"]
-	path = lib/jip
-	url = https://github.com/grape-pipeline/jip.git

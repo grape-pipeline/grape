@@ -7,18 +7,6 @@ from os.path import exists, join
 
 
 
-def test_project_datasets_flat():
-    p = Project("test_data/project_flat")
-    datasets = p.get_datasets()
-    assert len(datasets) == 1
-    #assert len(datasets.fastq) == 2
-    #first = filter(lambda x: x.name == "first", datasets)[0]
-    #print first.primary
-    #assert first.primary.endswith("first_1.fastq")
-    #assert first.data_folder.endswith("project_flat/data")
-    #print first.type_folders == False
-
-
 def test_project_initialization_with_structure(tmpdir):
     p = Project(str(tmpdir))
     p.initialize()
@@ -40,3 +28,11 @@ def test_project_initialization_without_structure(tmpdir):
     assert tmpdir.ensure(".grape", dir=True)
 
 
+def test_project_find_dataset_dataset():
+    assert Project.find_dataset("test_1.fastq.gz") == ("test", ["test_1.fastq.gz", "test_2.fastq.gz"])
+    assert Project.find_dataset("test_0.fastq.gz") == ("test", ["test_0.fastq.gz", "test_1.fastq.gz"])
+    assert Project.find_dataset("test_0.fastq") == ("test", ["test_0.fastq", "test_1.fastq"])
+    assert Project.find_dataset("test_0.fq") == ("test", ["test_0.fq", "test_1.fq"])
+    assert Project.find_dataset("test_0.fq.gz") == ("test", ["test_0.fq.gz", "test_1.fq.gz"])
+    assert Project.find_dataset("test-0.fq.gz") == ("test", ["test-0.fq.gz", "test-1.fq.gz"])
+    assert Project.find_dataset("test.0.fq.gz") == ("test", ["test.0.fq.gz", "test.1.fq.gz"])

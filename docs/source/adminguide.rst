@@ -1,3 +1,4 @@
+<<<<<<< HEAD:docs/source/installation.rst
 ============
 Installation
 ============

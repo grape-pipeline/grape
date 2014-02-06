@@ -16,7 +16,6 @@ def test_default_config():
     config = Config('test_data/project_default_conf')
     assert os.path.exists('test_data/project_default_conf/.grape/config')
     assert config.data['name'] == 'Default project'
-    assert config.data['quality'] == '33'
     assert config.data['genome'] == ""
     assert config.data['annotation'] == ""
     os.remove('test_data/project_default_conf/.grape/config')

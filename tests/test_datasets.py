@@ -3,48 +3,46 @@
 # Test grape Datasets
 #
 
-from grape.index import Metadata,Dataset
+from grape.grapeindex import *
 
-
-def test_secondary_matching():
-    print Dataset.find_secondary("test_0.fastq")
-    assert Dataset.find_secondary("test_1.fastq.gz") == "test_2.fastq.gz"
-    assert Dataset.find_secondary("test_0.fastq.gz") == "test_1.fastq.gz"
-    assert Dataset.find_secondary("test_0.fastq") == "test_1.fastq"
-    assert Dataset.find_secondary("test_0.fq") == "test_1.fq"
-    assert Dataset.find_secondary("test_0.fq.gz") == "test_1.fq.gz"
-    assert Dataset.find_secondary("test-0.fq.gz") == "test-1.fq.gz"
-    assert Dataset.find_secondary("test.0.fq.gz") == "test.1.fq.gz"
-
-
-def test_dataset_construction_typed_folder():
-    m = Metadata({'labExpId': 'test', 'type':'fastq', 'path':'/data/fastq/test_1.fq'})
-    d = Dataset(m)
+def test_dataset_init_dict():
+    m = {'id': 'test'}
+    d = GrapeDataset(**m)
+    assert d.id == "test"
+    d.add_file(**{'id':d.id, 'type':'fastq', 'path':'/data/fastq/test_1.fq'})
     assert d.primary == "/data/fastq/test_1.fq"
     #assert d.secondary == "/data/fastq/test_2.fq"
     assert d.secondary == None
-    assert d.data_folder == "/data", d.data_folder
+
+def test_dataset_init():
+    d = GrapeDataset(id='test')
     assert d.id == "test"
-    assert d.folder("mappings") == "/data/mappings"
+    d.add_file(id=d.id,type='fastq', path='/data/fastq/test_1.fq')
+    assert d.primary == "/data/fastq/test_1.fq"
+    #assert d.secondary == "/data/fastq/test_2.fq"
+    assert d.secondary == None
+
+def test_dataset_construction_typed_folder():
+    d = GrapeDataset(id='test')
+    assert d.id == "test"
+    d.add_file(id=d.id,type='fastq', path='/data/fastq/test_1.fq')
+    assert d.primary == "/data/fastq/test_1.fq"
+    #assert d.secondary == "/data/fastq/test_2.fq"
+    assert d.secondary == None
 
 
 def test_dataset_construction_untyped_folder():
-    m = Metadata({'labExpId': 'test', 'type':'fastq', 'path':'/data/test_1.fq'})
-    d = Dataset(m)
+    d = GrapeDataset(id='test')
+    assert d.id == "test"
+    d.add_file(id=d.id,type='fastq', path='/data/test_1.fq')
     assert d.primary == "/data/test_1.fq"
     #assert d.secondary == "/data/test_2.fq"
     assert d.secondary == None
-    assert d.data_folder == "/data", d.data_folder
-    assert d.id == "test"
-    assert d.folder("mappings") == "/data"
-
 
 def test_dataset_construction_sorted_by_file():
-    m = Metadata({'labExpId': 'test', 'type':'fastq', 'path':'/data/test_1.fq'})
-    d = Dataset(m)
+    d = GrapeDataset(id='test')
+    assert d.id == "test"
+    d.add_file(id=d.id,type='fastq', path='/data/test_1.fq')
     assert d.primary == "/data/test_1.fq"
     #assert d.secondary == "/data/test_2.fq"
     assert d.secondary == None
-    assert d.data_folder == "/data", d.data_folder
-    assert d.id == "test"
-    assert d.folder("mappings") == "/data"

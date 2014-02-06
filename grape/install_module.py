@@ -16,7 +16,6 @@ if sys.version_info[0] > 2:
 else:
     import urlparse
 
-
 TRUE_VALUES = ('yes', 'true', '1', 'on')
 GRAPE_HOME = 'GRAPE_HOME'
 
@@ -28,7 +27,7 @@ class Recipe(object):
     def __init__(self, buildout, name, options):
         self.options = options
         self.buildout = buildout
-        self.name = name
+        self.name = 'grape.install_module'
 
         options.setdefault('strip-top-level-dir', 'false')
         options.setdefault('ignore-existing', 'false')
@@ -182,5 +181,4 @@ class Recipe(object):
             finally:
                 if is_temp:
                     os.unlink(path)
-
         return parts

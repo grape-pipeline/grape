@@ -18,22 +18,10 @@ import argparse
 
 
 from . import cli
-from . import jobs
-from . import index
-from . import pipelines as _pipelines
+from . import grapeindex as index
+from . import utils as grapeutils
 from .grape import Grape, Project, GrapeError
 from .cli import utils
-from .jobs.store import PipelineStore
-from jip.tools import ToolException
-
-
-
-
-class CommandError(Exception):
-    """Exception raised by command line tools. This exception
-    is catched in the main call and no stack trace is printed, just
-    the error message"""
-    pass
 
 
 class GrapeCommand(object):
@@ -64,8 +52,14 @@ class InitCommand(GrapeCommand):
             cli.warn("Project already exists")
             return True
 
+        folders = ''
+        if args.type_folders:
+            folders = 'type'
+        if args.dataset_folders:
+            folders = 'dataset'
+
         cli.info("Initializing project ... ", newline=False)
-        project.initialize(init_structure=not args.empty)
+        project.initialize(init_structure=not args.empty, folder_structure=folders)
         cli.info(cli.green("Done"))
 
         if args.quality is not None or args.name is not None:
@@ -84,100 +78,13 @@ class InitCommand(GrapeCommand):
                             help="Path to the project folder. Defaults to current directory")
         parser.add_argument("--empty", dest="empty", default=False, action="store_true",
                             help="Do not create default folder structure")
+        parser.add_argument("--by-type", dest="type_folders", default=False, action="store_true",
+                            help="Organize project data folder by type")
+        parser.add_argument("--by-dataset", dest="dataset_folders", default=False, action="store_true",
+                            help="Organize project data folder by dataset")
         parser.add_argument("--quality", dest="quality", help="Set the default quality "
                                                               "offset for the project")
         parser.add_argument("--name", dest="name", help="Set the projects name")
-
-
-class SetupCommand(GrapeCommand):
-    name = "setup"
-    description = """Run the pre-processing steps needed to prepare the pipeline for the execution"""
-
-    def run(self, args):
-        import time, datetime
-        # get the project and the selected datasets
-        project, datasets = utils.get_project_and_datasets(args)
-        pipelines = []
-        grp = Grape()
-        pipeline = _pipelines.pre_pipeline(project.config)
-        # update job params
-        for step in pipeline.tools.values():
-            grp.configure_job(step, project, None, vars(args))
-
-
-        # validate the pipeline
-        if not utils._prepare_pipeline(pipeline):
-            raise ValueError('Cannot prepare pipeline')
-        pipelines.append(pipeline)
-        if not pipelines:
-            raise ValueError('No pipelines found')
-        if args.submit:
-            cluster = Grape().get_cluster()
-        # all created and validated, time to run
-        for pipeline in pipelines:
-            cli.info("Setting up %s" % pipeline)
-            if args.submit:
-                store = PipelineStore(project.path, pipeline.name)
-            steps = pipeline.get_sorted_tools()
-            for i, step in enumerate(steps):
-                skip = step.is_done()
-                state = "Running"
-                if skip:
-                    state = cli.yellow("Skipped")
-                    jobid = ""
-                if args.submit:
-                    if not skip:
-                        state = cli.green("Submitted")
-                        step.job.name = "GRP-SET-%s" % (str(step))
-                        jobs.store.prepare_tool(step._tool, project.path,
-                                                      pipeline.name)
-
-                        # we need to explicitly lock the store here as the
-                        # job is already on the cluster and we need to make
-                        # sure the cluster jobs does not updated the entry before
-                        # we actually set it
-                        store.lock()
-                        feature = cluster.submit(step,
-                                                 step.get_configuration())
-                        jobid = feature.jobid
-                        store_entry = {
-                            "id": jobid,
-                            "stderr": feature.stderr,
-                            "stdout": feature.stdout,
-                            "state": jobs.STATE_QUEUED
-                        }
-                        store.set(str(step), store_entry)
-                        store.release()
-
-                    s = "({0:3d}/{1}) | {2} {3:20} {4}".format(i + 1,
-                                                           len(steps),
-                                                           state, step,
-                                                           jobid)
-                    cli.info(s)
-                else:
-                    s = "({0:3d}/{1}) | {2} {3:20}".format(i + 1,
-                                                       len(steps),
-                                                       state, step)
-                    cli.info(s, newline=skip)
-                    if not skip:
-                        start_time = time.time()
-                        try:
-                            step.run()
-                        except ToolException, err:
-                            if err.termination_signal == signal.SIGINT:
-                                cli.info(" : " + cli.yellow("CANCELED"))
-                            else:
-                                cli.info(" : " + cli.red("FAILED " + str(err.exit_value)))
-                            return False
-                        end = datetime.timedelta(seconds=int(time.time() - start_time))
-                        cli.info(" : " + cli.green("DONE") + " [%s]" % end)
-        return True
-
-    def add(self, parser):
-        parser.add_argument('--submit', action='store_true', default=False,
-                            help='Run the setup steps in a HPC cluster environment - requires a working cluster configuration')
-        utils.add_default_job_configuration(parser,
-                                            add_cluster_parameter=False)
 
 
 class RunCommand(GrapeCommand):
@@ -185,193 +92,55 @@ class RunCommand(GrapeCommand):
     description = """Run the pipeline on a set of data"""
 
     def run(self, args):
-        import time, datetime
-        # get the project and the selected datasets
-        project, datasets = utils.get_project_and_datasets(args)
-        pipelines = utils.create_pipelines(_pipelines.default_pipeline,
-                                           project,
-                                           datasets, vars(args))
-        if not pipelines:
+        import tools
+        import jip
+        from datetime import datetime, timedelta
+        # jip parameters
+        silent = False
+        profiler = False
+        force = False
+
+        jobs = utils.jip_prepare(args)
+
+        if not jobs:
             return False
 
+        if args.dry:
+            from jip.cli import show_commands, show_dry
+            show_dry(jobs)
+            show_commands(jobs)
+            return
+
         # all created and validated, time to run
-        for pipeline in pipelines:
-            cli.info("Starting pipeline run: %s" % pipeline)
-            steps = pipeline.get_sorted_tools()
-            for i, step in enumerate(steps):
-                skip = step.is_done()
-                state = "Running"
-                if skip:
-                    state = cli.yellow("Skipped")
-                s = "({0:3d}/{1}) | {2} {3:20}".format(i + 1,
-                                                       len(steps),
-                                                       state, step)
-                cli.info(s, newline=skip)
-                if not skip:
-                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
-                    start_time = time.time()
-                    try:
-                        step.run()
-                    except ToolException, err:
-                        if err.termination_signal == signal.SIGINT:
-                            cli.info(" : " + cli.yellow("CANCELED"))
-                        else:
-                            cli.info(" : " + cli.red("FAILED " + str(err.exit_value)))
-                        return False
-                    end = datetime.timedelta(seconds=int(time.time() - start_time))
-                    cli.info(" : " + cli.green("DONE") + " [%s]" % end)
+        for exe in jip.jobs.create_executions(jobs):
+            if exe.completed and not force:
+                if not silent:
+                    cli.warn("Skipping " + exe.name)
+            else:
+                if not silent:
+                    cli.warn("Running {name:30}".format(name=exe.name))
+                start = datetime.now()
+                success = jip.jobs.run_job(exe.job, profiler=profiler)
+                end = timedelta(seconds=(datetime.now() - start).seconds)
+                if success:
+                    if not silent:
+                        cli.info(exe.job.state + " [%s]" % (end))
+                else:
+                    if not silent:
+                        cli.error(exe.job.state)
+                    sys.exit(1)
         return True
 
     def add(self, parser):
         parser.add_argument("datasets", default=["all"], nargs="*")
+        parser.add_argument("--dry", default=False, action="store_true",
+                            help="Show the pipeline graph and commands and exit")
+        parser.add_argument("--force", default=False, action="store_true",
+                            help="Force computation of all jobs")
+        parser.add_argument("--compute-stats", default=False, action="store_true",
+                            help="Compute md5 sums and size for jobs output files")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False)
-
-
-class JobsCommand(GrapeCommand):
-    name = "jobs"
-    description = """List and modify grape jobs"""
-
-    def run(self, args):
-        grp = Grape()
-        cluster = grp.get_cluster()
-
-        # list jobs
-        self._list_jobs(args, cluster)
-
-    def _get_stores(self, project, check=False, cluster=None):
-        """Iterates over all project job stores and collects
-        the data. If check is set to True and a cluster is
-        specified, the cluster jobs are listed and the states
-        are updated.
-        """
-        stores = []
-        job_states = None
-        for store in jobs.store.list(project.path):
-            try:
-                store.lock()
-                data = store.get()
-                if check:
-                    changed = False
-                    # check job status
-                    for k, v in data.items():
-                        if k in ["name"]:
-                            continue
-                        if v.get("state", None) in [jobs.STATE_QUEUED,
-                                                    jobs.STATE_RUNNING]:
-                            if job_states is None:
-                                job_states = cluster.list()
-                            if v["id"] not in job_states:
-                                v["state"] = jobs.STATE_FAILED
-                                changed = True
-                    if changed:
-                        store.save(data)
-                stores.append(data)
-            finally:
-                store.release()
-        return stores
-
-    def _list_jobs(self, args, cluster):
-        """List grape jobs
-
-        :param cluster: the cluster instance
-        :type cluster: jip.cluster.Cluster
-        """
-        project, datasets = utils.get_project_and_datasets(args)
-
-        stores = self._get_stores(project, check=args.check, cluster=cluster)
-
-        if args.verbose:
-            self._list_verbose(stores)
-            return True
-
-        names = []
-        states = []
-        bars = []
-        for data in stores:
-            raw_states = []
-            for k, v in data.items():
-                if k not in ["name"]:
-                    raw_states.append(v["state"])
-
-            # print overview
-            counts = {}
-            def _count(k):
-                counts[k] = counts.get(k, 0) + 1
-            map(_count, raw_states)
-
-            pipeline_state = cli.green(jobs.STATE_DONE)
-            if counts.get(jobs.STATE_FAILED, 0) > 0:
-                pipeline_state = cli.red(jobs.STATE_FAILED)
-            if counts.get(jobs.STATE_RUNNING, 0) > 0:
-                pipeline_state = cli.white(jobs.STATE_RUNNING)
-            if counts.get(jobs.STATE_QUEUED, 0) > 0:
-                pipeline_state = cli.yellow(jobs.STATE_QUEUED)
-
-            BAR_TEMPLATE = '[%s%s] %i/%i'
-            bar = None
-            count = len(raw_states)
-            width = 32
-            i = counts.get(jobs.STATE_DONE, 0)
-            x = int(width * i / count)
-            bar = BAR_TEMPLATE % (
-                '#' * x,
-                ' ' * (width - x),
-                i,
-                count
-            )
-            names.append(data["name"])
-            states.append(pipeline_state),
-            bars.append(bar)
-
-        max_names = max(map(len, names)) + 2
-        max_state = max(map(len, states)) + 2
-        for i, name in enumerate(names):
-            cli.info(cli.columns(
-                [name, max_names],
-                [states[i], max_state],
-                [bars[i], None]))
-
-
-
-    def _list_verbose(self, stores):
-        for data in stores:
-            names = []
-            states = []
-            ids = []
-            for k, v in data.items():
-                if k not in ["name"]:
-                    names.append(k)
-                    ids.append(str(v.get("id", "")))
-                    s = v.get("state", "")
-                    if s == jobs.STATE_QUEUED:
-                        states.append(cli.yellow(s))
-                    elif s == jobs.STATE_RUNNING:
-                        states.append(cli.white(s))
-                    elif s == jobs.STATE_DONE:
-                        states.append(cli.green(s))
-                    else:
-                        states.append(cli.red(s))
-
-            max_names = max(map(len, names)) + 2
-            max_ids = max(map(len, ids)) + 2
-            cli.info("Pipeline: " + data["name"])
-            for i, name in enumerate(names):
-                cli.info(cli.columns(
-                    [name, max_names],
-                    [ids[i], max_ids],
-                    [states[i], None]))
-
-
-    def add(self, parser):
-        parser.add_argument("--check", default=False, action="store_true",
-                            dest="check", help="Check the jobs status by "
-                                               "querying the cluster")
-        parser.add_argument("-v", "--verbose", default=False,
-                            action="store_true",
-                            dest="verbose", help="Print job details")
-        pass
-        #parser.add_argument("datasets", default="all", nargs="*")
 
 
 class SubmitCommand(GrapeCommand):
@@ -379,72 +148,90 @@ class SubmitCommand(GrapeCommand):
     description = """Submit the pipeline on a set of data"""
 
     def run(self, args):
-        # get the project and the selected datasets
-        project, datasets = utils.get_project_and_datasets(args)
-        pipelines = utils.create_pipelines(_pipelines.default_pipeline,
-                                           project,
-                                           datasets,
-                                           vars(args))
+        import time
+        import tools
+        import jip
+        from datetime import datetime, timedelta
 
-        if not pipelines:
+        force = args.force
+
+        jobs = utils.jip_prepare(args, submit=True)
+
+        if not jobs:
             return False
 
-        # all created and validated, time to run
-        grp = Grape()
-        cluster = grp.get_cluster()
+        if args.dry:
+            from jip.cli import show_commands, show_dry
+            show_dry(jobs)
+            show_commands(jobs)
+            return
 
-        for pipeline in pipelines:
-            cli.info("Submitting pipeline run: %s" % pipeline)
-            store = PipelineStore(project.path, pipeline.name)
+        if args.hold:
+            #####################################################
+            # Only save the jobs and let them stay on hold
+            #####################################################
+            jip.db.save(jobs)
+            print "Jobs stored and put on hold"
+        else:
+            try:
+                #####################################################
+                # Iterate the executions and submit
+                #####################################################
+                for exe in jip.jobs.create_executions(jobs, save=True,
+                                                      check_outputs=not force,
+                                                      check_queued=not force):
 
-            steps = pipeline.get_sorted_tools()
-            for i, step in enumerate(steps):
-                skip = step.is_done()
-                if skip:
-                    state = cli.yellow("Skipped")
-                    jobid = ""
-                else:
-                    state = cli.green("Submitted")
-                    # hard code some paramters
-                    # the name is always set
-                    # and we want cluster jobs to be verbose by default
-                    step.job.name = "GRP-%s" % (str(step))
-                    step.job.verbose = True
-
-                    index.prepare_tool(step._tool, project.path, pipeline.get_configuration(pipeline.tools[step._tool.name]))
-                    jobs.store.prepare_tool(step._tool, project.path,
-                                            pipeline.name)
-
-                    # we need to explicitly lock the store here as the
-                    # job is already on the cluster and we need to make
-                    # sure the cluster jobs does not updated the entry before
-                    # we actually set it
-                    store.lock()
-                    feature = cluster.submit(step,
-                                             step.get_configuration())
-                    jobid = feature.jobid
-                    store_entry = {
-                        "id": jobid,
-                        "stderr": feature.stderr,
-                        "stdout": feature.stdout,
-                        "state": jobs.STATE_QUEUED
-                    }
-                    store.set(str(step), store_entry)
-                    store.release()
-
-                s = "({0:3d}/{1}) | {2} {3:20} {4}".format(i + 1,
-                                                           len(steps),
-                                                           state, step,
-                                                           jobid)
-                cli.info(s)
-        return True
+                    if exe.job.state == jip.db.STATE_DONE and not force:
+                        cli.warn("Skipping %s" % exe.name)
+                    else:
+                        if jip.jobs.submit_job(exe.job, force=force):
+                            cli.info("Submitted %s with remote id %s" % (
+                                exe.job.id, exe.job.job_id
+                            ))
+                return True
+            except Exception as err:
+                cli.error("Error while submitting job: %s" % str(err))
+                ##################################################
+                # delete all submitted jobs
+                ##################################################
+                jip.jobs.delete(jobs, clean_logs=True)
 
 
     def add(self, parser):
+        parser.add_argument("--dry", default=False, action="store_true",
+                            help="Show the pipeline graph and commands and exit")
+        parser.add_argument("--hold", default=False, action="store_true",
+                            help="Submit and hold the jobs")
+        parser.add_argument("--force", default=False, action="store_true",
+                            help="Force job submission")
+        parser.add_argument("--compute-stats", default=False, action="store_true",
+                            help="Compute md5 sums and size for jobs output files")
         parser.add_argument("datasets", default=["all"], nargs="*")
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=True)
 
+
+class JobsCommand(GrapeCommand):
+    name = "jobs"
+    description = """List and modify grape jobs"""
+
+    def run(self, args):
+        import jip
+        project, datasets = utils.get_project_and_datasets(args)
+        # setup jip db
+        jip.db.init(project.jip_db)
+        try:
+            import runpy
+            argv = ["jip-jobs"] + ['--expand'] if args.expand else []
+            sys.argv = argv # reset options
+            runpy.run_module("jip.cli.jip_jobs", run_name="__main__")
+        except ImportError:
+            cli.error("Import error. Here is the exception:",
+                      exc_info=True)
+
+    def add(self, parser):
+        parser.add_argument("--expand", default=False, action="store_true",
+                            dest="expand", help="Do not collapse pipeline jobs")
 
 class ConfigCommand(GrapeCommand):
     name = "config"
@@ -461,41 +248,49 @@ class ConfigCommand(GrapeCommand):
             return True
         if args.set:
             info = args.set
-            project.config.set(info[0],info[1],commit=True)
+            project.config.set(info[0],info[1], absolute=args.absolute, commit=True)
             return True
         if args.remove:
             key = args.remove
             project.config.remove(key[0], commit=True)
             return True
 
-        self._show_config(project.config)
+        self._show_config(project, args.hidden, args.empty)
         return True
 
-    def _show_config(self, config):
+    def _show_config(self, project, show_hidden, show_empty):
         from clint.textui import indent
         # print configuration
-        values = config.get_values(exclude=['name'], sort_order=[])
+        values = project.config.get_values(exclude=['name'], show_hidden=show_hidden, show_empty=show_empty)
 
-        max_keys = max([len(x[0]) for x in values]) + 1
-        max_values = max([len(x[1]) for x in values]) + 1
+        if values:
+            max_keys = max([len(x[0]) for x in values]) + 1
+            max_values = max([len(x[1]) for x in values]) + 1
 
-        header = cli.green('Project %r' % config.data['name'])
-        line = '-' * max(len(header), max_keys+max_values)
+            header = str(project)
+            line = '-' * max(len(header), max_keys+max_values)
 
-        cli.info('')
-        cli.info(header)
-        cli.info(line)
-        for k,v in values:
-            k = cli.yellow(k)
-            cli.info(cli.columns([k,max_keys],[v,max_values]))
-        cli.info(line)
+            #cli.info(line)
+            cli.info(header)
+            cli.info(cli.columns(['='*(max_keys-1),max_keys],['='*(max_values-1),max_values]))
+            for k,v in values:
+                k = cli.green(k)
+                cli.info(cli.columns([k,max_keys],[v,max_values]))
+            cli.info(cli.columns(['='*(max_keys-1),max_keys],['='*(max_values-1),max_values]))
+            #cli.info(line)
 
 
 
     def add(self, parser):
+        parser.add_argument('--absolute-path', dest='absolute', action='store_true', default=False,
+                        help='Use absolute path for files. Default: use path relative to the project folder')
+        parser.add_argument('--hidden', action='store_true', default=False,
+                        help='Include hidden information')
+        parser.add_argument('--empty', action='store_true', default=False,
+                        help='Include information with empty values')
         group = parser.add_mutually_exclusive_group()
         group.add_argument('--show', action='store_true', default=False,
-                        help='List all the configuration information for a project')
+                        help='List the configuration information for a project')
         group.add_argument('--set', nargs=2, required=False, metavar=('key', 'value'),
                 help='Add a key/value pair information to the project configuration file')
         group.add_argument('--remove', nargs=1, required=False, metavar=('key'),
@@ -512,26 +307,26 @@ class ImportCommand(GrapeCommand):
             cli.error("No grape project found")
             return False
 
-        file = args.input
-        if file is sys.stdin:
-            import tempfile
-            t = tempfile.TemporaryFile('r+w')
-            for line in file:
-                t.write(line)
-            t.seek(0)
-            file = t
+        compute_stats=args.compute_stats
 
-        if type == 'index':
-            project.index.load(file)
-        else:
-            project.import_data(file, id=args.id_key, path=args.path_key)
-        project.index.save()
+        project.load(path=args.input,format=args.format)
+        for d in project.index.datasets.values():
+            for file in d.fastq.values():
+                if os.path.dirname(file.path) != project.folder('data'):
+                    d.rm_file(path=file.path, type='fastq')
+                    project.add_dataset(os.path.dirname(file.path), d.id, file.path, file, compute_stats=compute_stats, update=True)
+        project.save()
+
+        if project.index.format and not os.path.exists(project.formatfile):
+            import json
+            json.dump(project.index.format, open(project.formatfile,'w+'))
 
     def add(self, parser):
         parser.add_argument('input', nargs='?', type=argparse.FileType('r'), const=sys.stdin, default=sys.stdin,
                             metavar='<input_file>', help="path to the metadata file")
-        parser.add_argument('--id-key', dest='id_key', default='labExpId', metavar='<id_key>')
-        parser.add_argument('--path-key', dest='path_key', default='path', metavar='<path_key>')
+        parser.add_argument('-f', '--format', dest='format', default='', metavar='<format_string>', help='Format string')
+        parser.add_argument("--compute-stats", default=False, dest='compute_stats', action='store_true',
+                            help="Compute statistics for fastq files.")
 
 
 class ExportCommand(GrapeCommand):
@@ -540,22 +335,23 @@ class ExportCommand(GrapeCommand):
 
     def run(self, args):
         project = Project.find()
+
+        project.load()
+
         if not project or not project.exists():
             cli.error("No grape project found")
             return False
         if args.output:
-            #if args.fields:
-            #    cli.error("Invalid argument")
             signal.signal(signal.SIGPIPE, signal.SIG_DFL)
             out = args.output
-            project.index.export(out, absolute=True)
+            project.export(out)
             return True
 
 
     def add(self, parser):
         parser.add_argument('-o', '--output', nargs='?', type=argparse.FileType('w'), default=sys.stdout,
                             metavar='<output_file>', help='Export the project index to a standalone index format')
-        #parser.add_argument('--custom-fields', dest='fields', nargs='+', help='Get a list of custom field to add to the index')
+        parser.add_argument('-f', '--format', dest='format', default='', metavar='<format_string>', help='Format string')
 
 
 class ListToolsCommand(GrapeCommand):
@@ -564,56 +360,29 @@ class ListToolsCommand(GrapeCommand):
 
     def run(self, args):
         import jip
-        import json
-        import textwrap
+        from jip.cli import render_table
 
-        tool_classes = jip.discover()
-        if args.show_config:
-            grape = Grape()
-            cfgs = {}
-            # do not include these paramters
-            excludes = set(["verbose", "template", "jobid", "working_dir", "dependencies", "name"])
-
-            # default config
-            cfgs["default"] = {}
-            default_job = jip.tools.Job()
-            grape.configure_job(default_job)
-            for k in filter(lambda x: x not in excludes, vars(default_job)):
-                v = getattr(default_job, k, "")
-                cfgs["default"][k] = v
-
-
-            # all registered tools by name
-            for tc in tool_classes:
-                i = tc()
-                grape.configure_job(i)
-                cfgs[i.name] = {}
-                for k in filter(lambda x: x not in excludes, vars(i.job)):
-                    v = getattr(i.job, k, "")
-                    cfgs[i.name][k] = v
-
-            cli.puts(json.dumps(cfgs, indent=4))
-        else:
-            cli.puts(
-                textwrap.dedent("""
-                The following tools are available for grape pipeline runs.\n
-                You can get the available configuration options that can be applied for each tool
-                globally in your jobs.json configuration file with the --show-config option.
-                """)
-            )
-            cli.puts(cli.columns(["Tool Name", 20], ["Description", 60]))
-            cli.puts("-" * 80)
-            for tc in tool_classes:
-                i = tc()
-                description = i.short_description
-                if description is None:
-                    description = ""
-
-                cli.puts(cli.columns([i.name, 20], [description, 60]))
-        return True
+        print "GRAPE implemented tools"
+        print "-----------------------"
+        # print ""
+        rows = []
+        jip.scanner.scan_modules()
+        for name, cls in jip.scanner.registry.iteritems():
+            if name in ['bash','cleanup']:
+                continue
+            help = cls.help()
+            description = "-"
+            if help is not None:
+                description = help.split("\n")[0]
+            if len(description) > 60:
+                description = "%s ..." % description[:46]
+            rows.append((name, description))
+        print render_table(["Tool", "Description"], rows)
 
     def add(self, parser):
-        parser.add_argument('--show-config', dest='show_config', default=False, action="store_true")
+        parser.add_argument('--show-config', dest='show_config', default=False, action="store_true", help="show the possible job configuration options for running the tools on a cluster")
+        parser.add_argument('-c','--create', dest='create', default=False, action="store_true", help="create a global jobs.json file with the default job configuration for all tools")
+        parser.add_argument('-f','--force', dest='force', default=False, action="store_true", help="force overwriting the existing global configuration")
 
 
 class ListDataCommand(GrapeCommand):
@@ -624,11 +393,62 @@ class ListDataCommand(GrapeCommand):
         (project, datasets) = utils.get_project_and_datasets(args)
         if datasets is None:
             datasets = []
-        cli.puts("Project: %s" % (project.config.get("name")))
+        cli.puts(str(project))
         cli.puts("%d datasets registered in project" % len(datasets))
+        index = project.index.select(id=[d.id for d in datasets])
+        data = index.export(type='json',absolute=True, map=None)
+        if data:
+            self._list(data,tags=index._alltags,sort=[project.index.format.get('id','id')], human=args.human)
         return True
 
+    def _list(self, data, tags=None,sort=None, human=False):
+        from clint.textui import indent
+        import json
+
+        if tags:
+            header = tags
+        else:
+            d = json.loads(data[0])
+            header = d.keys()
+        if sort:
+            header = sort + [ k for k in header if k not in sort ]
+
+        max_keys = [len(x)+1 for x in header]
+        max_values = []
+        len_values = []
+        out=[]
+        for v in data:
+            values = [ json.loads(v).get(k,'-') for k in header ]
+            if human:
+                def isnum(x):
+                    try:
+                        float(x)
+                        return True
+                    except:
+                        return False
+
+                values = [grapeutils.human_fmt(float(v),header[1]=='size') if isnum(v) else v for i,v in enumerate(values)]
+            out.append(values)
+            len_values.append([len(x)+1 for x in values])
+        max_values = [ max(t) for t in zip(*len_values) ]
+
+
+        line = '-' * (sum([i if i>j else j for i,j in zip(max_keys,max_values)])+len(max_keys)-2)
+
+        #cli.info(line)
+        cli.info(cli.columns(*[[(max(max_keys[i],max_values[i])-1)*"=",max(max_keys[i],max_values[i])] for i,o in enumerate(header)]))
+        cli.info(cli.green(cli.columns(*[[o,max(max_keys[i],max_values[i])] for i,o in enumerate(header)])))
+        cli.info(cli.columns(*[[(max(max_keys[i],max_values[i])-1)*"=",max(max_keys[i],max_values[i])] for i,o in enumerate(header)]))
+        #cli.info(line)
+        for l in out:
+            cli.info(cli.columns(*[[o, max(max_keys[i],max_values[i])] for i,o in enumerate(l)]))
+        cli.info(cli.columns(*[[(max(max_keys[i],max_values[i])-1)*"=",max(max_keys[i],max_values[i])] for i,o in enumerate(header)]))
+        #cli.info(line)
+
+
     def add(self, parser):
+        parser.add_argument('-n','--numeric', dest='human', action='store_false', default=True,
+                        help='Output numbers in full numeric format')
         pass
 
 
@@ -640,42 +460,111 @@ class ScanCommand(GrapeCommand):
         import re
 
         project = Project.find()
+        try:
+            project.load()
+        except:
+            pass
         if not project or not project.exists():
             cli.error("No grape project found")
             return False
-        cli.info("Scanning data/fastq folder ... ", newline=False)
-        fastqs = sorted(Project.search_fastq_files(os.path.join(project.path, "data/fastq")))
+        path = args.path
+        if not path:
+            path = project.folder('fastq')
+        cli.info("Scanning %s folder ... " % path, newline=False)
+        fastqs = sorted(Project.search_fastq_files(path))
+        cli.info("%d fastq files found" % len(fastqs))
+        if len(fastqs) == 0:
+            return True
+
+        cli.info("Checking known data ... ", newline=False)
+        fqts = set(fastqs)
+        for name, dataset in project.index.datasets.items():
+            if (dataset.primary in fqts):
+                fqts.remove(dataset.primary)
+            if (dataset.secondary in fqts):
+                fqts.remove(dataset.secondary)
+        fastqs = sorted(list(fqts))
+        cli.info("%d new files found" % len(fastqs))
+
+
+        file_info = {}
+        compute_stats = args.compute_stats
+        update = args.update
+        if args.quality:
+            file_info["quality"] = args.quality
+        if args.sex:
+            file_info["sex"] = args.sex
+        if args.read_type:
+            file_info["read_type"] = args.read_type
+        file_info["type"] = "fastq"
 
         # collect groups
         groups = {}
         scanned = []
         for fastq in fastqs:
             name = os.path.basename(fastq)
-            match = re.match("^(?P<name>.*)(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)?$", name)
+            match = re.match("^(?P<name>.*)(?P<id>\d)\.(fastq|fq)(\.gz)?$", name)
             if match is not None:
                 try:
                     id = int(match.group("id"))
                     nm = match.group("name")
                     d = groups.get(nm, [])
                     d.append(fastq)
+                    groups[nm] = d
                     scanned.append(fastq)
                 except Exception, e:
                     pass
 
         # add all groups
         id = args.id
-        counter = 0
-        for group in groups:
-            project.index.add()
+        counter = 1
+        add_counter = len(groups) + (len(scanned) - len(fastqs)) > 1
+        for name, files in groups.items():
+            if len(files) > 2 or len(files) == 1:
+                # ignore those ones and
+                # add them as single entries
+                for file in files:
+                    scanned.remove(file)
+                continue
+            # try to build the id from specified id + counter or just the file
+            # name
+            ds_id = id
+            if ds_id is None:
+                ds_id = name
+                if ds_id[-1] in ["-", ".", "_"]:
+                    ds_id = ds_id[:-1]
+            elif add_counter:
+                    ds_id = "%s_%d" % (ds_id, counter)
+                    counter += 1
+            for file in files:
+                cli.info("Adding %r: %s" % (ds_id, file))
+                project.add_dataset(path, ds_id, file, file_info, compute_stats=compute_stats, update=update)
+        # add the singletons, everything that is not in scanned
+        for file in set(fastqs).difference(set(scanned)):
+            ds_id = id
+            if ds_id is None:
+                ds_id = os.path.basename(file)
+            cli.info("Adding %r: %s" % (ds_id, file))
+            project.add_dataset(path, ds_id, file, file_info, compute_stats=compute_stats, update=update)
+
+        project.save()
+
 
 
     def add(self, parser):
-        parser.add_argument('--quality', dest='quality', metavar='<quality>', help="Quality offset assigned to new data sets")
+        parser.add_argument("path", default=None, nargs="?",
+                            help="Path to folder containg the fastq files.")
+        parser.add_argument("--compute-stats", default=False, dest='compute_stats', action='store_true',
+                            help="Compute statistics for fastq files.")
         parser.add_argument('--sex', dest='sex', metavar='<sex>', help="Sex value assigned to new datasets")
         parser.add_argument('--id', dest='id', metavar='<id>', help="Experiment id assigned to new datasets. "
                                                                     "NOTE that a counter value is appended if more than "
                                                                     "one new dataset is found")
-
+        parser.add_argument("--update", default=False, dest='update', action='store_true',
+                            help="Update existing index entries.")
+        utils.add_default_job_configuration(parser,
+                                            add_cluster_parameter=False,
+                                            add_pipeline_parameter=False)
 
 
 
@@ -698,9 +587,11 @@ def main():
     line tool"""
 
     from . import __version__
+
     parser = argparse.ArgumentParser(prog="grape")
     parser.add_argument('-v', '--version', action='version',
                         version='grape %s' % (__version__))
+
     # add commands
     command_parsers = parser.add_subparsers()
     _add_command(InitCommand(), command_parsers)
@@ -712,8 +603,7 @@ def main():
     _add_command(JobsCommand(), command_parsers)
     _add_command(ImportCommand(), command_parsers)
     _add_command(ListToolsCommand(), command_parsers)
-    #_add_command(ExportCommand(), command_parsers)
-    _add_command(SetupCommand(), command_parsers)
+    _add_command(ExportCommand(), command_parsers)
 
     args = parser.parse_args()
     try:
@@ -721,7 +611,7 @@ def main():
             sys.exit(1)
     except KeyboardInterrupt:
         pass
-    except CommandError, ce:
+    except cli.utils.CommandError, ce:
         cli.error(str(ce))
         sys.exit(1)
     except ValueError, e:
@@ -734,10 +624,16 @@ def main():
             raise e
 
 
+
 def buildout():
     """The grape buildout"""
+    import shutil
     from .buildout import Buildout
     from . import __version__
+
+    import logging
+    logging.root.handlers = []
+
     parser = argparse.ArgumentParser(prog="grape-buildout")
     parser.add_argument('-v', '--version', action='version',
                         version='grape %s' % (__version__))
@@ -746,9 +642,21 @@ def buildout():
 
     buildout_conf = os.path.join(os.path.dirname(__file__), 'buildout.conf')
 
+    # get json files with Grape config
+    grape_config = [ os.path.join(os.path.dirname(__file__),f) for f in os.listdir(os.path.dirname(__file__)) if f.endswith(".json") ]
     try:
-        buildout = Buildout(buildout_conf)
+        buildout = Buildout(buildout_conf, [('buildout','directory', os.getenv("GRAPE_HOME"))])
         buildout.install([])
+
+        conf_dir = os.path.join(os.getenv("GRAPE_HOME"),"conf")
+        try:
+            os.makedirs(conf_dir)
+        except:
+            pass
+        for f in grape_config:
+            shutil.copy(f, conf_dir)
+
+
     except GrapeError as e:
         cli.error('Buildout error - %s', str(e))
         sys.exit(1)

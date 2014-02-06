@@ -8,25 +8,26 @@ from .grape import GrapeError, Grape
 
 import os
 import logging
+import shutil
 
 class Buildout(Bout):
     """A grape buildout class extending the zc.buildout
     """
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, clopts):
         #if not os.path.exists(buildout_conf):
         #    raise GrapeError("No buildout configuration file found!")
         #else:
         try:
-            Bout.__init__(self,config_file,[])
+            Bout.__init__(self,config_file, clopts)
         except UserError as e:
             raise GrapeError(str(e))
         self['buildout']['installed'] = ''
         self._type = 'tar'
 
-    def _setup_directories(self):
-        if self._type == 'egg':
-            Bout._setup_directories(self)
+    #def _setup_directories(self):
+    #    if self._type == 'egg':
+    #        Bout._setup_directories(self)
 
     def install(self, install_args):
         Bout.install(self,install_args)
@@ -36,47 +37,21 @@ class Buildout(Bout):
     def cleanup(self):
         """ Cleanup method to remove the directories created by buildout """
         for name in ('bin', 'develop-eggs', 'eggs', 'parts'):
-            logger = logging.getLogger('buildout')
+
             dir = self['buildout'][name+'-directory']
             if os.path.isdir(dir):
-                logger.warn('Removing directory %r.', dir)
-                os.removedirs(dir)
-
-class Module(object):
-    """A grape buildout module that can be activated in the current
-    environment.
-    """
-
-    def __init__(self, directory):
-        self.directory = directory
-
-    def activate(self):
-        """Activate this module and load its configuration into the current
-        environment.
-        """
-        # the default implementation simply puts the bin folder in path
-        bin_path = os.path.join(self.directory, "bin")
-        if os.path.exists(bin_path):
-            Module.__prepend_environment("PATH", bin_path)
-
-    @staticmethod
-    def __prepend_environment(source, value, delim=":"):
-        """Prepend the given value to the source environment variable
-        using the given delimiter
-        """
-        current = ""
-        if source in os.environ:
-            current = delim + os.environ[source]
-        os.environ[source] = "%s%s" % (value, current)
+                self._logger.warn('Removing directory %r.', dir)
+                #os.removedirs(dir)
+                shutil.rmtree(dir)
 
 
-def find(name, version=None, grape_home=None):
+def find_path(name, version=None, grape_home=None):
     """Using the grape home in teh given :class:grape.Grape instance,
     this searches for the module with the given name and version. If no
     version is specified, all detected versions are sorted alpha-numerically
     and the latest one is returned.
 
-    Paramter
+    Parameter
     --------
     grape_home   - the grape home folder used to search for modules
     name         - the name of the module
@@ -110,4 +85,32 @@ def find(name, version=None, grape_home=None):
         raise ValueError("Module %s/%s not found in %s" % (name,
                                                            version,
                                                            grape_home))
-    return Module(version_dir)
+    return version_dir
+
+
+class module(object):
+    """The @module decorator allows to decorate tool
+    classes to add module dependencies
+    """
+    def __init__(self, modules):
+        self.modules = modules
+
+    def _load_modules(self):
+        mods = []
+        # load modules
+        for m in self.modules:
+            name = m[0]
+            version = None
+            if len(m) > 1:
+                version = m[1]
+            mods.append(find_path(name, version))
+            return mods
+
+    def __call__(self, *args):
+        cl = args[0]
+        cl.modules = self.modules
+        cl._load_modules = self._load_modules
+
+        return cl
+
+

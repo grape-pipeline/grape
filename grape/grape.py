@@ -3,8 +3,8 @@ import errno
 import re
 import json
 from . import utils
-from .index import *
-
+#from indexfile.index import *
+from grapeindex import GrapeIndex
 
 class GrapeError(Exception):
     """Base grape error"""
@@ -34,9 +34,12 @@ class Grape(object):
 
         job = tool
         name = None
-        if isinstance(tool, jip.pipelines.PipelineTool):
+
+        try:
             job = tool.job
             name = tool.name
+        except:
+            pass
 
         # load configuration lazily once
         if self._default_job_config is None:
@@ -162,12 +165,14 @@ class Project(object):
                is located
         """
         self.path = path
+        self.genome_folder = "genomes"
+        self.annotation_folder =  "annotations"
+        self.data_folder = "data"
         if self.exists():
             self.config = Config(self.path)
-            self.index = Index(os.path.join(self.path,'.index'))
+            self.index = GrapeIndex(self.indexfile)
 
-
-    def initialize(self, init_structure=True):
+    def initialize(self, init_structure=True, folder_structure=''):
         """Initialize the current project.
         The initialization happens only if no .grape folder is found in the
         project path.
@@ -176,51 +181,16 @@ class Project(object):
         """
         if self.exists():
             return
-            # create .grape
+        # create .grape
         self.__mkdir(".grape")
         self.config = Config(self.path)
-        self.index = Index(os.path.join(self.path,'.index'))
+        self.index = GrapeIndex(self.indexfile)
         if init_structure:
+            if folder_structure:
+                self.config.set('_folders', folder_structure)
+                self.config._write_config()
             #create project structure
             self._initialize_structure()
-
-    def import_data(self, file, sep=None, id='labExpId', path='path'):
-        """Import entries from a SV file. The sv file must have an header line with the name of the properties.
-
-        Arguments:
-        ----------
-        path - path to the sv files to be imported
-        """
-        import csv
-
-        if not csv.Sniffer().has_header(file.readline()):
-            raise ValueError('Metadata file must have a header')
-
-        file.seek(0)
-
-        dialect = None
-        if sep is None:
-            dialect = csv.Sniffer().sniff(file.readline(), delimiters=[',','\t'])
-
-        file.seek(0)
-
-        reader = csv.DictReader(file, dialect=dialect)
-        reader.fieldnames = [{id:'labExpId', path:'path'}.get(x, x) for x in reader.fieldnames]
-
-
-        for line in reader:
-            meta = Metadata(line)
-            dataset = self.index.datasets.get(meta.labExpId, None)
-
-            # create symlink in project data folder and replace path in index file
-            symlink = self._make_link(meta.path, 'data')
-            meta.path = symlink
-
-            if not dataset:
-                dataset = Dataset(meta)
-                self.index.datasets[dataset.id] = dataset
-            else:
-                dataset.add_file(meta.path, meta)
 
     def logdir(self):
         """Get the path to the projects log file directory"""
@@ -232,34 +202,120 @@ class Project(object):
         """
         return os.path.exists("%s/.grape" % (self.path))
 
-    def metainf(self):
-        """Return the path to the meta.inf file describing the meta information for the project
-        """
-        metafile = os.path.join(self.path, '.grape/meta.inf')
-        return metafile
+    def load(self, path=None, format=None):
+        """Load project from file.
 
+        :param path: the indexfile to be loaded. If no path is passed the project index
+                        is loaded
+        :param format: the format of the index. It can be a path to a json file or a valid
+                        json string containing format information
+        """
+        if not path:
+            path = self.indexfile
+        if not format and os.path.exists(self.formatfile):
+            format = self.formatfile
+
+        if format:
+            self.index.set_format(format)
+
+        self.index.open(path)
+
+        if path != self.indexfile:
+            self.index.path = self.indexfile
+
+    def save(self, path=None, reload=False):
+        """Save the project.
+
+        :param path: the path of the output file. If no path is passed the
+                        project index is used.
+        """
+        if not path:
+            path = self.indexfile
+        self.index.save(path)
+        if reload:
+            self.load(path)
+
+    def export(self, out, type='index'):
+        """Export the project.
+
+        :param path: the path of the output file. If no path is passed the
+                        stdout is used.
+        """
+        for line in self.index.export(type=type):
+            out.write('%s%s' % (line,os.linesep))
+
+    def add_dataset(self, path, id, file, file_info, link=True, compute_stats=False, update=False):
+        file_info['id'] = id
+        if link and path != os.path.join(self.path,self.data_folder):
+            dest_folder = self.folder('fastq', id)
+            # Creating link
+            Project._make_link(file, dest_folder)
+            file = os.path.join(dest_folder,os.path.basename(file))
+        file_info['path'] = file
+        if compute_stats:
+            # Computing file statistcs
+            md5,size = utils.file_stats(file)
+            file_info['md5'] = md5
+            file_info['size'] = size
+        print "Adding %r: " % (id), file
+        self.index.insert(update=update, **file_info)
+
+    @property
+    def jip_db(self):
+        jip_db_file = self.config.get('jip.db')
+        if not jip_db_file:
+            jip_db_file = os.path.join(self.path, '.grape', 'grape_jp.db')
+        return jip_db_file
+
+    @property
+    def formatfile(self):
+        """Return the path to the json file describing the format for the project index
+        """
+        format_file = os.path.join(self.path, '.grape','format.json')
+        return format_file
+
+    @property
     def indexfile(self):
         """Return the path to the index file for this project
         """
         indexfile = os.path.join(self.path,'.index')
         return indexfile
 
-    def has_data_index(self):
-        """Return true if the project has an index file
-        """
-        return os.path.exists("%s/.index" % self.path)
+    @property
+    def type_folders(self):
+        if not self.config.get('_folders'):
+            return False
+        return self.config.get('_folders') == 'type'
 
-    def has_metainf(self):
-        """Return true if the meta.inf file exists
+    @property
+    def dataset_folders(self):
+        if not self.config.get('_folders'):
+            return False
+        return self.config.get('_folders') == 'dataset'
+
+
+    def folder(self, name, dataset=None):
+        """Resolve a folder based on datasets project folder and
+        if type_folders. If type folders is True, this always resolves
+        to the data folder. Otherwise, if name is specified, it resolves
+        to the named folder under this datasets data folder.
         """
-        return os.path.exists("%s/.grape/meta.inf" % self.path)
+        if self.type_folders:
+            return os.path.join(self.path, self.data_folder, name)
+        if self.dataset_folders and dataset:
+            return os.path.join(self.path, self.data_folder, dataset)
+
+        return os.path.join(self.path, self.data_folder)
+
 
     def _initialize_structure(self):
         """Initialize the project structure"""
-        self.__mkdir("annotations")
-        self.__mkdir("genomes")
-        self.__mkdir("data")
-        self.__mkdir("data/fastq")
+
+        self.__mkdir(self.annotation_folder)
+        self.__mkdir(self.genome_folder)
+        self.__mkdir(self.data_folder)
+        if self.type_folders:
+            self.__mkdir(os.path.join(self.data_folder,"fastq"))
 
     def __mkdir(self, name):
         """Helper class to mimik mkdir -p """
@@ -278,6 +334,9 @@ class Project(object):
         if not os.path.exists(src_path):
             raise GrapeError("The file %s does not exists" % (src_path))
 
+        if not os.path.exists(dest):
+            os.makedirs(dest)
+
         file_name = os.path.basename(src_path)
         dir_name = os.path.basename(os.path.dirname(src_path))
 
@@ -286,6 +345,14 @@ class Project(object):
         if dir_name == 'fastq':
             dst_path = os.path.join(dst_path, dir_name)
         dst_path = os.path.join(dst_path, file_name)
+
+        src_path = os.path.abspath(src_path)
+
+        if os.path.abspath(dst_path) == src_path:
+            return src_path
+
+        if os.path.exists(dst_path) and os.path.islink(dst_path):
+            os.unlink(dst_path)
 
         if symbolic:
             os.symlink(src_path, dst_path)
@@ -296,14 +363,15 @@ class Project(object):
                 if e.errno == errno.EXDEV:
                     os.symlink(src_path, dst_path)
                 else:
-                    raise e
+                    # do not create the link and continue
+                    pass
 
         return dst_path
 
     @staticmethod
     def _rm_link(path):
         if not os.path.exists(path):
-            #raise GrapeError("The file %s does not exists" % (path))
+            # the file does not exists
             return
 
         if os.path.islink(path):
@@ -311,10 +379,14 @@ class Project(object):
         else:
             stat = os.stat(path)
             if stat.st_nlink > 1:
-                os.remove(path)
+                # more than one copy - remove
+                try:
+                    os.remove(path)
+                except OSError,e:
+                    raise e
             else:
-                raise GrapeError("Only one copy of %s is present. The file won't be deleted." % (path))
-
+                # only one copy of the file - do not delete
+                pass
 
     @staticmethod
     def _get_dest(path):
@@ -348,17 +420,14 @@ class Project(object):
                 for f in os.listdir(folder) if (f.endswith(".gtf") or
                                                 f.endswith(".gtf.gz"))]
 
-    def get_datasets(self, query_list=[]):
-        """Return a list of all datasets found in this project"""
-        datasets = {}
-        # get the files in the data folder
-        for k,d in self.index.datasets.items():
-            if query_list and not k in query_list:
-                continue
-            if d.primary not in datasets:
-                datasets[d.primary] = d
-
-        return [d for k, d in datasets.items()]
+    def get_datasets(self, **kwargs):
+        """Return a list of datasets found in this project. Filters such as 'sex=M' can be used."""
+        if not self.index.datasets:
+            try:
+                self.load()
+            except:
+                pass
+        return self.index.select(**kwargs).datasets.values()
 
     @staticmethod
     def search_fastq_files(directory, level=0):
@@ -376,7 +445,8 @@ class Project(object):
             is_fastq = re.match(".*\.(fastq|fq)(\.gz)*?$", f)
             if is_file and is_fastq:
                 datasets.append(absname)
-            elif not os.path.isfile(absname) and f == "fastq":
+            #elif not os.path.isfile(absname) and f == "fastq":
+            elif not os.path.isfile(absname):
                 # scan folder
                 sub = Project.search_fastq_files(absname,
                                                    level=level + 1)
@@ -401,6 +471,53 @@ class Project(object):
                 return None
             return Project.find(path)
 
+    @staticmethod
+    def find_dataset(path):
+        """Find dataset from path. Detect if paired and find mate
+        file if possible
+
+        path: path to the input file
+
+        return:
+            None if no dataset found
+            [name, mate1] if single end
+            [name, mate1, mate2] if paired end
+        """
+
+        basedir = os.path.dirname(path)
+        name = os.path.basename(path)
+        expr_paired = "^(?P<name>.*)(?P<delim>[_\.-])" \
+               "(?P<id>\d)\.(?P<type>fastq|fq)(?P<compression>\.gz)*?$"
+        expr_single = "^(?P<name>.*)\.(fastq|fq)(\.gz)*?$"
+        match = re.match(expr_paired, name)
+        if match:
+            try:
+                id = int(match.group('id'))
+                if id < 2:
+                    id += 1
+                else:
+                    id -= 1
+                compr = match.group("compression")
+                if compr is None:
+                    compr = ""
+                files = [path, os.path.join(basedir, "%s%s%d.%s%s")
+                                                    % (match.group('name'),
+                                                    match.group('delim'),
+                                                    id, match.group('type'),
+                                                    compr)]
+                files.sort()
+
+                return match.group('name'), files
+            except:
+                pass
+        match = re.match(expr_single, name)
+        if match:
+            return match.group('name'), [path]
+        return None
+
+    def __str__(self):
+        return "Project: %r" % (self.config.get("name"))
+
 
 class Config(object):
     """Base class for grape configuration. The configuration contains all the
@@ -417,7 +534,9 @@ class Config(object):
         """
         self.path = path
         self._config_file = os.path.join(path, '.grape/config')
+        self._stat_file = os.path.join(path, '.grape/stats')
         self.data = {}
+        self.stats = {}
         if os.path.exists(self._config_file):
             self._load_config()
         else:
@@ -426,10 +545,26 @@ class Config(object):
     def _init_default_config(self):
         """Initialize a default configuration file for the current project
         """
+
+        import os, grp, pwd, json, datetime
+
+        grape_home = os.environ.get("GRAPE_HOME")
+
+        if grape_home:
+            global_config = os.path.join(grape_home,'conf','stats.json')
+
+            if os.path.exists(global_config):
+                self.stats = json.load(open(global_config,'r'))
+
         self.data['name'] = 'Default project'
-        self.data['quality'] = '33'
+        self.stats['user'] = pwd.getpwuid(os.getuid()).pw_name
+        if not self.data.get('group'):
+            self.stats['group'] = grp.getgrgid(os.getgid()).gr_name
+        self.stats['date'] = str(datetime.date.today())
         self.data['genome'] = ''
+        self.data['index'] = ''
         self.data['annotation'] = ''
+        self.data['quality'] = ''
 
         self._write_config()
 
@@ -437,12 +572,16 @@ class Config(object):
         """Load the confguration information from the project config file
         """
         self.data = utils.uni_convert(json.load(open(self._config_file,'r')))
+        self.stats = utils.uni_convert(json.load(open(self._stat_file,'r')))
 
-    def _write_config(self, tabs=4):
+    def _write_config(self, tabs=None):
         """Write the configuration to the config file
         """
         with open(self._config_file,'w+') as config:
             json.dump(self.data, config, indent=tabs)
+
+        with open(self._stat_file,'w+') as config:
+            json.dump(self.stats, config, indent=tabs)
 
 
     def get_printable(self, tabs=4):
@@ -465,7 +604,7 @@ class Config(object):
 
         return d
 
-    def get_values(self, key=None, exclude=[], sort_order=[]):
+    def get_values(self, key=None, exclude=[], sort_order=[], show_hidden=False, show_empty=False):
         """Return values from the data dictionary
 
         Keyword arguments:
@@ -477,6 +616,10 @@ class Config(object):
         if key is not None:
              data = self.get(key)
         values = self._dot_keys(key, data, exclude)
+        if not show_hidden:
+            values = [(k,v) for k,v in values if not k.startswith('_')]
+        if not show_empty:
+            values = [(k,v) for k,v in values if v]
         if sort_order:
             values = self._get_sorted_values(values, sort_order)
 
@@ -505,7 +648,7 @@ class Config(object):
         l.sort()
         return [x[1] for x in l]
 
-    def set(self, key, value, commit=False):
+    def set(self, key, value, commit=False, make_link=True, dest=None, absolute=False):
         """Set values into the configuration for a given key
 
         Arguments:
@@ -535,13 +678,18 @@ class Config(object):
         if len(values) == 1:
             values = values[0]
 
-        if value.find(os.path.sep) > -1 and os.path.exists(value):
+        if os.path.exists(values):
             if os.path.commonprefix([self.path, self.get(key)]) == self.path:
                 self.remove(key)
-            # create symlink in project data folder and replace path in index file
-            dest = Project._get_dest(values)
-            symlink = Project._make_link(values, os.path.join(self.path, dest) if dest else self.path, symbolic=False)
-            values = symlink
+            if make_link:
+                # create symlink in project destination folder and replace path
+                if not dest:
+                    dest = Project._get_dest(values)
+                symlink = Project._make_link(values, os.path.join(self.path, dest)
+                                            if dest else self.path, symbolic=False)
+                values = symlink
+                if not absolute:
+                    values = values.replace(self.path,"").lstrip("/")
 
         d[keys[-1]] = values
 

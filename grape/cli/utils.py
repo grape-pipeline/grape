@@ -1,10 +1,99 @@
 """Grape command line utilities
 """
 from clint.textui import colored, puts, columns
-from jip.pipelines import PipelineException
-import grape.commands
+import jip
+from grape.cli import *
 from grape.grape import Grape
 
+
+class CommandError(Exception):
+    """Exception raised by command line tools. This exception
+    is catched in the main call and no stack trace is printed, just
+    the error message"""
+    pass
+
+def jip_prepare(args, submit=False, project=None, datasets=[], validate=True):
+    # get the project and the selected datasets
+    if not project and not datasets:
+        project, datasets = get_project_and_datasets(args)
+    # setup jip db
+    jip.db.init(project.jip_db)
+    p = jip.Pipeline()
+    jargs = {}
+    if datasets == ['setup']:
+        jargs['input'] = project.config.get('genome')
+        jargs['annotation'] = project.config.get('annotation')
+        p.run('grape_gem_setup', **jargs)
+        jobs = jip.jobs.create_jobs(p)
+    else:
+        input = []
+        for d in datasets:
+            fqs = d.fastq.keys()
+            fqs.sort()
+            input.append(fqs[0])
+            if len(fqs) == 1:
+                jargs['single-end'] == True
+        jargs['fastq'] = input
+        jargs['annotation'] = project.config.get('annotation')
+        jargs['genome'] = project.config.get('genome')
+        jargs['max_mismatches'] = args.max_mismatches
+        jargs['max_matches'] = args.max_matches
+        jargs['threads'] = args.threads
+        p.run('grape_gem_rnapipeline', **jargs)
+        jobs = jip.jobs.create_jobs(p, validate=validate)
+    if submit:
+        jobs = check_jobs_dependencies(jobs)
+    return jobs
+
+def check_jobs_dependencies(jobs):
+    out_jobs = []
+    for j in jobs:
+        add_job = True
+        list = []
+        js = get_setup_jobs(j)
+        for job in js:
+            if job.name == j.name:
+                add_job = False
+                break
+            if job.name in [o.name for o in j.dependencies]:
+                j.state = jip.db.STATE_QUEUED
+                for c in j.children:
+                    c.state = jip.db.STATE_QUEUED
+                if not job in list:
+                    list += [job]
+        if list:
+            names = [job.name for job in list]
+            old_deps = [d for d in j.dependencies if d.name not in names]
+            j.dependencies = list + old_deps
+        if add_job:
+            out_jobs.append(j)
+    return out_jobs
+
+
+def get_setup_jobs(job):
+    setup_jobs = []
+    query = None
+    if str(job._tool) == 'grape_gem_index':
+        query = jip.db.query_by_files(job.tool.input.value,job.tool.output.value, and_query=True)
+    if str(job._tool) == 'grape_gem_t_index':
+        query = jip.db.query_by_files(job.tool.index.value, job.tool.gem.value, and_query=True)
+    job_list = query.all() if query else None
+    if job_list:
+        s_job = job_list[0]
+        if s_job.state == jip.db.STATE_FAILED:
+            remove_job(s_job)
+            return []
+        setup_jobs = [s_job]
+    for j in job.dependencies:
+        setup_jobs += get_setup_jobs(j)
+    return [j for j in setup_jobs if j]
+
+def remove_job(job):
+    for j in job.children:
+        remove_job(j)
+    jip.jobs.delete(job, clean_logs=True)
+    warn('Removed job %s[%s]' % (job.name, job.id))
+    return True
 
 def get_project_and_datasets(args):
     """Get the current project and the selected datasets using the command
@@ -15,24 +104,90 @@ def get_project_and_datasets(args):
          datasets
     """
     from grape.grape import Project
-
-    project = Project.find()
-    if project is None or not project.exists():
-        raise grape.commands.CommandError("No grape project found!")
+    from indexfile.index import Dataset
+    import os, re
 
     datasets = None
-    if "datasets" in args:
+
+    project = Project.find()
+    if not project or not project.exists():
+        project = Project(os.getcwd())
+        project.initialize()
+        datasets = prepare_from_commandline(project, args)
+
+    if "datasets" in args and not datasets:
         datasets = args.datasets
-        if datasets is None:
-            raise grape.commands.CommandError("No datasets specified!")
-        if datasets == ['all']:
-            datasets = []
-        datasets = project.get_datasets(query_list=datasets)
+    else:
+        datasets = ["all"]
+
+    if 'setup' in datasets:
+        return (project, ['setup'])
+
+    if datasets is None:
+        raise CommandError("No datasets specified!")
+    if datasets == ['all']:
+        datasets = []
+
+    datasets = project.get_datasets(id=datasets)
 
     return (project, datasets)
 
+def prepare_from_commandline(project, args):
+    """Prepare index and configuration for running the pipeline from commandline on a new automatically created project.
 
-def add_default_job_configuration(parser, add_cluster_parameter=True):
+     :raise grape.commands.CommandError: in case a error occured
+     :returns (project, datasets): tuple with the project and the selected
+         datasets
+    """
+    from grape.grape import Project
+    from indexfile.index import Dataset
+    import os
+
+    metadata = {'type':'fastq'}
+    datasets = None
+
+    if 'genome' in args and args.genome:
+        project.config.set('genome',os.path.abspath(args.genome),
+                               commit=True)
+        args.genome = project.config.get('genome')
+        if os.path.exists("%s.gem" % os.path.abspath(args.genome)):
+            project.config.set('index',"%s.gem" % os.path.abspath(args.genome),
+                                                   commit=True)
+    if 'annotation' in args and args.annotation:
+        project.config.set('annotation',os.path.abspath(args.annotation),
+                               commit=True)
+        args.annotation = project.config.get('annotation')
+        for t in [('t-index','gem'),('keys','keys')]:
+            if os.path.exists("%s.junctions.%s" % (os.path.abspath(args.annotation), t[1])):
+                project.config.set(t[0],"%s.junctions.%s" % (os.path.abspath(args.annotation), t[1]),
+                                                   commit=True, dest='annotations')
+    if 'quality' in args and args.quality:
+        project.config.set('quality', args.quality, commit=True)
+        metadata['quality'] = args.quality
+
+    if 'read_type' in args and args.read_type:
+        metadata['readType'] = args.read_type
+
+    if 'input' in args and args.input:
+        ds = {}
+        for dataset in args.input:
+            if Project.find_dataset(dataset):
+                name, files = Project.find_dataset(dataset)
+                ds[name] = files
+        for name, files in ds.items():
+            if len(files) > 1 and not 'readType' in metadata:
+                metadata['readType'] = '2x'
+            for f in files:
+                project.add_dataset(os.path.dirname(f), name, f, metadata, compute_stats=False, update=False)
+
+        project.save(reload=True)
+
+        datasets = project.get_datasets(id=ds.keys())
+
+    return datasets
+
+
+def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeline_parameter=True, add_dataset_parameter=True):
     """Add the default job configuration options to the given argument
     parser
 
@@ -46,6 +201,33 @@ def add_default_job_configuration(parser, add_cluster_parameter=True):
                                       "applied to all jobs")
     group.add_argument("-c", "--cpus", dest="threads",
                         help="Number of threads/cpus assigned to the jobs")
+
+    if add_pipeline_parameter:
+        pgroup = parser.add_argument_group("Pipeline",
+                                          "Pipeline execution parameters")
+
+        pgroup.add_argument("-i", "--input", default=None, nargs="*",
+                           help="The input files to run grape without creating a project")
+        pgroup.add_argument("-g", "--genome", default=None,
+                           help="The genome to be used in the run")
+        pgroup.add_argument("-a", "--annotation", default=None,
+                           help="The annotation to be used for the run")
+        pgroup.add_argument("-m", "--max-mismatches", default=4,
+                           help="The maximum number of mismatches allowed")
+        pgroup.add_argument("-n", "--max-matches", default=10,
+                           help="The maximum number of matches allowed (multimaps)")
+
+    if add_dataset_parameter:
+
+        if not add_pipeline_parameter:
+            pgroup = parser.add_argument_group("Dataset",
+                                          "Dataset information parameters")
+
+        pgroup.add_argument("--quality", default=None,
+                           help="The fastq offset for datasets quality")
+        pgroup.add_argument("--read-type", dest='read_type', default=None,
+                           help="The read type and length")
+
     if add_cluster_parameter:
         group.add_argument("-t", "--time", dest="max_time",
                             help="Maximum wall clock time")
@@ -53,62 +235,8 @@ def add_default_job_configuration(parser, add_cluster_parameter=True):
                             help="The cluster queue")
         group.add_argument("-p", "--priority", dest="priority",
                             help="The cluster priority")
-        group.add_argument("-m", "--max-mem", dest="max_mem",
+        group.add_argument("-e", "--max-mem", dest="max_mem",
                             help="Maximum memory per job")
     else:
         group.add_argument("--verbose", default=False, action="store_true",
                             dest="verbose", help="Verbose job output")
-
-
-def _prepare_pipeline(pipeline):
-    """Validate the pipeline and prints
-    the validation errors in case there are any.
-    """
-    import logging
-    log = logging.getLogger("grape")
-    log.info("Preparing pipeline: %s", pipeline)
-    try:
-        pipeline.validate()
-        return True
-    except PipelineException, e:
-        # print error messages and return false
-        puts(colored.red("Error while validating pipeline"))
-        for step, errs in e.validation_errors.items():
-            puts(colored.red("Validation error in step: %s" % (step)))
-            for field, desc in errs.items():
-                puts("\t" + columns([colored.red(field), 30], [desc, None]))
-        return False
-
-
-def create_pipelines(pipeline_fun, project, datasets, configuration):
-    """Create a pipeline for each dataset using the passed pipeline_fun
-    functions. The pipeline_fun function must be a function that
-    takes a :py:class:`grape.Dataset` and a configuration dict
-    and return a :py:class:jip.pipelines.Pipeline.
-
-    :param pipeline_fun: the pipeline creation function
-    :type pipeline_fun: function
-    :param datasets: list of datasets
-    :type datasets: list
-    :param project: the grape project
-    :type project: grape.Project
-    :param configuration: additional configuration dictionary
-    :type configuration: dict
-    :returns pipelines: list of pipelines
-    :rtype pipelines: list
-    """
-    from grape.grape import Grape
-    pipelines = []
-    grp = Grape()
-    for d in datasets:
-        pipeline = pipeline_fun(d, project.config)
-
-        # validate the pipeline
-        if not _prepare_pipeline(pipeline):
-            return False
-        pipelines.append(pipeline)
-        # update job params
-        if configuration is not None:
-            for step in pipeline.tools.values():
-                grp.configure_job(step, project, d, configuration)
-    return pipelines

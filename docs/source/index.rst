@@ -10,12 +10,11 @@ Grape 2.0 documentation
 Grape RNAseq Analysis Pipeline Environment is an automated workflow integrating the management, analysis and visualization of RNA-Seq data.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   installation
-   projects
-   execution
-   file_formats
+   adminguide
+   quickstart
+   userguide
 
 
 
