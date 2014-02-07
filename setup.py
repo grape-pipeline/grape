@@ -15,7 +15,7 @@ setup(
 analysys.
 ''',
     platforms=['lx64'],
-    packages=['grape', 'grape.cli', 'grape.jobs'],
+    packages=['grape', 'grape.cli'],
     package_data={'grape': ['buildout.conf']},
     classifiers=[
         'Development Status :: 4 - Beta',
