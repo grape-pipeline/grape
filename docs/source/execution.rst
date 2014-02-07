@@ -12,10 +12,16 @@ The execution of the pipeline includes two main steps:
 Default Pipeline
 ================
 
-At the moment a Default Pipeline is configured, which includes the following tools:
+At the moment a Default Pipeline is configured, which includes the following modules:
 
-- the `GEMTools <http://github.com/gemtools/gemtools>`_ pipeline, for the mapping step
-- the `FluxCapacitor <http://sammeth.net/confluence/display/FLUX/Home>`_ program, for the isoform quanitfication step
+- CRGtools, a set of in-house scripts and binaries from the *Computational Biology of RNA Processing* group at CRG Barcelona
+- SAMtools_, utilities to manipulate sam files
+- GEMTools_, utilities and pipelines for RNA-seq mapping
+- FluxCapacitor_, a program for isoform quantification estimation
+
+.. _GEMTools: http://github.com/gemtools/gemtools
+.. _FluxCapacitor: http://sammeth.net/confluence/display/FLUX/Home
+.. _SAMtools: http://samtools.sourceforge.net/
 
 Setup
 =====
@@ -33,30 +39,31 @@ At the moment the grape setup command executes the gemtools index and t-index co
 Execution
 =========
 
-The execution step run the pipeline on the given dataset(s). The pipeline can be run locally using the grape run command, int he following way:
+The pipeline excution relies on the `JIP pipeline system`_. It allows local execution and also provides HPC clusters integration.
 
-.. code-block:: bash
+The main GRAPE workflow can be run with the `grape run` command and is composed by two blocks:
 
-    $ grape run
-    Starting pipeline run: Default Pipeline test
-    (  1/2) | Running gem                  : DONE [0:00:25]
-    (  2/2) | Running flux                 : DONE [0:00:06]
+    - pre-processing step to generate all the required input files for running the pipeline (one for all the samples in the project)
+    - processing of the RNA-seq data (one for each samples)
 
-If a cluster configuration is provided during the Grape installation, the grape submit command can be used to run jobs on the cluster. The job id of each submitted job will be reported in the standard output of the command:
+The first block can also be run independently with the `grape run setup` command. The setup block check all the prerequisites for any configured pipeline and run all the necessary steps to reach a valid initial state from which the pipeline can be run. At present it consits of the following steps:
 
-.. code-block:: bash
+    - GEM genome index
+    - GEM transcriptome index
 
-    $ grape submit
-    Submitting pipeline run: Default Pipeline test
-    (  1/2) | Submitted gem                  780220
-    (  2/2) | Submitted flux                 780221
+In the second block the following steps are performed:
 
-Please see the Grape Jobs Management page to have an overview on the Grape features around Jobs management.
-If some/all the output files for the pipeline are already present the related tool is skipped in the pipeline run/submission:
+    - GEMtools RNA mapping pipeline run
+    - GEMtools mappings filtering
+    - isorform expression estimation with the Flux Capacitor
 
-.. code-block:: bash
+The pipeline can be run for a subset of the project dataset. Assuming that `foo` is a valid id for a sample you could run::
 
-    $ grape run/submit
-    Starting/Submitting pipeline run: Default Pipeline test
-    (  1/2) | Skipped gem
-    (  2/2) | Skipped flux
+    $ grape run foo
+
+to run the pipeline on the 'foo' sample data.
+
+If you configured JIP for a compute cluster, the `grape submit` command can be used to run jobs on the cluster
+
+
+.. _JIP pipeline system: https://github.com/thasso/pyjip
