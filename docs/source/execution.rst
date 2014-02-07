@@ -30,7 +30,7 @@ To run the pipeline on a HPC cluster you need to configure the JIP. Please refer
 
 .. note::
 
-Please note that a GRAPE project-specific database is used for the JIP. It can be found at `<project>/.grape/grape_jip.db`.
+    Please note that a GRAPE project-specific database is used for the JIP. It can be found at `<project>/.grape/grape_jip.db`.
 
 
 Default Pipeline
@@ -47,4 +47,5 @@ At the moment a Default Pipeline is configured, which includes the following mod
 .. _GEMTools: http://github.com/gemtools/gemtools
 .. _FluxCapacitor: http://sammeth.net/confluence/display/FLUX/Home
 .. _SAMtools: http://samtools.sourceforge.net/
-.. _JIP pipeline system: https://github.com/thasso/pyjip
+.. _JIP pipeline system: http://github.com/thasso/pyjip
+.. _JIP documentation: http://pyjip.rtfd.org
