@@ -18,6 +18,7 @@ Execute the following commands to install GRAPE:
     # activate the virtual environment
     grape2 $ source bin/activate
     # install GRAPE
+    grape2 $ pip install distribute==0.6.36 zc.buildout==2.1.0
     grape2 $ pip install grape-pipeline
 
 .. _venv:
@@ -88,7 +89,7 @@ To run the pipeline you will need to create a folder for the project and initali
     project $ grape init
     Initializing project ... Done
 
-A project has been created and initialized with an empty configuration. For further information about projects please see :ref:`projects`
+A project has been created and initialized with an empty configuration. For further information about GRAPE projects please see :ref:`projects`
 
 Reference files
 ~~~~~~~~~~~~~~~
@@ -97,50 +98,65 @@ The reference genome and annotation files for the project must be set with the `
 
 .. code-block:: bash
 
-        project $ grape config --set genome $GRAPE_HOME/testdata/genome/genome.fa
-        project $ grape config --set annotation $GRAPE_HOME/testdata/annotation/annotation.gtf
-        project $ grape config
-        Project: 'Default project'
-        ==========  =========================
-        genome      genome/genome.fa
-        annotation  annotation/annotation.gtf
-        ==========  =========================
+    project $ grape config --set genome $GRAPE_HOME/testdata/genome/H.sapiens.genome.hg19.test.fa
+    project $ grape config --set annotation $GRAPE_HOME/testdata/annotation/H.sapiens.EnsEMBL.55.test.gtf
+    project $ grape config
+    Project: 'Default project'
+    ==========  =========================================
+    genome      genomes/H.sapiens.genome.hg19.test.fa
+    annotation  annotations/H.sapiens.EnsEMBL.55.test.gtf
+    ==========  =========================================
 
 Fastq files
 ~~~~~~~~~~~
-::
-        quickstart $ grape setup
 
-   or if you are on a cluster submit it::
+To import the test RNA-seq data into the project you have to run the `grape scan` command:
 
-        quickstart $ grape setup --submit
-        Setting up Default Pipeline Setup
-        (  1/2) | Submitted gem_index            806052
-        (  2/2) | Submitted gem_t_index          806053
+.. code-block:: bash
 
-    check that the jobs complete::
+    grape2 $ grape scan $GRAPE_HOME/testdata/reads
+    Scanning <your grape home>/testdata/reads folder ... 4 fastq files found
+    Checking known data ... 4 new files found
+    Adding 'testB': <your grape home>/testdata/reads/testB_1.fastq.gz
+    Adding 'testB':  /home/epalumbo/git/grape.ant/grape2/project/data/testB_1.fastq.gz
+    Adding 'testB': <your grape home>/testdata/reads/testB_2.fastq.gz
+    Adding 'testB':  /home/epalumbo/git/grape.ant/grape2/project/data/testB_2.fastq.gz
+    Adding 'testA': <your grape home>/testdata/reads/testA_1.fastq.gz
+    Adding 'testA':  /home/epalumbo/git/grape.ant/grape2/project/data/testA_1.fastq.gz
+    Adding 'testA': <your grape home>/testdata/reads/testA_2.fastq.gz
+    Adding 'testA':  /home/epalumbo/git/grape.ant/grape2/project/data/testA_2.fastq.gz
 
-        quickstart $ grape jobs --verbose
-        Pipeline: Default Pipeline Setup
-        gem_t_index   806053   Done
-        gem_index     806052   Done
+You can check that the files were correctly imported with the `grape list` command:
+
+.. code-block:: bash
+
+    grape2 $ grape list
+    Project: 'Default project'
+    2 datasets registered in project
+    =====  ======================  =====
+    id     path                    type
+    =====  ======================  =====
+    testA  reads/testA_2.fastq.gz  fastq
+    testA  reads/testA_1.fastq.gz  fastq
+    testB  reads/testB_1.fastq.gz  fastq
+    testB  reads/testB_2.fastq.gz  fastq
+    =====  ======================  =====
 
 
 Running the pipeline
 --------------------
 
-If you already have the gem indices (genome and transcriptome) you can run the pipeline specifying the parameters on the command line::
+You can run the pipeline for all the test files from within the project folder with the `grape run` command. Before actually running, you can perform a dry run::
 
-     quickstart $ grape run -i ~/data/test_1.fastq.gz -g ~/data/genome_1Mbp.fa -a ~/data/annotation.gtf --quality 33 --read-type 2x76
+    project $ grape run --dry
 
-If you followed the previous section to generate the indices you could run the pipeline as follows::
+This command will show you the pipeline graph and commands for all the samples. For one sample (e.g. testA) you can do::
 
-     quickstart $ grape run -i ~/data/test_1.fastq.gz -g genomes/genome_1Mbp.fa -a annotations/annotation.gtf --quality 33 --read-type 2x76
+    project $ grape run testA --dry
 
-If you want to submit the pipeline to a HPC cluster environment replace the **run** command with the **submit** command.
+To submit the pipeline to a HPC cluster environment replace the **run** command with the **submit** command. A dry run will also show you information about the jobs that will be submitted such as threads, memory, queue, etc..
 
-
-For other use cases please see :ref:`execution`.
+For more information about running GRAPE please see :ref:`execution`.
 
 
 
