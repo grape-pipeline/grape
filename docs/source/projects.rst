@@ -1,6 +1,6 @@
-==============
-Grape Projects
-==============
+========
+Projects
+========
 
 The main starting point to execute the pipeline is to create a grape project. A project has a dedicated folder that contains all the data for the project including:
 
