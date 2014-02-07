@@ -50,31 +50,31 @@ If everything goes well you should get the following output:
 
 .. code-block:: bash
 
-    Creating directory '/home/epalumbo/git/grape.ant/grape2/pipeline/bin'.
-    Creating directory '/home/epalumbo/git/grape.ant/grape2/pipeline/parts'.
-    Creating directory '/home/epalumbo/git/grape.ant/grape2/pipeline/eggs'.
-    Creating directory '/home/epalumbo/git/grape.ant/grape2/pipeline/develop-eggs'.
+    Creating directory '<your grape home>/bin'.
+    Creating directory '<your grape home>/parts'.
+    Creating directory '<your grape home>/eggs'.
+    Creating directory '<your grape home>/develop-eggs'.
     Getting distribution for 'hexagonit.recipe.download'.
     Got hexagonit.recipe.download 1.7.
     Installing gem.
     Downloading http://barnaserver.com/gemtools/releases/GEMTools-static-i3-1.6.2.tar.gz
-    grape.install_module: Extracting module package to /home/epalumbo/git/grape.ant/grape2/pipeline/modules/gemtools/1.6.2
+    grape.install_module: Extracting module package to <your grape home>/modules/gemtools/1.6.2
     Installing flux.
     Downloading http://sammeth.net/artifactory/barna/barna/barna.capacitor/1.2.4/flux-capacitor-1.2.4.tgz
-    grape.install_module: Extracting module package to /home/epalumbo/git/grape.ant/grape2/pipeline/modules/flux/1.2.4
+    grape.install_module: Extracting module package to <your grape home>/modules/flux/1.2.4
     Installing samtools.
     Downloading http://genome.crg.es/~epalumbo/grape/modules/samtools-0.1.19.tgz
-    grape.install_module: Extracting module package to /home/epalumbo/git/grape.ant/grape2/pipeline/modules/samtools/0.1.19
+    grape.install_module: Extracting module package to <your grape home>/modules/samtools/0.1.19
     Installing crgtools.
     Downloading http://genome.crg.es/~epalumbo/grape/modules/crgtools-0.1.tgz
-    grape.install_module: Extracting module package to /home/epalumbo/git/grape.ant/grape2/pipeline/modules/crgtools/0.1
+    grape.install_module: Extracting module package to <your grape home>/modules/crgtools/0.1
     Installing testdata.
     Downloading http://genome.crg.es/~epalumbo/grape/testdata.tgz
-    testdata: Extracting package to /home/epalumbo/git/grape.ant/grape2/pipeline
-    Removing directory '/home/epalumbo/git/grape.ant/grape2/pipeline/bin'.
-    Removing directory '/home/epalumbo/git/grape.ant/grape2/pipeline/develop-eggs'.
-    Removing directory '/home/epalumbo/git/grape.ant/grape2/pipeline/eggs'.
-    Removing directory '/home/epalumbo/git/grape.ant/grape2/pipeline/parts'.
+    testdata: Extracting package to <your grape home>
+    Removing directory '<your grape home>/bin'.
+    Removing directory '<your grape home>/develop-eggs'.
+    Removing directory '<your grape home>/eggs'.
+    Removing directory '<your grape home>/parts'.
 
 
 Project
@@ -117,14 +117,10 @@ To import the test RNA-seq data into the project you have to run the `grape scan
     grape2 $ grape scan $GRAPE_HOME/testdata/reads
     Scanning <your grape home>/testdata/reads folder ... 4 fastq files found
     Checking known data ... 4 new files found
-    Adding 'testB': <your grape home>/testdata/reads/testB_1.fastq.gz
-    Adding 'testB':  /home/epalumbo/git/grape.ant/grape2/project/data/testB_1.fastq.gz
-    Adding 'testB': <your grape home>/testdata/reads/testB_2.fastq.gz
-    Adding 'testB':  /home/epalumbo/git/grape.ant/grape2/project/data/testB_2.fastq.gz
-    Adding 'testA': <your grape home>/testdata/reads/testA_1.fastq.gz
-    Adding 'testA':  /home/epalumbo/git/grape.ant/grape2/project/data/testA_1.fastq.gz
-    Adding 'testA': <your grape home>/testdata/reads/testA_2.fastq.gz
-    Adding 'testA':  /home/epalumbo/git/grape.ant/grape2/project/data/testA_2.fastq.gz
+    Adding 'testB':  data/testB_1.fastq.gz
+    Adding 'testB':  data/testB_2.fastq.gz
+    Adding 'testA':  data/testA_1.fastq.gz
+    Adding 'testA':  data/testA_2.fastq.gz
 
 You can check that the files were correctly imported with the `grape list` command:
 
