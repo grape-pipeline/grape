@@ -398,10 +398,10 @@ class ListDataCommand(GrapeCommand):
         index = project.index.select(id=[d.id for d in datasets])
         data = index.export(type='json',absolute=True, map=None)
         if data:
-            self._list(data,tags=index._alltags,sort=[project.index.format.get('id','id')], human=args.human)
+            self._list(data,tags=index._alltags,sort=[project.index.format.get('id','id')], human=args.human, absolute=args.absolute)
         return True
 
-    def _list(self, data, tags=None,sort=None, human=False):
+    def _list(self, data, tags=None,sort=None, human=False, absolute=True):
         from clint.textui import indent
         import json
 
@@ -418,7 +418,10 @@ class ListDataCommand(GrapeCommand):
         len_values = []
         out=[]
         for v in data:
-            values = [ json.loads(v).get(k,'-') for k in header ]
+            v = json.loads(v)
+            if 'path' in header and not absolute:
+                v['path'] = os.path.join(os.path.basename(os.path.dirname(v['path'])),os.path.basename(v['path']))
+            values = [ v.get(k,'-') for k in header ]
             if human:
                 def isnum(x):
                     try:
@@ -449,6 +452,9 @@ class ListDataCommand(GrapeCommand):
     def add(self, parser):
         parser.add_argument('-n','--numeric', dest='human', action='store_false', default=True,
                         help='Output numbers in full numeric format')
+        parser.add_argument('--absolute-path', dest='absolute', action='store_true', default=False,
+                        help='Use absolute path for files. Default: use path relative to the project folder')
+
         pass
 
 
@@ -458,7 +464,6 @@ class ScanCommand(GrapeCommand):
 
     def run(self, args):
         import re
-
         project = Project.find()
         try:
             project.load()
@@ -537,14 +542,12 @@ class ScanCommand(GrapeCommand):
                     ds_id = "%s_%d" % (ds_id, counter)
                     counter += 1
             for file in files:
-                cli.info("Adding %r: %s" % (ds_id, file))
                 project.add_dataset(path, ds_id, file, file_info, compute_stats=compute_stats, update=update)
         # add the singletons, everything that is not in scanned
         for file in set(fastqs).difference(set(scanned)):
             ds_id = id
             if ds_id is None:
                 ds_id = os.path.basename(file)
-            cli.info("Adding %r: %s" % (ds_id, file))
             project.add_dataset(path, ds_id, file, file_info, compute_stats=compute_stats, update=update)
 
         project.save()
@@ -562,6 +565,8 @@ class ScanCommand(GrapeCommand):
                                                                     "one new dataset is found")
         parser.add_argument("--update", default=False, dest='update', action='store_true',
                             help="Update existing index entries.")
+        parser.add_argument('--absolute-path', dest='absolute', action='store_true', default=False,
+                            help='Use absolute path for files. Default: use path relative to the project folder')
         utils.add_default_job_configuration(parser,
                                             add_cluster_parameter=False,
                                             add_pipeline_parameter=False)
