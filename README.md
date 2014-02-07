@@ -15,7 +15,7 @@ Documentation
 
 The latest GRAPE 2.0 documentation can be found at:
 
-[http://grape-pipeline.rtfd.org]
+http://grape-pipeline.rtfd.org
 
 
 Development
