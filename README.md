@@ -22,7 +22,7 @@ GRAPE 2.0 can be easily installed from source:
 The commands above will install grape in a python virtual environment `env`
 within the `grape` folder.
 
-To strt using it, just run the following command from the `grape` folder to activate the virtual environment:
+To start using it, just run the following command from the `grape` folder to activate the virtual environment:
 
     $ source env/bin/activate
 
