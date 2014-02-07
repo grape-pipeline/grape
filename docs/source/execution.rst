@@ -26,7 +26,12 @@ The pipeline can be run for a subset of the project dataset. Assuming that `foo`
 
 to run the pipeline on the 'foo' sample data.
 
-If you configured JIP for a compute cluster, the `grape submit` command can be used to run jobs on the cluster
+To run the pipeline on a HPC cluster you need to configure the JIP. Please refer to the `JIP documentation`_ for more information about this topic. With a valid JIP cluster configuration the `grape submit` command can be used to run jobs on the cluster.
+
+.. note::
+
+Please note that a GRAPE project-specific database is used for the JIP. It can be found at `<project>/.grape/grape_jip.db`.
+
 
 Default Pipeline
 ================
