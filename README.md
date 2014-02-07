@@ -10,28 +10,30 @@ License
 GRAPE 2.0 is release under GPL. See the LICENSE.txt file.
 
 
-Installation
-------------
-
-GRAPE 2.0 can be easily installed from source:
-
-    $ git clone git://github.com/grape-pipeline/grape.git
-    $ cd grape
-    $ make install
-
-The commands above will install grape in a python virtual environment within the `grape` folder.
-
-To start using it, just run the following command from the `grape` folder to activate the virtual environment:
-
-    $ source bin/activate
-
-
 Documentation
 -------------
 
 The latest GRAPE 2.0 documentation can be found at:
 
 http://grape-pipeline.rtfd.org
+
+
+Installation
+------------
+
+GRAPE 2.0 can be installed with pip:
+
+    $ pip install grape-pipeline
+
+or it can be easily installed from source:
+
+    $ git clone git://github.com/grape-pipeline/grape.git
+    $ cd grape
+    $ make install
+
+The installation con be activated running the following command from the `grape` folder:
+
+    $ source bin/activate
 
 
 Development
