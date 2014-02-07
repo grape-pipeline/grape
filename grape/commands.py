@@ -648,7 +648,7 @@ def buildout():
     buildout_conf = os.path.join(os.path.dirname(__file__), 'buildout.conf')
 
     # get json files with Grape config
-    grape_config = [ os.path.join(os.path.dirname(__file__),f) for f in os.listdir(os.path.dirname(__file__)) if f.endswith(".json") ]
+    # grape_config = [ os.path.join(os.path.dirname(__file__),f) for f in os.listdir(os.path.dirname(__file__)) if f.endswith(".json") ]
     try:
         buildout = Buildout(buildout_conf, [('buildout','directory', os.getenv("GRAPE_HOME"))])
         buildout.install([])
@@ -658,8 +658,8 @@ def buildout():
             os.makedirs(conf_dir)
         except:
             pass
-        for f in grape_config:
-            shutil.copy(f, conf_dir)
+        #for f in grape_config:
+        #    shutil.copy(f, conf_dir)
 
 
     except GrapeError as e:
