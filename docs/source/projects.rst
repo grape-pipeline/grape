@@ -29,24 +29,19 @@ Project folder
 
 The grape project folder consist of the following structure::
 
-    .grape            -- the grape folder - this is where all the grape data goes
-    annotation        -- genome annotations in gtf format and the transcriptome indices for the annotation
-    genome            -- index folder with genome indices. If there are multiple indices, they should follow the _AXYM suffix scheme (see below)
-    data              -- input and result data folder
+    .grape          -- the grape folder - this is where all the grape data goes
+    annotations     -- genome annotations in gtf format and the transcriptome indices for the annotation
+    genomes         -- index folder with genome indices
+    data            -- input and result data folder
 
-The genome indices should be suffixed with AXYM where:
+The data folder can be organised in various ways. The preferred layout cna be specified at project initalization using the `grape init` commandline options:
 
-- A - Autosome for all "numbered" chromosomes
-- X - If the index contains the X chromosome
-- Y - If the index contains the Y chromosome
-- M - If the index contains Mitochondrial DNA
+  --empty            Do not create default folder structure
+  --by-type          Organize project data folder by type
+  --by-dataset       Organize project data folder by dataset
 
-This is important as we will use this to distinguish between indices used for male/female if no further specification is given.
+Please run `grape init --help` to see all available commandline options.
 
-The data folder can be organised in various ways and the pipeline will detect the following scheme
-
-- If the parent folder of a data file is called fastq, the pipeline will create subfolders for the results next to the fastq folder. Typically these will be mappings and quantification
-- If nothing is detected the folder that contains the data file will also host the results
 
 Project configuration
 =====================
