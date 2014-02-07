@@ -7,7 +7,7 @@ This tutorial covers all the necessary steps to setup and run the default GRAPE 
 Installation
 ------------
 
-Execute the following commands to install GRAPE::
+Execute the following commands to install GRAPE:
 
 .. code-block:: bash
 
@@ -25,7 +25,7 @@ Execute the following commands to install GRAPE::
 Activate the virtualenv
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-With the installation above you will need to activate the virtual environment each time you want to use GRAPE::
+With the installation above you will need to activate the virtual environment each time you want to use GRAPE:
 
 .. code-block:: bash
 
@@ -37,7 +37,7 @@ Pipeline buildout
 
 Once GRAPE is succesfully installed you need to run `grape-buildout` to setup the pipeline home folder with the required configuration files and modules.
 
-The pipeline home folder location must be defined with the `GRAPE_HOME` environment variable::
+The pipeline home folder location must be defined with the `GRAPE_HOME` environment variable:
 
 .. code-block:: bash
 
@@ -45,7 +45,9 @@ The pipeline home folder location must be defined with the `GRAPE_HOME` environm
     grape2 $ export GRAPE_HOME=$PWD/pipeline
     grape2 $ grape-buildout
 
-If everything goes well you should get the following output::
+If everything goes well you should get the following output:
+
+.. code-block:: bash
 
     Creating directory '/home/epalumbo/git/grape.ant/grape2/pipeline/bin'.
     Creating directory '/home/epalumbo/git/grape.ant/grape2/pipeline/parts'.
@@ -77,7 +79,7 @@ If everything goes well you should get the following output::
 Project
 -------
 
-To run the pipeline you will need to create a folder for the project and initalize it with the `grape init` command::
+To run the pipeline you will need to create a folder for the project and initalize it with the `grape init` command:
 
 .. code-block:: bash
 
@@ -91,7 +93,7 @@ A project has been created and initialized with an empty configuration. For furt
 Reference files
 ~~~~~~~~~~~~~~~
 
-The reference genome and annotation files for the project must be set with the `grape config` command::
+The reference genome and annotation files for the project must be set with the `grape config` command:
 
 .. code-block:: bash
 
@@ -106,7 +108,7 @@ The reference genome and annotation files for the project must be set with the `
 
 Fastq files
 ~~~~~~~~~~~
-
+::
         quickstart $ grape setup
 
    or if you are on a cluster submit it::
