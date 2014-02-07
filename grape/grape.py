@@ -244,12 +244,14 @@ class Project(object):
         for line in self.index.export(type=type):
             out.write('%s%s' % (line,os.linesep))
 
-    def add_dataset(self, path, id, file, file_info, link=True, compute_stats=False, update=False):
+    def add_dataset(self, path, id, file, file_info, link=True, compute_stats=False, update=False, absolute=False):
         file_info['id'] = id
         if link and path != os.path.join(self.path,self.data_folder):
             dest_folder = self.folder('fastq', id)
             # Creating link
             Project._make_link(file, dest_folder)
+            if not absolute:
+                dest_folder = os.path.basename(dest_folder)
             file = os.path.join(dest_folder,os.path.basename(file))
         file_info['path'] = file
         if compute_stats:

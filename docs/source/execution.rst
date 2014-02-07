@@ -26,7 +26,12 @@ The pipeline can be run for a subset of the project dataset. Assuming that `foo`
 
 to run the pipeline on the 'foo' sample data.
 
-If you configured JIP for a compute cluster, the `grape submit` command can be used to run jobs on the cluster
+To run the pipeline on a HPC cluster you need to configure the JIP. Please refer to the `JIP documentation`_ for more information about this topic. With a valid JIP cluster configuration the `grape submit` command can be used to run jobs on the cluster.
+
+.. note::
+
+    A specific JIP database file for each GRAPE project is used and can be found at **<project>/.grape/grape_jip.db**.
+
 
 Default Pipeline
 ================
@@ -42,4 +47,5 @@ At the moment a Default Pipeline is configured, which includes the following mod
 .. _GEMTools: http://github.com/gemtools/gemtools
 .. _FluxCapacitor: http://sammeth.net/confluence/display/FLUX/Home
 .. _SAMtools: http://samtools.sourceforge.net/
-.. _JIP pipeline system: https://github.com/thasso/pyjip
+.. _JIP pipeline system: http://github.com/thasso/pyjip
+.. _JIP documentation: http://pyjip.rtfd.org
