@@ -109,19 +109,19 @@ else:
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    # HTML navbar class (Default: "navbar") to attach to <div>.
-    # For black navbar, do "navbar navbar-inverse"
-    'navbar_class': "navbar navbar-inverse",
+    html_theme_options = {
+        # HTML navbar class (Default: "navbar") to attach to <div>.
+        # For black navbar, do "navbar navbar-inverse"
+        'navbar_class': "navbar navbar-inverse",
 
-    # Fix navigation bar to top of page?
-    # Values: "true" (default) or "false"
-    'navbar_fixed_top': "true",
+        # Fix navigation bar to top of page?
+        # Values: "true" (default) or "false"
+        'navbar_fixed_top': "true",
 
-    # Location of link to source.
-    # Options are "nav" (default), "footer".
-    'source_link_position': "nav",
-}
+        # Location of link to source.
+        # Options are "nav" (default), "footer".
+        'source_link_position': "nav",
+    }
 #html_theme_options = {
 #            "collapsiblesidebar": True
 #        }
@@ -274,4 +274,4 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+#intersphinx_mapping = {'http://docs.python.org/': None}
