@@ -12,7 +12,7 @@
 # serve to show the default.
 
 import sys, os, datetime
-import grape-pipeline as grape
+import grape_pipeline as grape
 import sphinx_bootstrap_theme
 
 # If extensions (or modules to document with autodoc) are in another directory,
