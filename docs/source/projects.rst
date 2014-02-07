@@ -30,7 +30,7 @@ Project folder
 The grape project folder consist of the following structure::
 
     .grape            -- the grape folder - this is where all the grape data goes
-    annotation        -- genome annotations in gtf format and the transcriptome indices for the annotation 
+    annotation        -- genome annotations in gtf format and the transcriptome indices for the annotation
     genome            -- index folder with genome indices. If there are multiple indices, they should follow the _AXYM suffix scheme (see below)
     data              -- input and result data folder
 
@@ -56,16 +56,16 @@ When a new project is initialized a default configuration file in Json format is
 .. code-block:: json
 
     {
-        "quality": "33", 
-        "genome": "", 
-        "name": "Default project", 
+        "quality": "33",
+        "genome": "",
+        "name": "Default project",
         "annotation": ""
     }
-   
+
 The grape config command can also be used to set or modify configuration values. For example, to add the path for a genome file we can use the following command:
 
 .. code-block:: bash
-    
+
     $ grape config --set genome <path_to_genome>
 
 In a similar way, we could also set a project property like the project read quality offset:

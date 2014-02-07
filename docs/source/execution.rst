@@ -43,7 +43,7 @@ The execution step run the pipeline on the given dataset(s). The pipeline can be
     (  2/2) | Running flux                 : DONE [0:00:06]
 
 If a cluster configuration is provided during the Grape installation, the grape submit command can be used to run jobs on the cluster. The job id of each submitted job will be reported in the standard output of the command:
-    
+
 .. code-block:: bash
 
     $ grape submit
@@ -55,8 +55,8 @@ Please see the Grape Jobs Management page to have an overview on the Grape featu
 If some/all the output files for the pipeline are already present the related tool is skipped in the pipeline run/submission:
 
 .. code-block:: bash
-    
+
     $ grape run/submit
     Starting/Submitting pipeline run: Default Pipeline test
-    (  1/2) | Skipped gem                  
+    (  1/2) | Skipped gem
     (  2/2) | Skipped flux
