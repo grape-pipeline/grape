@@ -21,7 +21,11 @@ http://grape-pipeline.rtfd.org
 Installation
 ------------
 
-GRAPE 2.0 can be installed with pip:
+Before installing GRAPE 2.0 some dependendencies need to be installed:
+
+    $ pip install distribute==0.6.36 zc.buildout==2.1.0 
+
+GRAPE 2.0 can then be installed with pip:
 
     $ pip install grape-pipeline
 
