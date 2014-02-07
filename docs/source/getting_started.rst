@@ -1,11 +1,12 @@
----------------
+===============
 Getting started
----------------
+===============
 
-This tutorial covers all the necessary steps to setup and run the default GRAPE pipeline on the included test dataset.
+This section shows all the necessary steps to setup and run the default GRAPE pipeline on the provided test dataset.
+
 
 Installation
-------------
+============
 
 Execute the following commands to install GRAPE:
 
@@ -24,7 +25,7 @@ Execute the following commands to install GRAPE:
 .. _venv:
 
 Activate the virtualenv
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 With the installation above you will need to activate the virtual environment each time you want to use GRAPE:
 
@@ -33,8 +34,9 @@ With the installation above you will need to activate the virtual environment ea
     $ cd grape2
     grape2 $ source bin/activate
 
+
 Pipeline buildout
------------------
+=================
 
 Once GRAPE is succesfully installed you need to run `grape-buildout` to setup the pipeline home folder with the required configuration files and modules.
 
@@ -50,35 +52,35 @@ If everything goes well you should get the following output:
 
 .. code-block:: bash
 
-    Creating directory '<your grape home>/bin'.
-    Creating directory '<your grape home>/parts'.
-    Creating directory '<your grape home>/eggs'.
-    Creating directory '<your grape home>/develop-eggs'.
+    Creating directory '<grape_home>/bin'.
+    Creating directory '<grape_home>/parts'.
+    Creating directory '<grape_home>/eggs'.
+    Creating directory '<grape_home>/develop-eggs'.
     Getting distribution for 'hexagonit.recipe.download'.
     Got hexagonit.recipe.download 1.7.
     Installing gem.
     Downloading http://barnaserver.com/gemtools/releases/GEMTools-static-i3-1.6.2.tar.gz
-    grape.install_module: Extracting module package to <your grape home>/modules/gemtools/1.6.2
+    grape.install_module: Extracting module package to <grape_home>/modules/gemtools/1.6.2
     Installing flux.
     Downloading http://sammeth.net/artifactory/barna/barna/barna.capacitor/1.2.4/flux-capacitor-1.2.4.tgz
-    grape.install_module: Extracting module package to <your grape home>/modules/flux/1.2.4
+    grape.install_module: Extracting module package to <grape_home>/modules/flux/1.2.4
     Installing samtools.
     Downloading http://genome.crg.es/~epalumbo/grape/modules/samtools-0.1.19.tgz
-    grape.install_module: Extracting module package to <your grape home>/modules/samtools/0.1.19
+    grape.install_module: Extracting module package to <grape_home>/modules/samtools/0.1.19
     Installing crgtools.
     Downloading http://genome.crg.es/~epalumbo/grape/modules/crgtools-0.1.tgz
-    grape.install_module: Extracting module package to <your grape home>/modules/crgtools/0.1
+    grape.install_module: Extracting module package to <grape_home>/modules/crgtools/0.1
     Installing testdata.
     Downloading http://genome.crg.es/~epalumbo/grape/testdata.tgz
-    testdata: Extracting package to <your grape home>
-    Removing directory '<your grape home>/bin'.
-    Removing directory '<your grape home>/develop-eggs'.
-    Removing directory '<your grape home>/eggs'.
-    Removing directory '<your grape home>/parts'.
+    testdata: Extracting package to <grape_home>
+    Removing directory '<grape_home>/bin'.
+    Removing directory '<grape_home>/develop-eggs'.
+    Removing directory '<grape_home>/eggs'.
+    Removing directory '<grape_home>/parts'.
 
 
 Project
--------
+=======
 
 To run the pipeline you will need to create a folder for the project and initalize it with the `grape init` command:
 
@@ -92,7 +94,7 @@ To run the pipeline you will need to create a folder for the project and initali
 A project has been created and initialized with an empty configuration. For further information about GRAPE projects please see :ref:`projects`
 
 Reference files
-~~~~~~~~~~~~~~~
+---------------
 
 The reference genome and annotation files for the project must be set with the `grape config` command:
 
@@ -108,14 +110,14 @@ The reference genome and annotation files for the project must be set with the `
     ==========  =========================================
 
 Fastq files
-~~~~~~~~~~~
+-----------
 
 To import the test RNA-seq data into the project you have to run the `grape scan` command:
 
 .. code-block:: bash
 
     grape2 $ grape scan $GRAPE_HOME/testdata/reads
-    Scanning <your grape home>/testdata/reads folder ... 4 fastq files found
+    Scanning <grape_home>/testdata/reads folder ... 4 fastq files found
     Checking known data ... 4 new files found
     Adding 'testB':  data/testB_1.fastq.gz
     Adding 'testB':  data/testB_2.fastq.gz
@@ -140,7 +142,7 @@ You can check that the files were correctly imported with the `grape list` comma
 
 
 Running the pipeline
---------------------
+====================
 
 You can run the pipeline for all the test files from within the project folder with the `grape run` command. Before actually running, you can perform a dry run::
 
