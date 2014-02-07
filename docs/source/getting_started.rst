@@ -1,6 +1,6 @@
---------
-Tutorial
---------
+---------------
+Getting started
+---------------
 
 This tutorial covers all the necessary steps to setup and run the default GRAPE pipeline on the included test dataset.
 

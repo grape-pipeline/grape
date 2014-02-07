@@ -16,7 +16,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   tutorial
+   getting_started 
    installation
    projects
    execution
