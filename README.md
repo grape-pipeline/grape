@@ -15,7 +15,29 @@ Documentation
 
 The latest GRAPE 2.0 documentation can be found at:
 
-[http://grape-pipeline.rtfd.org]
+http://grape-pipeline.rtfd.org
+
+
+Installation
+------------
+
+Before installing GRAPE 2.0 some dependendencies need to be installed:
+
+    $ pip install distribute==0.6.36 zc.buildout==2.1.0 
+
+GRAPE 2.0 can then be installed with pip:
+
+    $ pip install grape-pipeline
+
+or it can be easily installed from source:
+
+    $ git clone git://github.com/grape-pipeline/grape.git
+    $ cd grape
+    $ make install
+
+The installation con be activated running the following command from the `grape` folder:
+
+    $ source bin/activate
 
 
 Development
@@ -25,5 +47,4 @@ If you want to contribute to the GRAPE 2.0 development you can get the code from
 
     $ git clone git://github.com/grape-pipeline/grape.git
     $ cd grape
-    $ pip install -r requirements.txt
     $ make develop

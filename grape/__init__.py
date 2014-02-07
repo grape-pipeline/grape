@@ -2,5 +2,3 @@
 """The grape main module"""
 
 __version__ = "2.0-beta.2-SNAPSHOT"
-
-

@@ -4,8 +4,8 @@ BUNDLE_ENV26 = $(shell pwd)/bundle/env26
 BUNDLE_DIR = $(shell pwd)/bundle/grape-$(VERSION)
 DOWNLOAD_CACHE = downloads
 PIP_OPTIONS = --download-cache $(DOWNLOAD_CACHE)
-DEVEL_ENV = $(shell pwd)/env
-INSTALL_DIR = $(shell pwd)/grape-env
+DEVEL_ENV = $(shell pwd)
+INSTALL_DIR = $(shell pwd)
 INSTALL_LOG = $(shell pwd)/install.log
 
 .PHONY: docs docs-clean
@@ -17,6 +17,14 @@ devel:
 	@if [ ! -d $(DEVEL_ENV) ]; then virtualenv --no-site-packages $(DEVEL_ENV);fi
 	@. $(DEVEL_ENV)/bin/activate;pip install -r requirements.txt $(PIP_OPTIONS)
 	@. $(DEVEL_ENV)/bin/activate;python setup.py develop
+	@echo "Development setup completed."
+	@echo ""
+	@echo "------------------------------------------------------"
+	@echo "Please remember that each time you want to use Grape 2"
+	@echo "you will have to run the folowing command:"
+	@echo ""
+	@echo ". bin/activate"
+	@echo "------------------------------------------------------"
 
 install:
 	@if [ ! -d $(INSTALL_DIR) ]; then virtualenv --no-site-packages $(INSTALL_DIR);fi
@@ -29,7 +37,7 @@ install:
 	@echo "Please remember that each time you want to use Grape 2"
 	@echo "you will have to run the folowing command:"
 	@echo ""
-	@echo ". env/bin/activate"
+	@echo ". bin/activate"
 	@echo "------------------------------------------------------"
 
 test:
