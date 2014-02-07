@@ -30,7 +30,7 @@ To run the pipeline on a HPC cluster you need to configure the JIP. Please refer
 
 .. note::
 
-    Please note that a GRAPE project-specific database is used for the JIP. It can be found at `<project>/.grape/grape_jip.db`.
+    A specific JIP database file for each GRAPE project is used and can be found at `<project>/.grape/grape_jip.db`.
 
 
 Default Pipeline
