@@ -1,15 +1,29 @@
-Grape 2.0
+GRAPE 2.0
 =========
 
-Development setup
------------------
-Please use virtualenv to develop in grape. You might also want to take a look
-at the virtualenvwrapper. We assume you have a dedicated virtualenv set up and
-activated. To get started:
+GRAPE 2.0 provides an extensive pipeline for RNA-Seq analyses. It allows the creation of an automated and integrated workflow to manage, analyse and visualize RNA-Seq data.
 
-    pip install requirements.txt
 
-This will install all dependencies. In order to get the commands into path and
-be able to run things from command line even if you are in development mode, do
+License
+-------
 
-    python setup.py develop
+GRAPE 2.0 is release under GPL. See the LICENSE.txt file.
+
+
+Documentation
+-------------
+
+The latest GRAPE 2.0 documentation can be found at:
+
+[http://grape-pipeline.rtfd.org]
+
+
+Development
+-----------
+
+If you want to contribute to the GRAPE 2.0 development you can get the code from github and get started:
+
+    $ git clone git://github.com/grape-pipeline/grape.git
+    $ cd grape
+    $ pip install -r requirements.txt
+    $ make develop
