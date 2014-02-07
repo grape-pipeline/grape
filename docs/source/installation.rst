@@ -9,13 +9,13 @@ Grape can be installed like this:
     $ mkdir grape2
     $ cd grape2
     $ virtualenv --no-site-packages .
-    $ source bin/activate    
+    $ source bin/activate
     $ pip install grape
 
 If you are a developer, you can install from source as well:
 
 .. code-block:: bash
-    
+
     $ git clone https://github.com/grape-pipeline/grape
     $ cd grape
     $ virtualenv --no-site-packages .
@@ -62,37 +62,6 @@ You will then see some modules appearing in grape_home::
       grape.conf      -- global configuration
       modules         -- base directory for modules
         <name>        -- the module name
-          <version>   -- the module version 
+          <version>   -- the module version
             activate  -- activate script to load the module into the current environment
-
-
-Project
-=======
-
-When you start on a new project, you first create another folder for it::
-
-    $ mkdir ExampleProject
-    $ cd ExampleProject
-
-You then run::
-
-    $ grape init
-
-And then you have a .grape folder that contains the configuration.
-
-Let's say you have a bunch of fastq or bam files in path/to/files
-
-You need to run:: 
-
-    $ grape scan path/to/files
-
-which will create soft links inside your data folder.
-
-Then you run Grape::
-
-    $ grape run setup
-    $ grape run
-
-See the chapter on running Grape in a cluster for more advanced usage.
-
 
