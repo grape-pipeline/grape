@@ -25,9 +25,9 @@ Before installing GRAPE 2.0 some dependendencies need to be installed:
 
     $ pip install distribute==0.6.36 zc.buildout==2.1.0 
 
-GRAPE 2.0 can then be installed with pip:
+GRAPE 2.0 can then be installed with pip (since GRAPE 2.0 development is in beta stage you will need the `--pre` option):
 
-    $ pip install grape-pipeline
+    $ pip install grape-pipeline --pre
 
 or it can be easily installed from source:
 
