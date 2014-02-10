@@ -162,7 +162,7 @@ class SubmitCommand(GrapeCommand):
 
         if args.dry:
             from jip.cli import show_commands, show_dry
-            show_dry(jobs)
+            show_dry(jobs, profiles=True)
             show_commands(jobs)
             return
 
