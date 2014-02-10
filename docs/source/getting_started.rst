@@ -154,7 +154,7 @@ This command will show you the pipeline graph and commands for all the samples. 
 
 To submit the pipeline to a HPC cluster environment replace the **run** command with the **submit** command. A dry run will also show you information about the jobs that will be submitted such as threads, memory, queue, etc..
 
-For more information about running GRAPE please see :ref:`execution`.
+For more information about running GRAPE please see :ref:`Pipeline Execution`.
 
 
 
