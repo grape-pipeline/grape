@@ -1,3 +1,5 @@
+.. _installation:
+
 ============
 Installation
 ============
@@ -11,7 +13,8 @@ Grape can be installed like this:
     grape2 $ virtualenv --no-site-packages .
     grape2 $ source bin/activate
     grape2 $ pip install distribute==0.6.36 zc.buildout==2.1.0
-    grape2 $ pip install grape-pipeline
+    # Since GRAPE 2.0 development is in beta stage you will need the --pre option
+    grape2 $ pip install grape-pipeline --pre
 
 If you are a developer, you can install from source as well:
 
