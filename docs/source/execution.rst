@@ -42,6 +42,7 @@ At the moment a Default Pipeline is configured, which includes the following mod
 
 - CRGtools, a set of in-house scripts and binaries from the *Computational Biology of RNA Processing* group at CRG Barcelona
 - SAMtools_, utilities to manipulate sam files
+- BEDtools_, utilities to manipulate bed files 
 - GEMTools_, utilities and pipelines for RNA-seq mapping
 - FluxCapacitor_, a program for isoform quantification estimation
 
@@ -49,5 +50,6 @@ At the moment a Default Pipeline is configured, which includes the following mod
 .. _GEMTools: http://github.com/gemtools/gemtools
 .. _FluxCapacitor: http://sammeth.net/confluence/display/FLUX/Home
 .. _SAMtools: http://samtools.sourceforge.net/
+.. _BEDtools: https://github.com/arq5x/bedtools2
 .. _JIP pipeline system: http://github.com/thasso/pyjip
 .. _JIP documentation: http://pyjip.rtfd.org
