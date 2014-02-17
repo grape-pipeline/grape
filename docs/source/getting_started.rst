@@ -1,3 +1,5 @@
+.. _getting-started:
+
 ===============
 Getting started
 ===============
@@ -18,9 +20,9 @@ Execute the following commands to install GRAPE:
     grape2 $ virtualenv --no-site-packages .
     # activate the virtual environment
     grape2 $ source bin/activate
-    # install GRAPE
+    # install GRAPE (since GRAPE 2.0 development is in beta stage you will need the --pre option)
     grape2 $ pip install distribute==0.6.36 zc.buildout==2.1.0
-    grape2 $ pip install grape-pipeline
+    grape2 $ pip install grape-pipeline --pre
 
 .. _venv:
 

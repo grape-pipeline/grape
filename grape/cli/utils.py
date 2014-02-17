@@ -19,12 +19,26 @@ def jip_prepare(args, submit=False, project=None, datasets=[], validate=True):
     # setup jip db
     jip.db.init(project.jip_db)
     p = jip.Pipeline()
+
+    # load profile
+    profile = jip.profiles.get(name='default')
+    #                           if not args.profile
+    #                           else args.profile)
+    profile.tool_name = 'grape'
+    pro_args = {}
+    pro_args['mem'] = args.max_mem
+    pro_args['threads'] = args.threads
+    pro_args['queue'] = args.queue
+    pro_args['time'] = args.max_time
+    profile.load_args(pro_args)
+    #log.info("Profile: %s", profile)
+
     jargs = {}
     if datasets == ['setup']:
         jargs['input'] = project.config.get('genome')
         jargs['annotation'] = project.config.get('annotation')
         p.run('grape_gem_setup', **jargs)
-        jobs = jip.jobs.create_jobs(p)
+        jobs = jip.jobs.create_jobs(p, profile=profile)
     else:
         input = []
         for d in datasets:
@@ -40,7 +54,7 @@ def jip_prepare(args, submit=False, project=None, datasets=[], validate=True):
         jargs['max_matches'] = args.max_matches
         jargs['threads'] = args.threads
         p.run('grape_gem_rnapipeline', **jargs)
-        jobs = jip.jobs.create_jobs(p, validate=validate)
+        jobs = jip.jobs.create_jobs(p, validate=validate, profile=profile)
     if submit:
         jobs = check_jobs_dependencies(jobs)
     return jobs
