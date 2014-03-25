@@ -166,7 +166,7 @@ class gem_filter(object):
         return 'bash','%s ${options()}' % bin_path(self, 'gt.filter')
 
 
-@module([("gemtools","1.6.2")])
+@module([("gemtools", "1.6.2")])
 @tool('grape_gem_stats')
 class gem_stats(object):
     """\
@@ -194,7 +194,7 @@ class gem_stats(object):
         return 'bash','%s ${options()}' % bin_path(self, 'gt.stats')
 
 
-@module([("gemtools","1.6.2")])
+@module([("gemtools", "1.6.2")])
 @tool('grape_gem_sam')
 class gem_sam(object):
     """\
@@ -386,7 +386,7 @@ class BedtoolsBedgraphBigwig(object):
         return 'bash','%s ${input|arg("")|else("-")|suf(" ")}${genome|arg("")|suf(" ")}${output|arg("")}' % bin_path(self, 'bedGraphToBigWig')
 
 
-@module([("samtools","0.1.19")])
+@module([("samtools", "0.1.19")])
 @tool('grape_samtools_view')
 class samtools(object):
     """\
@@ -417,7 +417,7 @@ class samtools(object):
         return 'bash','%s ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'samtools view')
 
 
-@module([("samtools","0.1.19")])
+@module([("samtools", "0.1.19")])
 @tool('grape_samtools_sort')
 class samtools(object):
     """\
@@ -446,7 +446,7 @@ class samtools(object):
         return 'bash','%s ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}' % bin_path(self, 'samtools sort')
 
 
-@module([("samtools","0.1.19")])
+@module([("samtools", "0.1.19")])
 @tool('grape_samtools_index')
 class samtools(object):
     """\
