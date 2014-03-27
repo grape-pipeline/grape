@@ -2,11 +2,11 @@
 """Grape basic tools and utilities
 and manage modules
 """
+import jip
+from jip import tool, pipeline
+from .buildout import module
 
-from jip import *
-from buildout import module
-
-r = jip.templates.render_template
+R = jip.templates.render_template
 
 def bin_path(module, bin=''):
     """ Return the absolute path of a module binary """
@@ -73,7 +73,7 @@ class GemTranscriptomeIndex(object):
 
 @module([("gemtools", "1.6.2")])
 @tool('grape_gem_rnatool')
-class gem(object):
+class Gem(object):
     """\
     The GEMtools RNAseq Mapping Pipeline
 
@@ -106,12 +106,12 @@ class gem(object):
 
     def get_command(self):
         from grape import Grape
-        return 'bash','%s ${options()}' % bin_path(self, 'gemtools rna-pipeline')
+        return 'bash', '%s ${options()}' % bin_path(self, 'gemtools rna-pipeline')
 
 
 @module([("crgtools","0.1")])
 @tool('grape_gem_quality')
-class gem_quality(object):
+class GemQuality(object):
     """\
     The GEMtools quality filter program
 
@@ -133,12 +133,12 @@ class gem_quality(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-t')
 
     def get_command(self):
-        return 'bash','%s ${options()}' % bin_path(self, 'gt.quality')
+        return 'bash', '%s ${options()}' % bin_path(self, 'gt.quality')
 
 
 @module([("crgtools","0.1")])
 @tool('grape_gem_filter')
-class gem_filter(object):
+class GemFilter(object):
     """\
     The GEMtools general filter program
 
@@ -162,13 +162,12 @@ class gem_filter(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-t')
 
     def get_command(self):
-        from grape import Grape
-        return 'bash','%s ${options()}' % bin_path(self, 'gt.filter')
+        return 'bash', '%s ${options()}' % bin_path(self, 'gt.filter')
 
 
 @module([("gemtools", "1.6.2")])
 @tool('grape_gem_stats')
-class gem_stats(object):
+class GemStats(object):
     """\
     The GEMtools stats program
 
@@ -191,12 +190,12 @@ class gem_stats(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-t')
 
     def get_command(self):
-        return 'bash','%s ${options()}' % bin_path(self, 'gt.stats')
+        return 'bash', '%s ${options()}' % bin_path(self, 'gt.stats')
 
 
 @module([("gemtools", "1.6.2")])
 @tool('grape_gem_sam')
-class gem_sam(object):
+class GemSam(object):
     """\
     The GEMtools SAM conversion program
 
@@ -229,12 +228,12 @@ class gem_sam(object):
             pass
 
     def get_command(self):
-        return 'bash','%s ${options()}' % bin_path(self, 'gem-2-sam')
+        return 'bash', '%s ${options()}' % bin_path(self, 'gem-2-sam')
 
 
-@module([("crgtools","0.1")])
+@module([("crgtools", "0.1")])
 @tool('grape_pigz')
-class pigz(object):
+class Pigz(object):
     """\
     The parallel gzip program
 
@@ -257,12 +256,12 @@ class pigz(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-p')
 
     def get_command(self):
-        return 'bash','%s ${threads|arg|suf(" ")}${decompress|arg|suf(" ")}${input|arg("-c ")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'pigz')
+        return 'bash', '%s ${threads|arg|suf(" ")}${decompress|arg|suf(" ")}${input|arg("-c ")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'pigz')
 
 
-@module([("crgtools","0.1")])
+@module([("crgtools", "0.1")])
 @tool('grape_fix_se')
-class awk_fix_se(object):
+class AwkFixSE(object):
     """\
     An AWK script to fix SAM flags for single-end data
 
@@ -284,12 +283,12 @@ class awk_fix_se(object):
 
     def get_command(self):
         command = "\'BEGIN{OFS=FS=\"\\t\"}$0!~/^@/{split(\"1_2_8_32_64_128\",a,\"_\");for(i in a){if(and($2,a[i])>0){$2=xor($2,a[i])}}}{print}\'"
-        return 'bash','awk %s ${input|arg("")|suf(" ")}${output|arg("> ")}' % command
+        return 'bash', 'awk %s ${input|arg("")|suf(" ")}${output|arg("> ")}' % command
 
 
-@module([("crgtools","0.1")])
+@module([("crgtools", "0.1")])
 @tool('grape_reverse_mate')
-class awk_reverse_mate(object):
+class AwkReverseMate(object):
     """\
     An AWK script for stranded data to reverse a mate in a SAM file.
 
@@ -313,10 +312,10 @@ class awk_reverse_mate(object):
 
     def get_command(self):
         command = "\'BEGIN {OFS=\"\\t\"} {if ($1!~/^@/ && and($2,${mate})>0) {$2=xor($2,0x10)}; print}\'"
-        return 'bash','awk %s ${input|arg("")|suf(" ")}${output|arg("> ")}' % command
+        return 'bash', 'awk %s ${input|arg("")|suf(" ")}${output|arg("> ")}' % command
 
 
-@module([("bedtools","2.17.0")])
+@module([("bedtools", "2.17.0")])
 @tool('grape_bedtools_genome_cov')
 class BedtoolsGenomeCov(object):
     """\
@@ -350,10 +349,10 @@ class BedtoolsGenomeCov(object):
         self.options['strand'].short = "-strand"
 
     def get_command(self):
-        return 'bash','%s ${bed_graph|arg|suf(" ")}${split|arg|suf(" ")}${strand|arg|suf(" ")}${input|arg|else(input.short+" stdin")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'genomeCoverageBed')
+        return 'bash', '%s ${bed_graph|arg|suf(" ")}${split|arg|suf(" ")}${strand|arg|suf(" ")}${input|arg|else(input.short+" stdin")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'genomeCoverageBed')
 
 
-@module([("bedtools","2.17.0")])
+@module([("bedtools", "2.17.0")])
 @tool('grape_bedtools_bedgraph_bigwig')
 class BedtoolsBedgraphBigwig(object):
     """\
@@ -379,12 +378,12 @@ class BedtoolsBedgraphBigwig(object):
             self.options['name'].hidden = True
 
     def get_command(self):
-        return 'bash','%s ${input|arg("")|else("-")|suf(" ")}${genome|arg("")|suf(" ")}${output|arg("")}' % bin_path(self, 'bedGraphToBigWig')
+        return 'bash', '%s ${input|arg("")|else("-")|suf(" ")}${genome|arg("")|suf(" ")}${output|arg("")}' % bin_path(self, 'bedGraphToBigWig')
 
 
 @module([("samtools", "0.1.19")])
 @tool('grape_samtools_view')
-class samtools(object):
+class SamtoolsView(object):
     """\
     The SAMtools view program
 
@@ -409,12 +408,12 @@ class samtools(object):
         self.options['input_sam'].short = "-S"
 
     def get_command(self):
-        return 'bash','%s ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'samtools view')
+        return 'bash', '%s ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'samtools view')
 
 
 @module([("samtools", "0.1.19")])
 @tool('grape_samtools_sort')
-class samtools(object):
+class SamtoolsSort(object):
     """\
     The SAMtools sort program
 
@@ -437,12 +436,12 @@ class samtools(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-@')
 
     def get_command(self):
-        return 'bash','%s ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}' % bin_path(self, 'samtools sort')
+        return 'bash', '%s ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}' % bin_path(self, 'samtools sort')
 
 
 @module([("samtools", "0.1.19")])
 @tool('grape_samtools_index')
-class samtools(object):
+class SamtoolsIndex(object):
     """\
     The SAMtools index program
 
@@ -464,12 +463,12 @@ class samtools(object):
 
 
     def get_command(self):
-        return 'bash','%s ${input|arg("")|suf(" ")}${output|arg("")}' % bin_path(self, 'samtools index')
+        return 'bash', '%s ${input|arg("")|suf(" ")}${output|arg("")}' % bin_path(self, 'samtools index')
 
 
 @module([("flux", "1.2.4")])
 @tool('grape_flux')
-class flux(object):
+class Flux(object):
     """\
     The Flux Capacitor tool
 
@@ -497,9 +496,9 @@ class flux(object):
         return 'bash', '%s ${options()}' % bin_path(self, 'flux-capacitor')
 
 
-@module([("crgtools","0.1")])
+@module([("crgtools", "0.1")])
 @tool('grape_flux_split_features')
-class awk_split_features(object):
+class AwkSplitFeatures(object):
     """\
     An AWK script to split the Flux Capacitor output by features
 
@@ -525,7 +524,7 @@ class awk_split_features(object):
 
     def get_command(self):
         command = "\'BEGIN{OFS=FS=\"\\t\"}{print > input\".\"$3\".gtf\"}\'"
-        return 'bash','awk -v input=${input|arg("")|suf(" ")|ext} %s ${input|arg("")|suf(" ")}' % command
+        return 'bash', 'awk -v input=${input|arg("")|suf(" ")|ext} %s ${input|arg("")|suf(" ")}' % command
 
 
 @pipeline('grape_gem_setup')
@@ -711,4 +710,3 @@ class BigwigPipeline(object):
         p.run('grape_bedtools_bedgraph_bigwig', input=bedgraph.output, genome=self.genome, output='${input|ext}.bw')
         p.context(locals())
         return p
-
