@@ -6,7 +6,7 @@ import jip
 from jip import tool, pipeline
 from .buildout import module
 
-R = jip.templates.render_template
+r = jip.templates.render_template
 
 def bin_path(module, bin=''):
     """ Return the absolute path of a module binary """
