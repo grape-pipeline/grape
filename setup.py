@@ -34,8 +34,8 @@ analysys.
                       "idxtools==0.9.1"],
     entry_points={
         'console_scripts': [
-            'grape = grape.commands:main',
-            'grape-buildout = grape.commands:buildout'
+            'grape = grape.cli.commands:main',
+            'grape-buildout = grape.cli.commands:buildout'
         ],
         'zc.buildout': [
             'install_module = grape.install_module:Recipe'
