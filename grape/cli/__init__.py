@@ -3,8 +3,6 @@
 
 import sys
 from clint.textui import puts, colored, columns
-from clint.textui.colored import *
-
 
 def error(msg, newline=True):
     """Print an error message"""
