@@ -9,6 +9,7 @@ from .grape import GrapeError, Grape
 import os
 import logging
 import shutil
+import sys
 
 class Buildout(Bout):
     """A grape buildout class extending the zc.buildout
@@ -40,8 +41,7 @@ class Buildout(Bout):
 
             dir = self['buildout'][name+'-directory']
             if os.path.isdir(dir):
-                self._logger.warn('Removing directory %r.', dir)
-                #os.removedirs(dir)
+                self._logger.debug('Removing directory %r.', dir)
                 shutil.rmtree(dir)
 
 
