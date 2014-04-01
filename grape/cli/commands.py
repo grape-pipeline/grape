@@ -679,8 +679,17 @@ def buildout():
 
     args = parser.parse_args()
 
-    if not args.buildout_config:
+    default_config = os.path.join(os.getcwd(), 'grape-buildout.conf')
+    buildout_conf = default_config
+    if args.buildout_config:
+        buildout_conf = args.buildout_config
+
+    if not buildout_conf:
         cli.error('Please specify a configuration file')
+        sys.exit(1)
+
+    if not os.path.exists(buildout_conf):
+        cli.error('The configuration file %r does not exists', buildout_conf)
         sys.exit(1)
 
     grape_home = os.getenv("GRAPE_HOME", None)
