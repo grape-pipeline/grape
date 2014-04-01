@@ -17,7 +17,6 @@ else:
     import urlparse
 
 TRUE_VALUES = ('yes', 'true', '1', 'on')
-GRAPE_HOME = 'GRAPE_HOME'
 
 class Recipe(object):
     """Recipe for downloading packages from the net and extracting them on
@@ -36,7 +35,9 @@ class Recipe(object):
         options.setdefault('on-update', 'true')
         options['filename'] = options.get('filename', '').strip()
 
+        logging.root.handlers = []
         log = logging.getLogger(self.name)
+        log.addHandler(logging.StreamHandler(sys.stderr))
         if not options.get('name'):
             log.warning('Module name was not specified - using part name')
             options['name'] = self.name
@@ -64,8 +65,7 @@ class Recipe(object):
         return dst
 
     def get_destination(self):
-        grape_home = os.getenv(GRAPE_HOME, os.path.join(os.getenv('HOME'), 'grape'))
-        return os.path.join(grape_home, 'modules')
+        return os.path.join(self.buildout['buildout']['directory'], 'modules')
 
 
     def update(self):
