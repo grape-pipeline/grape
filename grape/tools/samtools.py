@@ -2,14 +2,15 @@
 """\
 """
 
-@module([("samtools", "0.1.19")])
+from jip import tool, pipeline, Pipeline
+
 @tool('grape_samtools_view')
 class SamtoolsView(object):
     """\
     The SAMtools view program
 
     Usage:
-        sam.view -i <input> -o <output> [-s] [-b] [-n <name>]
+        sam.view [-i <input>] [-o <output>] [-s] [-b] [-n <name>]
 
     Options:
         --help  Show this help message
@@ -29,17 +30,16 @@ class SamtoolsView(object):
         self.options['input_sam'].short = "-S"
 
     def get_command(self):
-        return 'bash', '%s ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'samtools view')
+        return 'bash', 'samtools view ${input_sam|arg|suf(" ")}${output_bam|arg|suf(" ")}${threads|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("> ")}'
 
 
-@module([("samtools", "0.1.19")])
 @tool('grape_samtools_sort')
 class SamtoolsSort(object):
     """\
     The SAMtools sort program
 
     Usage:
-        sam.sort -i <input> -o <output> [-m <max_memory>] [-n <name>]
+        sam.sort [-i <input>] -o <output> [-m <max_memory>] [-n <name>]
 
     Options:
         --help  Show this help message
@@ -57,10 +57,9 @@ class SamtoolsSort(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-@')
 
     def get_command(self):
-        return 'bash', '%s ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}' % bin_path(self, 'samtools sort')
+        return 'bash', 'samtools sort ${threads|arg|suf(" ")}${max_memory|arg|suf(" ")}${input|arg("")|else("-")|suf(" ")}${output|arg("")|ext}'
 
 
-@module([("samtools", "0.1.19")])
 @tool('grape_samtools_index')
 class SamtoolsIndex(object):
     """\
@@ -84,4 +83,4 @@ class SamtoolsIndex(object):
 
 
     def get_command(self):
-        return 'bash', '%s ${input|arg("")|suf(" ")}${output|arg("")}' % bin_path(self, 'samtools index')
+        return 'bash', 'samtools index ${input|arg("")|suf(" ")}${output|arg("")}'

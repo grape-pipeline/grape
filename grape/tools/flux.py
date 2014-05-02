@@ -2,6 +2,8 @@
 Flux tools
 """
 
+from jip import tool, pipeline, Pipeline
+
 @tool('grape_flux')
 class Flux(object):
     """\
@@ -28,7 +30,7 @@ class Flux(object):
         self.options['name'].hidden = True
 
     def get_command(self):
-        return 'bash', '%s ${options()}' % bin_path(self, 'flux-capacitor')
+        return 'bash', 'flux-capacitor ${options()}'
 
 
 @tool('grape_flux_split_features')

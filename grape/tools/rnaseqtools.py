@@ -3,14 +3,15 @@
 RNAseq tools
 """
 
-@module([("crgtools", "0.1")])
+from jip import tool, pipeline, Pipeline
+
 @tool('grape_pigz')
 class Pigz(object):
     """\
     The parallel gzip program
 
     Usage:
-        pigz -i <input> -o <output> [-d] [-n name]
+        pigz [-i <input>] [-o <output>] [-d] [-n name]
 
     Options:
         --help  Show this help message
@@ -28,10 +29,9 @@ class Pigz(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-p')
 
     def get_command(self):
-        return 'bash', '%s ${threads|arg|suf(" ")}${decompress|arg|suf(" ")}${input|arg("-c ")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'pigz')
+        return 'bash', 'pigz ${threads|arg|suf(" ")}${decompress|arg|suf(" ")}${input|arg("-c ")|suf(" ")}${output|arg("> ")}'
 
 
-@module([("crgtools", "0.1")])
 @tool('grape_fix_se')
 class AwkFixSE(object):
     """\
@@ -58,7 +58,6 @@ class AwkFixSE(object):
         return 'bash', 'awk %s ${input|arg("")|suf(" ")}${output|arg("> ")}' % command
 
 
-@module([("crgtools", "0.1")])
 @tool('grape_reverse_mate')
 class AwkReverseMate(object):
     """\

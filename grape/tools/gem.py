@@ -2,6 +2,8 @@
 Gem tools and pipelines
 """
 
+from jip import tool, pipeline, Pipeline
+
 @tool('grape_gem_index')
 class GemIndex(object):
     """\
@@ -23,7 +25,7 @@ class GemIndex(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-t')
 
     def get_command(self):
-        return "bash", "%s ${options()}" % bin_path(self, 'gemtools index')
+        return "bash", "gemtools index ${options()}"
 
 
 @tool('grape_gem_t_index')
@@ -52,7 +54,7 @@ class GemTranscriptomeIndex(object):
         self.name('t_index.${index|name|ext}')
 
     def get_command(self):
-        return 'bash', '%s ${options()}' % bin_path(self, 'gemtools t-index')
+        return 'bash', 'gemtools t-index ${options()}'
 
 
 @tool('grape_gem_rnatool')
@@ -88,8 +90,7 @@ class Gem(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-t')
 
     def get_command(self):
-        from grape import Grape
-        return 'bash', '%s ${options()}' % bin_path(self, 'gemtools rna-pipeline')
+        return 'bash', 'gemtools rna-pipeline ${options()}'
 
 
 @tool('grape_gem_quality')
@@ -98,7 +99,7 @@ class GemQuality(object):
     The GEMtools quality filter program
 
     Usage:
-        gem.quality -i <input> -o <output> [-n name]
+        gem.quality [-i <input>] [-o <output>] [-n name]
 
     Options:
         --help  Show this help message
@@ -115,8 +116,7 @@ class GemQuality(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-t')
 
     def get_command(self):
-        return 'bash', '%s ${options()}' % bin_path(self, 'gt.quality')
-
+        return 'bash', 'gt.quality ${options()}'
 
 @tool('grape_gem_filter')
 class GemFilter(object):
@@ -124,7 +124,7 @@ class GemFilter(object):
     The GEMtools general filter program
 
     Usage:
-        gem.filter -i <input> -o <output> [-n name] [--max-levenshtein-error <error>] [--max-matches <matches>]
+        gem.filter [-i <input>] [-o <output>] [-n name] [--max-levenshtein-error <error>] [--max-matches <matches>]
 
     Options:
         --help  Show this help message
@@ -143,7 +143,7 @@ class GemFilter(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-t')
 
     def get_command(self):
-        return 'bash', '%s ${options()}' % bin_path(self, 'gt.filter')
+        return 'bash', 'gt.filter ${options()}'
 
 
 @tool('grape_gem_stats')
@@ -170,7 +170,7 @@ class GemStats(object):
         self.add_option('threads', '${JIP_THREADS}', hidden=False, short='-t')
 
     def get_command(self):
-        return 'bash', '%s ${options()}' % bin_path(self, 'gt.stats')
+        return 'bash', 'gt.stats ${options()}'
 
 
 @tool('grape_gem_sam')
@@ -179,7 +179,7 @@ class GemSam(object):
     The GEMtools SAM conversion program
 
     Usage:
-        gem.sam -f <input> -o <output> -i <genome_index> -q <quality> [-l] [--read-group <read_group>] [--expect-single-end-reads] [--expect-paired-end-reads] [-n name]
+        gem.sam [-f <input>] [-o <output>] -i <genome_index> -q <quality> [-l] [--read-group <read_group>] [--expect-single-end-reads] [--expect-paired-end-reads] [-n name]
 
     Options:
         --help  Show this help message
@@ -207,7 +207,7 @@ class GemSam(object):
             pass
 
     def get_command(self):
-        return 'bash', '%s ${options()}' % bin_path(self, 'gem-2-sam')
+        return 'bash', 'gem-2-sam ${options()}'
 
 
 @pipeline('grape_gem_setup')
@@ -254,15 +254,19 @@ class FilterPipeline(object):
     The GEM filter pipeline
 
     usage:
-         gem.filter.pipeline -i <map_file> --max-mismatches <mismatches> --max-matches <matches> -o <output> [-l <name>]
+         gem.filter.pipeline -i <map_file> --max-mismatches <mismatches>
+                             --max-matches <matches> -o <output> [-l <name>]
 
     Inputs:
         -i, --input <map_file>        The input MAP file
 
     Options:
         -l, --name <name>  Prefix name
-        -o, --output <output>  The output file [default: ${input|ext|ext}_m${max_mismatches}_n${max_matches}.map.gz]
-        -m, --max-mismatches <mismatches>  The maximum number of edit operations allowed
+        -o, --output <output>  The output file [default:
+                               ${input|ext|ext}_m${max_mismatches}_n${max_match
+                               es}.map.gz]
+        -m, --max-mismatches <mismatches>  The maximum number of edit
+                                           operations allowed
         -n, --max-matches <matches>  The maximum number of matches allowed
 
     """
@@ -284,10 +288,10 @@ class Gem2BamPipeline(object):
     The GEM to BAM conversion pipeline
 
     usage:
-         gem2bam.pipeline -f <map_file> -i <gem_index> -q quality -o <output> [-s] [-l] [--read-group <read_group>] [-n <name>]
+         gem2bam.pipeline [-f <map_file>] -i <gem_index> -q quality -o <output> [-s] [-l] [--read-group <read_group>] [-n <name>]
 
     Inputs:
-        -f, --input <map_file>        The input MAP file
+        -f, --input <map_file>        The input MAP file [default: stdin]
         -i, --index <gem_index>        The gem index for the genome
 
     Options:

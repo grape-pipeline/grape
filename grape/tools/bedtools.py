@@ -3,6 +3,8 @@
 BEDtools
 """
 
+from jip import tool, pipeline, Pipeline
+
 @tool('grape_bedtools_genome_cov')
 class BedtoolsGenomeCov(object):
     """\
@@ -36,7 +38,7 @@ class BedtoolsGenomeCov(object):
         self.options['strand'].short = "-strand"
 
     def get_command(self):
-        return 'bash', '%s ${bed_graph|arg|suf(" ")}${split|arg|suf(" ")}${strand|arg|suf(" ")}${input|arg|else(input.short+" stdin")|suf(" ")}${output|arg("> ")}' % bin_path(self, 'genomeCoverageBed')
+        return 'bash', 'bedtools genomecov ${bed_graph|arg|suf(" ")}${split|arg|suf(" ")}${strand|arg|suf(" ")}${input|arg|else(input.short+" stdin")|suf(" ")}${output|arg("> ")}'
 
 
 @tool('grape_bedtools_bedgraph_bigwig')
@@ -64,7 +66,7 @@ class BedtoolsBedgraphBigwig(object):
             self.options['name'].hidden = True
 
     def get_command(self):
-        return 'bash', '%s ${input|arg("")|else("-")|suf(" ")}${genome|arg("")|suf(" ")}${output|arg("")}' % bin_path(self, 'bedGraphToBigWig')
+        return 'bash', 'bedGraphToBigWig ${input|arg("")|else("-")|suf(" ")}${genome|arg("")|suf(" ")}${output|arg("")}'
 
 
 @pipeline('grape_bigwig')
