@@ -30,8 +30,3 @@ def test_check_dependencies(tmpdir):
     for job in jobs:
         assert str(job._tool) != 'grape_gem_index'
         assert str(job._tool) != 'grape_gem_t_index'
-
-
-
-
-
