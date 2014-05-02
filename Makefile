@@ -43,7 +43,7 @@ install:
 test:
 	@echo -n "Running pytest"
 	@py.test -q tests
-	@echo "All tests ran successfully"
+	@echo "All tests passed!"
 
 bundle: downloads
 	@echo "Creating bundled distribution for $(VERSION)"
