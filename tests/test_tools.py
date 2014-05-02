@@ -58,19 +58,19 @@ def test_gem_setup_pipeline_with_output_dir():
 
 def test_gem_filter_pipeline():
     p = jip.Pipeline()
-    p.run('grape_gem_filter_pipeline', input="gem.map", max_mismatches="4",
+    p.run('grape_gem_filter_pipeline', input="gem.map.gz", max_mismatches="4",
           max_matches="10", name="test")
     jobs = jip.create_jobs(p, validate=False)
     ldir = os.getcwd()
     j = os.path.join
     assert len(jobs) == 4
-    assert jobs[0].configuration['input'].get() == j(ldir, 'gem.map')
+    assert jobs[0].configuration['input'].get() == j(ldir, 'gem.map.gz')
     assert jobs[0].configuration['name'].get() == "test"
     assert jobs[1].configuration['max_levenshtein_error'].get() == "4"
     assert jobs[1].configuration['name'].get() == "test"
     assert jobs[2].configuration['max_matches'].get() == "10"
     assert jobs[2].configuration['name'].get() == "test"
-    assert jobs[3].configuration['output'].get() == ''
+    assert jobs[3].configuration['output'].get() == os.path.join(ldir,'gem_m4_n10.map.gz')
     assert jobs[3].configuration['name'].get() == "test"
 
     assert len(jobs[0].children) == 1

@@ -254,17 +254,15 @@ class FilterPipeline(object):
     The GEM filter pipeline
 
     usage:
-         gem.filter.pipeline -i <map_file> --max-mismatches <mismatches>
-                             --max-matches <matches> -o <output> [-l <name>]
+         grape_gem_filter_pipeline -i <map_file> --max-mismatches <mismatches>
+                             --max-matches <matches> [-o <output>] [-l <name>]
 
     Inputs:
         -i, --input <map_file>        The input MAP file
 
     Options:
         -l, --name <name>  Prefix name
-        -o, --output <output>  The output file [default:
-                               ${input|ext|ext}_m${max_mismatches}_n${max_match
-                               es}.map.gz]
+        -o, --output <output>  The output file [default: ${input|ext|ext}_m${max_mismatches}_n${max_matches}.map.gz]
         -m, --max-mismatches <mismatches>  The maximum number of edit
                                            operations allowed
         -n, --max-matches <matches>  The maximum number of matches allowed
