@@ -600,7 +600,7 @@ class Config(object):
 
         d = self.data
         for k in keys:
-            if not d.has_key(k):
+            if k not in d:
                 return None
             d = d[k]
 
@@ -668,7 +668,7 @@ class Config(object):
         d = self.data
         for k in keys:
             if isinstance(d, dict):
-                if not k in d.keys():
+                if not k in d:
                     if keys.index(k) < len(keys)-1:
                         d[k] = {}
                     else:
