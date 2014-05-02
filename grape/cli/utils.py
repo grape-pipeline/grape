@@ -3,6 +3,7 @@
 import sys
 import jip
 import os
+from grape.tools import gem, flux, bedtools, samtools, rnaseqtools
 from clint.textui import puts, colored, columns
 
 
@@ -39,18 +40,20 @@ def jip_prepare(args, submit=False, project=None, datasets=[], validate=True):
     jip.db.init(project.jip_db)
     p = jip.Pipeline()
 
-    # load profile
-    profile = jip.profiles.get(name='default')
-    #                           if not args.profile
-    #                           else args.profile)
-    profile.tool_name = 'grape'
-    pro_args = {}
-    pro_args['mem'] = args.max_mem
-    pro_args['threads'] = args.threads
-    pro_args['queue'] = args.queue
-    pro_args['time'] = args.max_time
-    profile.load_args(pro_args)
-    #log.info("Profile: %s", profile)
+    profile = None
+    if submit:
+        # load profile
+        profile = jip.profiles.get(name='default')
+        #                           if not args.profile
+        #                           else args.profile)
+        profile.tool_name = 'grape'
+        pro_args = {}
+        pro_args['mem'] = args.max_mem
+        pro_args['threads'] = args.threads
+        pro_args['queue'] = args.queue
+        pro_args['time'] = args.max_time
+        profile.load_args(pro_args)
+        #log.info("Profile: %s", profile)
 
     jargs = {}
     if datasets == ['setup']:
@@ -71,8 +74,8 @@ def jip_prepare(args, submit=False, project=None, datasets=[], validate=True):
         jargs['genome'] = project.config.get('genome')
         jargs['max_mismatches'] = args.max_mismatches
         jargs['max_matches'] = args.max_matches
-        jargs['threads'] = args.threads
-        p.run('grape_gem_rnapipeline', **jargs)
+        # jargs['threads'] = args.threads
+        p.run('grape_pipeline', **jargs)
         jobs = jip.jobs.create_jobs(p, validate=validate, profile=profile)
     if submit:
         jobs = check_jobs_dependencies(jobs)
