@@ -38,7 +38,7 @@ class AwkFixSE(object):
     An AWK script to fix SAM flags for single-end data
 
     Usage:
-        fix_se -i <input> -o <output> [-n <name>]
+        grape_fix_se -i <input> -o <output> [-n <name>]
 
     Options:
         --help  Show this help message
@@ -64,7 +64,7 @@ class AwkReverseMate(object):
     An AWK script for stranded data to reverse a mate in a SAM file.
 
     Usage:
-        reverse_mate -i <input> -o <output> [-n <name>] [--second-mate]
+        grape_reverse_mate -i <input> -o <output> [-n <name>] [--second-mate]
 
     Options:
         --help  Show this help message

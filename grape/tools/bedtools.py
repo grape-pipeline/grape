@@ -5,13 +5,13 @@ BEDtools
 
 from jip import tool, pipeline, Pipeline
 
-@tool('grape_bedtools_genome_cov')
+@tool('grape_bedtools_genomecov')
 class BedtoolsGenomeCov(object):
     """\
     The BEDtools genomeCoverage program
 
     Usage:
-        bed.gencov -i <input> -o <output> [-s <strand>] [--bam] [-b] [--split] [-n <name>]
+        grape_bedtools_genomecov -i <input> -o <output> [-s <strand>] [--bam] [-b] [--split] [-n <name>]
 
     Options:
         --help  Show this help message
@@ -41,13 +41,13 @@ class BedtoolsGenomeCov(object):
         return 'bash', 'bedtools genomecov ${bed_graph|arg|suf(" ")}${split|arg|suf(" ")}${strand|arg|suf(" ")}${input|arg|else(input.short+" stdin")|suf(" ")}${output|arg("> ")}'
 
 
-@tool('grape_bedtools_bedgraph_bigwig')
-class BedtoolsBedgraphBigwig(object):
+@tool('grape_bedGraphToBigWig')
+class BedgraphBigwig(object):
     """\
-    The BEDtools bedGraphToBigWig program
+    The bedGraphToBigWig program
 
     Usage:
-        bed.bgtobw -i <input> -o <output> -g <genome_fai> [-n <name>]
+        grape_bedGraphToBigWig -i <input> -o <output> -g <genome_fai> [-n <name>]
 
     Options:
         --help  Show this help message
@@ -69,13 +69,13 @@ class BedtoolsBedgraphBigwig(object):
         return 'bash', 'bedGraphToBigWig ${input|arg("")|else("-")|suf(" ")}${genome|arg("")|suf(" ")}${output|arg("")}'
 
 
-@pipeline('grape_bigwig')
+@pipeline('grape_bigwig_pipeline')
 class BigwigPipeline(object):
     """\
     The Bigwig pipeline
 
     usage:
-         grape.bigwig -i <bam_file> -o <bw_file> -g <genome_file> [--stranded] [ --reverse-first-mate | --reverse-second-mate ]
+         grape_bigwig_pipeline -i <bam_file> -o <bw_file> -g <genome_file> [--stranded] [ --reverse-first-mate | --reverse-second-mate ]
 
     Inputs:
         -i, --input <bam_file>        The input MAP file
@@ -106,7 +106,7 @@ class BigwigPipeline(object):
                   p.run('grape_reverse_mate', input=self.input, name=sample, second_mate=True) | \
                   p.run('grape_samtools_view', input_sam=True, output_bam=True, name=sample)
         print strands['-']
-        bedgraph = p.job(temp=True).run('grape_bedtools_genome_cov', input=bam, output="${inp|ext}_${strands.get(strand.raw())}.bedgraph", bam=True, split=True, bed_graph=True, strand = "" if not self.stranded else ["+", "-"])
-        p.run('grape_bedtools_bedgraph_bigwig', input=bedgraph.output, genome=self.genome, output='${input|ext}.bw')
+        bedgraph = p.job(temp=True).run('grape_bedtools_genomecov', input=bam, output="${inp|ext}_${strands.get(strand.raw())}.bedgraph", bam=True, split=True, bed_graph=True, strand = "" if not self.stranded else ["+", "-"])
+        p.run('grape_bedGraphToBigWig', input=bedgraph.output, genome=self.genome, output='${input|ext}.bw')
         p.context(locals())
         return p

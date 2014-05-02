@@ -4,13 +4,13 @@ Flux tools
 
 from jip import tool, pipeline, Pipeline
 
-@tool('grape_flux')
-class Flux(object):
+@tool('grape_flux_capacitor')
+class FluxCapacitor(object):
     """\
     The Flux Capacitor tool
 
     Usage:
-        flux -i <input> -a <annotation> [-o <output_dir>] [-n <name>]
+        grape_flux_capacitor -i <input> -a <annotation> [-o <output_dir>] [-n <name>]
 
     Options:
         --help  Show this help message
@@ -33,13 +33,13 @@ class Flux(object):
         return 'bash', 'flux-capacitor ${options()}'
 
 
-@tool('grape_flux_split_features')
+@tool('grape_split_flux_features')
 class AwkSplitFluxFeatures(object):
     """\
     An AWK script to split the Flux Capacitor output by features
 
     Usage:
-        split_features -i <input> [-n <name>]
+        grape_split_flux_features -i <input> [-n <name>]
 
     Options:
         --help  Show this help message

@@ -58,7 +58,7 @@ def test_gem_setup_pipeline_with_output_dir():
 
 def test_gem_filter_pipeline():
     p = jip.Pipeline()
-    p.run('grape_gem_filter_p', input="gem.map", max_mismatches="4",
+    p.run('grape_gem_filter_pipeline', input="gem.map", max_mismatches="4",
           max_matches="10", name="test")
     jobs = jip.create_jobs(p, validate=False)
     ldir = os.getcwd()
@@ -82,7 +82,7 @@ def test_gem_filter_pipeline():
 
 def test_gem_pipeline():
     p = jip.Pipeline()
-    p.run('grape_gem_rnapipeline', fastq='reads_1.fastq.gz', genome='index.fa', annotation='gencode.gtf', max_matches='10', max_mismatches='4')
+    p.run('grape_pipeline', fastq='reads_1.fastq.gz', genome='index.fa', annotation='gencode.gtf', max_matches='10', max_mismatches='4')
     jobs = jip.create_jobs(p, validate=False)
     ldir = os.getcwd()
     j = os.path.join
@@ -110,7 +110,7 @@ def test_gem_pipeline():
 
 def test_gem_pipeline_with_output_dir():
     p = jip.Pipeline()
-    p.run('grape_gem_rnapipeline', fastq='reads_1.fastq.gz', genome='index.fa',
+    p.run('grape_pipeline', fastq='reads_1.fastq.gz', genome='index.fa',
           annotation='gencode.gtf', output_dir="mydir", max_matches='10', max_mismatches='4')
     jobs = jip.create_jobs(p, validate=False)
     ldir = os.getcwd()

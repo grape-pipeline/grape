@@ -10,7 +10,7 @@ class GemIndex(object):
     The GEM Indexer tool
 
     Usage:
-        gem_index -i <genome> [-o <genome_index>] [--no-hash]
+        grape_gem_index -i <genome> [-o <genome_index>] [--no-hash]
 
     Options:
         --help  Show this help message
@@ -34,7 +34,7 @@ class GemTranscriptomeIndex(object):
     The GEM Transcrptome Indexer tool
 
     Usage:
-        gem_t_index -i <genome_index> -a <annotation> [-m <max_read_length>] [-o <output_prefix>]
+        grape_gem_t_index -i <genome_index> -a <annotation> [-m <max_read_length>] [-o <output_prefix>]
 
     Options:
         --help  Show this help message
@@ -57,13 +57,13 @@ class GemTranscriptomeIndex(object):
         return 'bash', 'gemtools t-index ${options()}'
 
 
-@tool('grape_gem_rnatool')
+@tool('grape_gem_rna_pipeline')
 class Gem(object):
     """\
     The GEMtools RNAseq Mapping Pipeline
 
     Usage:
-        gem -f <fastq_file> -i <genome_index> -r <transcript_index> -q <quality> [-n <name>] [-o <output_dir>] [--single-end] [--no-bam] [--no-stats]
+        grape_gem_rnapipeline -f <fastq_file> -i <genome_index> -r <transcript_index> -q <quality> [-n <name>] [-o <output_dir>] [--single-end] [--no-bam] [--no-stats]
 
     Options:
         --help  Show this help message
@@ -99,7 +99,7 @@ class GemQuality(object):
     The GEMtools quality filter program
 
     Usage:
-        gem.quality [-i <input>] [-o <output>] [-n name]
+        grape_gem_quality [-i <input>] [-o <output>] [-n name]
 
     Options:
         --help  Show this help message
@@ -124,7 +124,7 @@ class GemFilter(object):
     The GEMtools general filter program
 
     Usage:
-        gem.filter [-i <input>] [-o <output>] [-n name] [--max-levenshtein-error <error>] [--max-matches <matches>]
+        grape_gem_filter [-i <input>] [-o <output>] [-n name] [--max-levenshtein-error <error>] [--max-matches <matches>]
 
     Options:
         --help  Show this help message
@@ -152,7 +152,7 @@ class GemStats(object):
     The GEMtools stats program
 
     Usage:
-        gem.stats -i <input> [-a] [-p] [-n name]
+        grape_gem_stats -i <input> [-a] [-p] [-n name]
 
     Options:
         --help  Show this help message
@@ -179,7 +179,7 @@ class GemSam(object):
     The GEMtools SAM conversion program
 
     Usage:
-        gem.sam [-f <input>] [-o <output>] -i <genome_index> -q <quality> [-l] [--read-group <read_group>] [--expect-single-end-reads] [--expect-paired-end-reads] [-n name]
+        grape_gem_sam [-f <input>] [-o <output>] -i <genome_index> -q <quality> [-l] [--read-group <read_group>] [--expect-single-end-reads] [--expect-paired-end-reads] [-n name]
 
     Options:
         --help  Show this help message
@@ -216,7 +216,7 @@ class SetupPipeline(object):
     The GEM indexes setup pipeline
 
     usage:
-        setup -i <genome> -a <annotation> [-o <output_prefix>]
+        grape_gem_setup -i <genome> -a <annotation> [-o <output_prefix>]
 
     Options:
         -i, --input <genome>              The input reference genome
@@ -230,7 +230,7 @@ class SetupPipeline(object):
         self.add_output('t_index', '')
 
     def setup(self):
-        self.name('gem.setup')
+        self.name('grape_gem_setup')
         out = self.output_dir
         if not out:
             index = "${input|ext}.gem"
@@ -248,7 +248,7 @@ class SetupPipeline(object):
         p.run('grape_gem_t_index', index=index, annotation=self.annotation, output_prefix=self.t_out)
         return p
 
-@pipeline('grape_gem_filter_p')
+@pipeline('grape_gem_filter_pipeline')
 class FilterPipeline(object):
     """\
     The GEM filter pipeline
@@ -271,7 +271,7 @@ class FilterPipeline(object):
 
     """
     def setup(self):
-        self.name('gem.filter.pipeline')
+        self.name('grape_gem_filter_pipeline')
 
     def pipeline(self):
         p = Pipeline()
@@ -282,13 +282,13 @@ class FilterPipeline(object):
         p.run('grape_pigz', output=self.output, name=sample)
         return p
 
-@pipeline('grape_gem_bam_p')
+@pipeline('grape_gem_bam_pipeline')
 class Gem2BamPipeline(object):
     """\
     The GEM to BAM conversion pipeline
 
     usage:
-         gem2bam.pipeline [-f <map_file>] -i <gem_index> -q quality -o <output> [-s] [-l] [--read-group <read_group>] [-n <name>]
+         grape_gem_bam_pipeline [-f <map_file>] -i <gem_index> -q quality -o <output> [-s] [-l] [--read-group <read_group>] [-n <name>]
 
     Inputs:
         -f, --input <map_file>        The input MAP file [default: stdin]
@@ -306,7 +306,7 @@ class Gem2BamPipeline(object):
         self.add_output('bai', '${output}.bai')
 
     def setup(self):
-        self.name('gem.to.bam.pipeline')
+        self.name('grape_gem_bam_pipeline')
 
     def pipeline(self):
         p = Pipeline()
