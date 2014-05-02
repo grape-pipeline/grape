@@ -1,8 +1,22 @@
 from distribute_setup import use_setuptools
 use_setuptools()
+from sys import exit
 from setuptools import setup
+from setuptools.command.test import test as TestCommand
 
 import grape
+
+class PyTest(TestCommand):
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = ['tests']
+        self.test_suite = True
+
+    def run_tests(self):
+        #import here, cause outside the eggs aren't loaded
+        import pytest
+        errno = pytest.main(self.test_args)
+        exit(errno)
 
 setup(
     name='grape-pipeline',
@@ -17,6 +31,8 @@ analysys.
     platforms=['lx64'],
     packages=['grape', 'grape.cli'],
     package_data={'grape': ['buildout.conf']},
+    tests_require=['pytest'],
+    cmdclass = {'test': PyTest},
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
