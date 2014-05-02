@@ -1,9 +1,9 @@
-"""Grape command line utilities
-"""
-from clint.textui import colored, puts, columns
+"""Grape command line utilities"""
+
+import sys
 import jip
-from grape.cli import *
-from grape.grape import Grape
+import os
+from clint.textui import puts, colored, columns
 
 
 class CommandError(Exception):
@@ -11,6 +11,25 @@ class CommandError(Exception):
     is catched in the main call and no stack trace is printed, just
     the error message"""
     pass
+
+
+def error(msg, newline=True):
+    """Print an error message"""
+    puts(colored.red(msg), stream=sys.stderr.write, newline=newline)
+    sys.stderr.flush()
+
+
+def info(msg, newline=True):
+    """Print an info message"""
+    puts(msg, stream=sys.stdout.write, newline=newline)
+    sys.stdout.flush()
+
+
+def warn(msg, newline=True):
+    """Print an warning message"""
+    puts(colored.yellow(msg), stream=sys.stdout.write, newline=newline)
+    sys.stdout.flush()
+
 
 def jip_prepare(args, submit=False, project=None, datasets=[], validate=True):
     # get the project and the selected datasets
@@ -254,3 +273,82 @@ def add_default_job_configuration(parser, add_cluster_parameter=True, add_pipeli
     else:
         group.add_argument("--verbose", default=False, action="store_true",
                             dest="verbose", help="Verbose job output")
+
+
+def show_config(project, show_hidden=False, show_empty=False):
+    """\
+    Show project configuration
+    """
+    #from clint.textui import indent
+    # print configuration
+    values = project.config.get_values(exclude=['name'], show_hidden=show_hidden, show_empty=show_empty)
+
+    if values:
+        max_keys = max([len(x[0]) for x in values]) + 1
+        max_values = max([len(x[1]) for x in values]) + 1
+
+        header = str(project)
+        #line = '-' * max(len(header), max_keys+max_values)
+
+        #cli.info(line)
+        cli.info(header)
+        cli.info(cli.columns(['='*(max_keys-1), max_keys], ['='*(max_values-1), max_values]))
+        for k, val in values:
+            k = cli.colored.green(k)
+            cli.info(cli.columns([k, max_keys], [val, max_values]))
+        cli.info(cli.columns(['='*(max_keys-1), max_keys], ['='*(max_values-1), max_values]))
+        #cli.info(line)
+
+
+def list_datasets(data, tags=None, sort=None, human=False, absolute=True):
+    """\
+    List datasets
+    """
+    import json
+
+    if tags:
+        header = tags
+    else:
+        dataset = json.loads(data[0])
+        header = dataset.keys()
+    if sort:
+        header = sort + [k for k in header if k not in sort]
+
+    max_keys = [len(x)+1 for x in header]
+    max_values = []
+    len_values = []
+    out = []
+    for val in data:
+        val = json.loads(val)
+        if 'path' in header and not absolute:
+            val['path'] = os.path.join(os.path.basename(os.path.dirname(val['path'])),os.path.basename(val['path']))
+        values = [val.get(k, '-') for k in header]
+        if human:
+            def isnum(item):
+                """\
+                Check if item is a number
+                """
+                try:
+                    float(item)
+                    return True
+                except Exception:
+                    return False
+
+            values = [grapeutils.human_fmt(float(v), header[1] == 'size') if isnum(v) else v for i, v in enumerate(values)]
+        out.append(values)
+        len_values.append([len(x)+1 for x in values])
+    max_values = [max(t) for t in zip(*len_values)]
+
+
+    #line = '-' * (sum([i if i>j else j for i, j in zip(max_keys,max_values)])+len(max_keys)-2)
+
+    #cli.info(line)
+    info(columns(*[[(max(max_keys[i], max_values[i])-1)*"=", max(max_keys[i], max_values[i])] for i, o in enumerate(header)]))
+    info(colored.green(columns(*[[o, max(max_keys[i], max_values[i])] for i, o in enumerate(header)])))
+    info(columns(*[[(max(max_keys[i], max_values[i])-1)*"=", max(max_keys[i], max_values[i])] for i, o in enumerate(header)]))
+    #cli.info(line)
+    for line in out:
+        info(columns(*[[o, max(max_keys[i], max_values[i])] for i, o in
+            enumerate(line)]))
+    info(columns(*[[(max(max_keys[i], max_values[i])-1)*"=", max(max_keys[i], max_values[i])] for i, o in enumerate(header)]))
+    #cli.info(line)

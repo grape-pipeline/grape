@@ -17,11 +17,8 @@ import signal
 import argparse
 import grape
 
-import grape.utils as grapeutils
-import grape.cli as cli
-#import grape.grapeindex as index
 from grape.grape import Project
-from grape.cli import utils
+from grape.cli.utils import *
 
 
 class GrapeCommand(object):
@@ -48,12 +45,12 @@ class InitCommand(GrapeCommand):
     def run(self, args):
         path = args.path
         if path is None:
-            cli.error("No project path specified")
+            error("No project path specified")
             return False
 
         project = Project(path)
         if project.exists():
-            cli.warn("Project already exists")
+            warn("Project already exists")
             return True
 
         folders = ''
@@ -62,18 +59,18 @@ class InitCommand(GrapeCommand):
         if args.dataset_folders:
             folders = 'dataset'
 
-        cli.info("Initializing project ... ", newline=False)
+        info("Initializing project ... ", newline=False)
         project.initialize(init_structure=not args.empty, folder_structure=folders)
-        cli.info(cli.colored.green("Done"))
+        info(colored.green("Done"))
 
         if args.quality is not None or args.name is not None:
-            cli.info("Writing project configuration ... ", newline=False)
+            info("Writing project configuration ... ", newline=False)
             if args.quality:
                 project.config.set("quality", args.quality)
             if args.name:
                 project.config.set("name", args.name)
             project.config._write_config()
-            cli.info(cli.colored.green("Done"))
+            info(colored.green("Done"))
 
         return True
 
@@ -106,7 +103,7 @@ class RunCommand(GrapeCommand):
         profiler = False
         force = False
 
-        jobs = utils.jip_prepare(args)
+        jobs = jip_prepare(args)
 
         if not jobs:
             return False
@@ -121,19 +118,19 @@ class RunCommand(GrapeCommand):
         for exe in jip.jobs.create_executions(jobs):
             if exe.completed and not force:
                 if not silent:
-                    cli.warn("Skipping " + exe.name)
+                    warn("Skipping " + exe.name)
             else:
                 if not silent:
-                    cli.warn("Running {name:30}".format(name=exe.name))
+                    warn("Running {name:30}".format(name=exe.name))
                 start = datetime.now()
                 success = jip.jobs.run_job(exe.job, profiler=profiler)
                 end = timedelta(seconds=(datetime.now() - start).seconds)
                 if success:
                     if not silent:
-                        cli.info(exe.job.state + " [%s]" % (end))
+                        info(exe.job.state + " [%s]" % (end))
                 else:
                     if not silent:
-                        cli.error(exe.job.state)
+                        error(exe.job.state)
                     sys.exit(1)
         return True
 
@@ -145,7 +142,7 @@ class RunCommand(GrapeCommand):
                             help="Force computation of all jobs")
         parser.add_argument("--compute-stats", default=False, action="store_true",
                             help="Compute md5 sums and size for jobs output files")
-        utils.add_default_job_configuration(parser,
+        add_default_job_configuration(parser,
                                             add_cluster_parameter=False)
 
 
@@ -161,7 +158,7 @@ class SubmitCommand(GrapeCommand):
 
         force = args.force
 
-        jobs = utils.jip_prepare(args, submit=True)
+        jobs = jip_prepare(args, submit=True)
 
         if not jobs:
             return False
@@ -188,15 +185,15 @@ class SubmitCommand(GrapeCommand):
                                                       check_queued=not force):
 
                     if exe.job.state == jip.db.STATE_DONE and not force:
-                        cli.warn("Skipping %s" % exe.name)
+                        warn("Skipping %s" % exe.name)
                     else:
                         if jip.jobs.submit_job(exe.job, force=force):
-                            cli.info("Submitted %s with remote id %s" % (
+                            info("Submitted %s with remote id %s" % (
                                 exe.job.id, exe.job.job_id
                             ))
                 return True
             except Exception as err:
-                cli.error("Error while submitting job: %s" % str(err))
+                error("Error while submitting job: %s" % str(err))
                 ##################################################
                 # delete all submitted jobs
                 ##################################################
@@ -213,7 +210,7 @@ class SubmitCommand(GrapeCommand):
         parser.add_argument("--compute-stats", default=False, action="store_true",
                             help="Compute md5 sums and size for jobs output files")
         parser.add_argument("datasets", default=["all"], nargs="*")
-        utils.add_default_job_configuration(parser,
+        add_default_job_configuration(parser,
                                             add_cluster_parameter=True)
 
 
@@ -233,90 +230,13 @@ class JobsCommand(GrapeCommand):
             import runpy
             argv = ["jip-jobs"] + ['--expand'] if args.expand else []
             sys.argv = argv # reset options
-            runpy.run_module("jip.cli.jip_jobs", run_name="__main__")
+            runpy.run_module("jip.jip_jobs", run_name="__main__")
         except ImportError as err:
-            cli.error("Import error. Here is the exception: %s" % str(err))
+            error("Import error. Here is the exception: %s" % str(err))
 
     def add(self, parser):
         parser.add_argument("--expand", default=False, action="store_true",
                             dest="expand", help="Do not collapse pipeline jobs")
-
-def show_config(project, show_hidden=False, show_empty=False):
-    """\
-    Show project configuration
-    """
-    #from clint.textui import indent
-    # print configuration
-    values = project.config.get_values(exclude=['name'], show_hidden=show_hidden, show_empty=show_empty)
-
-    if values:
-        max_keys = max([len(x[0]) for x in values]) + 1
-        max_values = max([len(x[1]) for x in values]) + 1
-
-        header = str(project)
-        #line = '-' * max(len(header), max_keys+max_values)
-
-        #cli.info(line)
-        cli.info(header)
-        cli.info(cli.columns(['='*(max_keys-1), max_keys], ['='*(max_values-1), max_values]))
-        for k, val in values:
-            k = cli.colored.green(k)
-            cli.info(cli.columns([k, max_keys], [val, max_values]))
-        cli.info(cli.columns(['='*(max_keys-1), max_keys], ['='*(max_values-1), max_values]))
-        #cli.info(line)
-
-def list_datasets(data, tags=None, sort=None, human=False, absolute=True):
-    """\
-    List datasets
-    """
-    import json
-
-    if tags:
-        header = tags
-    else:
-        dataset = json.loads(data[0])
-        header = dataset.keys()
-    if sort:
-        header = sort + [k for k in header if k not in sort]
-
-    max_keys = [len(x)+1 for x in header]
-    max_values = []
-    len_values = []
-    out = []
-    for val in data:
-        val = json.loads(val)
-        if 'path' in header and not absolute:
-            val['path'] = os.path.join(os.path.basename(os.path.dirname(val['path'])),os.path.basename(val['path']))
-        values = [val.get(k, '-') for k in header]
-        if human:
-            def isnum(item):
-                """\
-                Check if item is a number
-                """
-                try:
-                    float(item)
-                    return True
-                except Exception:
-                    return False
-
-            values = [grapeutils.human_fmt(float(v), header[1] == 'size') if isnum(v) else v for i, v in enumerate(values)]
-        out.append(values)
-        len_values.append([len(x)+1 for x in values])
-    max_values = [max(t) for t in zip(*len_values)]
-
-
-    #line = '-' * (sum([i if i>j else j for i, j in zip(max_keys,max_values)])+len(max_keys)-2)
-
-    #cli.info(line)
-    cli.info(cli.columns(*[[(max(max_keys[i], max_values[i])-1)*"=", max(max_keys[i], max_values[i])] for i, o in enumerate(header)]))
-    cli.info(cli.colored.green(cli.columns(*[[o, max(max_keys[i], max_values[i])] for i, o in enumerate(header)])))
-    cli.info(cli.columns(*[[(max(max_keys[i], max_values[i])-1)*"=", max(max_keys[i], max_values[i])] for i, o in enumerate(header)]))
-    #cli.info(line)
-    for line in out:
-        cli.info(cli.columns(*[[o, max(max_keys[i], max_values[i])] for i, o in
-            enumerate(line)]))
-    cli.info(cli.columns(*[[(max(max_keys[i], max_values[i])-1)*"=", max(max_keys[i], max_values[i])] for i, o in enumerate(header)]))
-    #cli.info(line)
 
 class ConfigCommand(GrapeCommand):
     """\
@@ -328,7 +248,7 @@ class ConfigCommand(GrapeCommand):
     def run(self, args):
         project = Project.find()
         if not project or not project.exists():
-            cli.error("No grape project found")
+            error("No grape project found")
             return False
 
         if args.show:
@@ -373,7 +293,7 @@ class ImportCommand(GrapeCommand):
     def run(self, args):
         project = Project.find()
         if not project or not project.exists():
-            cli.error("No grape project found")
+            error("No grape project found")
             return False
 
         compute_stats = args.compute_stats
@@ -411,7 +331,7 @@ class ExportCommand(GrapeCommand):
         project.load()
 
         if not project or not project.exists():
-            cli.error("No grape project found")
+            error("No grape project found")
             return False
         if args.output:
             signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -468,15 +388,15 @@ class ListDataCommand(GrapeCommand):
     description = __doc__
 
     def run(self, args):
-        (project, datasets) = utils.get_project_and_datasets(args)
+        (project, datasets) = get_project_and_datasets(args)
         if datasets is None:
             datasets = []
-        cli.puts(str(project))
-        cli.puts("%d datasets registered in project" % len(datasets))
+        puts(str(project))
+        puts("%d datasets registered in project" % len(datasets))
         index = project.index.select(id=[dataset.id for dataset in datasets])
         data = index.export(type='json', absolute=True, map=None)
         if data:
-            list_dataset(data, tags=index._alltags, sort=[project.index.format.get('id','id')], human=args.human, absolute=args.absolute)
+            list_datasets(data, tags=index._alltags, sort=[project.index.format.get('id','id')], human=args.human, absolute=args.absolute)
         return True
 
     def add(self, parser):
@@ -499,18 +419,18 @@ class ScanCommand(GrapeCommand):
         except Exception:
             pass
         if not project or not project.exists():
-            cli.error("No grape project found")
+            error("No grape project found")
             return False
         path = args.path
         if not path:
             path = project.folder('fastq')
-        cli.info("Scanning %s folder ... " % path, newline=False)
+        info("Scanning %s folder ... " % path, newline=False)
         fastqs = sorted(Project.search_fastq_files(path))
-        cli.info("%d fastq files found" % len(fastqs))
+        info("%d fastq files found" % len(fastqs))
         if len(fastqs) == 0:
             return True
 
-        cli.info("Checking known data ... ", newline=False)
+        info("Checking known data ... ", newline=False)
         fqts = set(fastqs)
         for name, dataset in project.index.datasets.items():
             if dataset.primary in fqts:
@@ -518,7 +438,7 @@ class ScanCommand(GrapeCommand):
             if dataset.secondary in fqts:
                 fqts.remove(dataset.secondary)
         fastqs = sorted(list(fqts))
-        cli.info("%d new files found" % len(fastqs))
+        info("%d new files found" % len(fastqs))
 
 
         file_info = {}
@@ -590,7 +510,7 @@ class ScanCommand(GrapeCommand):
         parser.add_argument('--id', dest='id', metavar='<id>', help="Experiment id assigned to new datasets. NOTE that a counter value is appended if more than one new dataset is found")
         parser.add_argument("--update", default=False, dest='update', action='store_true', help="Update existing index entries.")
         parser.add_argument('--absolute-path', dest='absolute', action='store_true', default=False, help='Use absolute path for files. Default: use path relative to the project folder')
-        utils.add_default_job_configuration(parser, add_cluster_parameter=False, add_pipeline_parameter=False)
+        add_default_job_configuration(parser, add_cluster_parameter=False, add_pipeline_parameter=False)
 
 
 def _add_command(command, command_parser):
@@ -644,12 +564,12 @@ def main():
             sys.exit(1)
     except KeyboardInterrupt:
         pass
-    except cli.utils.CommandError, cerr:
-        cli.error(str(cerr))
+    except CommandError, cerr:
+        error(str(cerr))
         sys.exit(1)
     except ValueError, err:
         if str(err).startswith("GRAPE_HOME not defined."):
-            cli.error("GRAPE_HOME not found. Please make sure that the"
+            error("GRAPE_HOME not found. Please make sure that the"
                       " GRAPE_HOME evironment variable is set and points"
                       " to the grape buildout directory!")
             sys.exit(1)
@@ -685,11 +605,11 @@ def buildout():
         buildout_conf = args.buildout_config
 
     if not buildout_conf:
-        cli.error('Please specify a configuration file')
+        error('Please specify a configuration file')
         sys.exit(1)
 
     if not os.path.exists(buildout_conf):
-        cli.error('The configuration file %r does not exists', buildout_conf)
+        error('The configuration file %r does not exists', buildout_conf)
         sys.exit(1)
 
     grape_home = os.getenv("GRAPE_HOME", None)
@@ -719,5 +639,5 @@ def buildout():
         #    shutil.copy(f, conf_dir)
 
     except GrapeError as err:
-        cli.error('Buildout error - %s', str(err))
+        error('Buildout error - %s', str(err))
         sys.exit(1)
