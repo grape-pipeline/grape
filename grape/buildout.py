@@ -86,31 +86,3 @@ def find_path(name, version=None, grape_home=None):
                                                            version,
                                                            grape_home))
     return version_dir
-
-
-class module(object):
-    """The @module decorator allows to decorate tool
-    classes to add module dependencies
-    """
-    def __init__(self, modules):
-        self.modules = modules
-
-    def _load_modules(self):
-        mods = []
-        # load modules
-        for m in self.modules:
-            name = m[0]
-            version = None
-            if len(m) > 1:
-                version = m[1]
-            mods.append(find_path(name, version))
-            return mods
-
-    def __call__(self, *args):
-        cl = args[0]
-        cl.modules = self.modules
-        cl._load_modules = self._load_modules
-
-        return cl
-
-

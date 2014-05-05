@@ -11,11 +11,11 @@ except ImportError:
 
 __version__ = "2.0-beta.2-SNAPSHOT"
 
+
 def setup_logging(
-    default_path='logging.yaml',
-    default_level=logging.INFO,
-    env_key='LOG_CFG'
-):
+        default_path='logging.yaml',
+        default_level=logging.INFO,
+        env_key='LOG_CFG'):
     """Setup logging configuration
 
     """

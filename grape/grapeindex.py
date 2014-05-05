@@ -30,7 +30,7 @@ class GrapeIndex(Index):
 
 
 
-class _OnSuccessListener(object):
+class IndexUpdater(object):
     def __init__(self, project, config, compute_stats=False):
         self.project = project
         self.config = config
@@ -65,16 +65,3 @@ class _OnSuccessListener(object):
             index.save()
         finally:
             index.release()
-
-def prepare_tool(tool, project, config, compute_stats=False):
-    """Add listeners to the tool to ensure that it updates the index
-    during execution.
-
-    :param tool: the tool instance
-    :type tool: jip.tools.Tool
-    :param project: the project
-    :type project: grape.Project
-    :param name: the run name used to identify the job store
-    :type name: string
-    """
-    tool.on_success.append(_OnSuccessListener(project, config, compute_stats))
