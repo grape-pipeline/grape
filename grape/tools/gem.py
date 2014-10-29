@@ -1,7 +1,7 @@
 """\
 Gem tools and pipelines
 """
-
+import os
 from jip import tool, pipeline, Pipeline
 
 @tool('grape_gem_index')
@@ -314,4 +314,59 @@ class Gem2BamPipeline(object):
         p.run('grape_samtools_view', input_sam=True, output_bam=True, name=sample) | \
         p.run('grape_samtools_sort', output=self.output, name=sample)
         gem_bai = p.run('grape_samtools_index', input=gem_bam.output, name=sample)
+        return p
+
+
+@pipeline('grape_gem_mapping_pipeline')
+class GemMappingPipeline(object):
+    """\
+    The GEM mapping pipeline
+
+    Usage:
+        grape_gem_mapping_pipeline -f <fastq_file> -g <genome_file> -a
+        <annotation_file> -m <max_mismatches> -n <max_matches> [-o
+        <output_dir>] [-s] [-k] [-q <quality_offset>]
+
+    Inputs:
+        -f, --fastq <fastq_file>                The input sequences in FASTQ
+                                                format
+        -g, --genome <genome_file>              The reference genome in FASTA
+                                                format
+        -a, --annotation <annotation_file>      The reference annotation in
+                                                GTF format
+
+    Options:
+        -o, --output-dir <output_dir>           The folder where to store the
+                                                output
+                                                [default: ${fastq|abs|parent}]
+        -q, --quality <quality_offset>          The fastq quality offset
+                                                [default: 33]
+        -k, --keep-temp                         Keep intermediate files
+        -s, --single-end                        Run the pipeline for
+                                                single-end data
+        -m, --max-mismatches <max_mismatches>   The maximum number of
+                                                mismatches allowed
+        -n, --max-matches <max_matches>         The maximum number of
+                                                multimaps allowed
+    """
+
+    def init(self):
+        self.add_option('sample', '${fastq|name|ext|ext|re("[_-][12]","")}')
+        self.add_output('bam',
+                        os.path.join(self.output_dir.get(), '${sample}.bam'))
+
+    def setup(self):
+        pass
+
+    def pipeline(self):
+        p = Pipeline()
+        temp = (not self.keep_temp)
+        gem_setup = p.run('grape_gem_setup', input=self.genome, annotation=self.annotation)
+        gem = p.job(temp=temp).run('grape_gem_rna_pipeline', index=gem_setup.index, transcript_index=gem_setup.t_index, single_end=self.single_end, fastq=self.fastq, quality=self.quality, no_bam=True, no_stats=True,
+            output_dir=self.output_dir.get())
+        sample = self.sample
+        gem_filter = p.job(temp=temp).run('grape_gem_filter_pipeline', input=gem.map, max_mismatches=self.max_mismatches, max_matches=self.max_matches, name=sample)
+        gem_bam = p.run('grape_gem_bam_pipeline', input=gem_filter.output, index=gem_setup.index, quality=self.quality, single_end=self.single_end, sequence_lengths=True, name=sample,
+            output=self.bam)
+        p.context(locals())
         return p

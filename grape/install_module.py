@@ -175,6 +175,8 @@ class Recipe(object):
                                 os.symlink(os.path.basename(real_path), dest)
                             else:
                                 shutil.move(os.path.join(base, filename), dest)
+                    # store package installation info
+                    finalize_install()
                     finally:
                         shutil.rmtree(extract_dir)
 
@@ -182,3 +184,18 @@ class Recipe(object):
                 if is_temp:
                     os.unlink(path)
         return parts
+
+
+def finalize_install(self, module):
+    """Store installation information on a json file"""
+    info = {
+        'name': module.get('name') {
+            'version': version,
+            'installationDate': date
+        }
+    }
+    with open(os.path.join(self.get_destination(), 'installed.json')) as
+    installed:
+        installd = json.load(installed)
+        json.dump(installed, installd+info)
+

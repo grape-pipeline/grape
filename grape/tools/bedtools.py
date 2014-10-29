@@ -94,18 +94,20 @@ class BigwigPipeline(object):
     def pipeline(self):
         p = Pipeline()
         sample=self.options['name']
-        inp = self.input
         bam = self.input
         strands = {'-':'minusRaw','+':'plusRaw'}
+        second_mate = False
+        reverse_mate = False
+
         if self.options['reverse_first_mate']:
-            bam = p.run('grape_samtools_view', input=bam, name=sample) | \
-                  p.run('grape_reverse_mate', input=self.input, name=sample) | \
-                  p.run('grape_samtools_view', input_sam=True, output_bam=True, name=sample)
+            reverse_mate = True
         if self.options['reverse_second_mate']:
+            second_mate = True
+            reverse_mate = True
+        if reverse_mate:
             bam = p.run('grape_samtools_view', input=bam, name=sample) | \
-                  p.run('grape_reverse_mate', input=self.input, name=sample, second_mate=True) | \
+                  p.run('grape_reverse_mate', input=self.input, name=sample, second_mate=second_mate) | \
                   p.run('grape_samtools_view', input_sam=True, output_bam=True, name=sample)
-        print strands['-']
         bedgraph = p.job(temp=True).run('grape_bedtools_genomecov', input=bam, output="${inp|ext}_${strands.get(strand.raw())}.bedgraph", bam=True, split=True, bed_graph=True, strand = "" if not self.stranded else ["+", "-"])
         p.run('grape_bedGraphToBigWig', input=bedgraph.output, genome=self.genome, output='${input|ext}.bw')
         p.context(locals())

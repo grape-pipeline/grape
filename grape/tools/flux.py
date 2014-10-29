@@ -10,12 +10,13 @@ class FluxCapacitor(object):
     The Flux Capacitor tool
 
     Usage:
-        grape_flux_capacitor -i <input> -a <annotation> [-o <output_dir>] [-n <name>]
+        grape_flux_capacitor -i <input> -a <annotation> [-o <output_dir>]
+                             [-n <name>]
 
     Options:
-        --help  Show this help message
-        -o, --output-dir <output_dir>  The output folder [default: ${input|parent}]
-        -n, --name <name>  The output prefix name
+        -o, --output-dir <output_dir>   The output folder
+                                        [default: ${input|parent}]
+        -n, --name <name>               The output prefix name
 
     Inputs:
         -i, --input <input>  The input file with mappings
