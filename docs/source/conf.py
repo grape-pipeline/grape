@@ -18,6 +18,8 @@ import sphinx_bootstrap_theme
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
+
+# on_rtd is whether we are on readthedocs.org
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # -- General configuration -----------------------------------------------------
@@ -103,25 +105,26 @@ pygments_style = "sphinx"
 if on_rtd:
     html_theme = 'default'
 else:
-    html_theme = 'bootstrap'
-    html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
+    import sphinx_rtd_theme
+    html_theme = 'sphinx_rtd_theme'
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-    html_theme_options = {
-        # HTML navbar class (Default: "navbar") to attach to <div>.
-        # For black navbar, do "navbar navbar-inverse"
-        'navbar_class': "navbar navbar-inverse",
+# html_theme_options = {
+#     # HTML navbar class (Default: "navbar") to attach to <div>.
+#     # For black navbar, do "navbar navbar-inverse"
+#     'navbar_class': "navbar navbar-inverse",
 
-        # Fix navigation bar to top of page?
-        # Values: "true" (default) or "false"
-        'navbar_fixed_top': "true",
+#     # Fix navigation bar to top of page?
+#     # Values: "true" (default) or "false"
+#     'navbar_fixed_top': "true",
 
-        # Location of link to source.
-        # Options are "nav" (default), "footer".
-        'source_link_position': "nav",
-    }
+#     # Location of link to source.
+#     # Options are "nav" (default), "footer".
+#     'source_link_position': "nav",
+# }
 #html_theme_options = {
 #            "collapsiblesidebar": True
 #        }
