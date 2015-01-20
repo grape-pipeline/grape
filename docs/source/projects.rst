@@ -4,15 +4,14 @@
 Projects
 ========
 
-The main starting point to execute the pipeline is to create a grape project. A project has a dedicated folder that contains all the data for the project including:
+GRAPE pipelines can be organized in projects. A project is a dedicated folder that contains all the project data including:
 
-- Data projects raw data
-- All the results
-- The reference genome/index
-- The reference annotation
+- the reference genome(s) and annotation(s)
+- raw data
+- analyses results
 
-Create a project
-================
+How to create a project
+=======================
 
 The grape command allows to create projects from the command line with a single init command:
 
@@ -20,62 +19,44 @@ The grape command allows to create projects from the command line with a single 
 
     $ grape init
 
-This will create a grape project in the current folder. In addition, the path can be specified:
+that creates a grape project in the current folder. In addition, a path to another folder can be specified:
 
 .. code-block:: bash
 
-    $ grape init <path_to_project>
-
-Project folder
---------------
-
-The grape project folder consist of the following structure::
-
-    .grape          -- the grape folder - this is where all the grape data goes
-    annotations     -- genome annotations in gtf format and the transcriptome indices for the annotation
-    genomes         -- index folder with genome indices
-    data            -- input and result data folder
-
-The data folder can be organised in various ways. The preferred layout cna be specified at project initalization using the `grape init` commandline options:
-
-  --empty            Do not create default folder structure
-  --by-type          Organize project data folder by type
-  --by-dataset       Organize project data folder by dataset
-
-Please run `grape init --help` to see all available commandline options.
-
+    $ grape init /path/to/project
 
 Project configuration
 =====================
 
-When a new project is initialized a default configuration file in Json format is created in the .grape folder. The default configuration can be see using the grape config command and looks like the following:
+When a new project is initialized a default configuration file in Yaml format is created in the .grape folder. The default configuration can be seen using the grape config command and looks like the following:
 
-.. code-block:: json
+.. code-block:: yaml
 
-    {
-        "quality": "33",
-        "genome": "",
-        "name": "Default project",
-        "annotation": ""
-    }
+    project:
+     date: 2015-01-13
+     name: Default Project
+     user: epalumbo
+     genomes:
+       human:
+         male: /path/to/human/male
+         female: /path/to/human/female
+       mouse:
+         male: /path/to/mouse/male
+         female: /path/to/mouse/female
 
-The grape config command can also be used to set or modify configuration values. For example, to add the path for a genome file we can use the following command:
+The following attributes are supported under the ``project`` configuration section:
 
-.. code-block:: bash
-
-    $ grape config --set genome <path_to_genome>
-
-In a similar way, we could also set a project property like the project read quality offset:
-
-.. code-block:: bash
-
-    $ grape config --set quality 64
-
-In case you need, it is possible to remove entries from the configuration file using the following command:
-
-.. code-block:: bash
-
-    $ grape config --remove <key_name>
+===============  ================
+ Name              Description
+===============  ================
+``name``         the project name
+``desc``         a description of the project
+``genomes``      the set of genomes used in the project
+``annotations``  the set of annotations used in the projects
+``date``         the creation date
+``user``         the user that created the project
+``group``        the group the user that created the project belongs to
+===============  ================
 
 Import datasets
 ===============

@@ -16,8 +16,10 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   getting_started 
+   getting_started
+   configuration
    installation
+   Commands <cli>
    projects
    execution
    file_formats

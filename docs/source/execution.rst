@@ -4,52 +4,51 @@
 Pipeline Execution
 ==================
 
-The pipeline excution relies on the `JIP pipeline system`_. It allows local execution and also provides HPC clusters integration.
+The pipeline excution is based on `Nextflow`_.
 
-The main GRAPE workflow can be run with the `grape run` command and is composed by two blocks:
+The main GRAPE workflow can be run with the ``grape run`` command and is composed by several processes generating the following files:
 
-    - pre-processing step to generate all the required input files for running the pipeline (one for all the samples in the project)
-    - processing of the RNA-seq data (one for each samples)
-
-The first block can also be run independently with the `grape run setup` command. The setup block check all the prerequisites for any configured pipeline and run all the necessary steps to reach a valid initial state from which the pipeline can be run. At present it consits of the following steps:
-
-    - GEM genome index
-    - GEM transcriptome index
-
-In the second block the following steps are performed:
-
-    - GEMtools RNA mapping pipeline run
-    - GEMtools mappings filtering
-    - isorform expression estimation with the Flux Capacitor
-
-The pipeline can be run for a subset of the project dataset. Assuming that `foo` is a valid id for a sample you could run::
-
-    $ grape run foo
-
-to run the pipeline on the 'foo' sample data.
-
-To run the pipeline on a HPC cluster you need to configure the JIP. Please refer to the `JIP documentation`_ for more information about this topic. With a valid JIP cluster configuration the `grape submit` command can be used to run jobs on the cluster.
-
-.. note::
-
-    A specific JIP database file for each GRAPE project is used and can be found at **<project>/.grape/grape_jip.db**.
+    - Fasta index
+    - GEMtools_ genome index
+    - GEMtools_ transcriptome index
+    - GEMtools_ mappings (bam files)
+    - Raw Signal (bigwig files)
+    - Contigs (bed files)
+    - FluxCapacitor_ isoform expression quantifications (gtf files)
+    - Gene quantifications (based on FluxCapacitor_ quantifications) (gff files)
 
 
-Default Pipeline
-================
+Execution on different conditions
+=================================
 
-At the moment a Default Pipeline is configured, which includes the following modules:
+The simple execution of the pipeline with no defined project is as follows:
 
-- CRGtools, a set of in-house scripts and binaries from the *Computational Biology of RNA Processing* group at CRG Barcelona
-- SAMtools_, utilities to manipulate sam files
-- BEDtools_, utilities to manipulate bed files 
-- GEMTools_, utilities and pipelines for RNA-seq mapping
-- FluxCapacitor_, a program for isoform quantification estimation
+.. code-block:: bash
+
+    grape2 $ grape run --genome /path/to/genome --annotation /path/to/annotation --index /path/to/index
+
+If you set up a project, configure the reference genome and annotation and imported some fastq files you can use the following commands:
+
+.. code-block:: bash
+
+    # run the whole project
+    grape2 $ grape run
+
+    # run only the male samples
+    grape2 $ grape run sex=male
+
+In case you configured multiple genome and annotation files:
+
+.. code-block:: bash
+
+    # run human samples
+    grape2 $ grape run organism=human --refs human
 
 
+.. Useful links
 .. _GEMTools: http://github.com/gemtools/gemtools
 .. _FluxCapacitor: http://sammeth.net/confluence/display/FLUX/Home
 .. _SAMtools: http://samtools.sourceforge.net/
 .. _BEDtools: https://github.com/arq5x/bedtools2
-.. _JIP pipeline system: http://github.com/thasso/pyjip
-.. _JIP documentation: http://pyjip.rtfd.org
+.. _Nextflow: http://www.nextflow.io
+.. _Nextflow documentation: http://www.nextflow.io/docs/latest/
