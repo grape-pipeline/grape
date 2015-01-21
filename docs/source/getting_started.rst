@@ -33,8 +33,6 @@ Execute the following command to run the test pipeline on your local machine::
 
     grape2 $ grape run --genome /path/to/genome --annotation /path/to/annotation --index test-index.tsv
 
-To submit the pipeline to a HPC cluster environment you need to work a bit with you GRAPE :ref:`configuration`.
-
 For more information about running GRAPE please see :ref:`execution`.
 
 .. Links

@@ -32,47 +32,41 @@ Example::
 Project configuration files
 ===========================
 
-Grape project configuration files are text files in `Json <http://www.json.org/>`_ format. The config file represent a dictionary for the project configuration. Any key/value pair can be specified, but at the moment only the following items are used n the pieline:
+Grape project configuration files are text files in `YAML <http://http://www.yaml.org//>`_ format. The config file represent a dictionary for the project configuration. Any key/value pair can be specified but at the moment only the following items are used n the pieline:
 
-- **name**, the project name
-- **quality**, a global quality offset for the reads
-- **genome**, the genome to be used in the pipeline (please see details below)
-- **annotation**, the annotation to be used in the pipeline (please see details below)
+- **name** the project name
+- **quality** a global quality offset for the reads
+- **genome** the genome to be used in the pipeline (please see details below)
+- **annotation** the annotation to be used in the pipeline (please see details below)
 
 Following is a simple example of a configuration file:
 
-.. code-block:: json
+.. code-block:: yaml
 
-    {
-        "name": "Test",
-        "quality": "33",
-        "annotation": "annotations/annotation.gtf",
-        "genome": "genomes/genome_1Mbp.fa"
-    }
+    name: Test
+    annotation: annotations/annotation.gtf
+    genome: genomes/genome_1Mbp.fa
 
 Genome and annotation
 ---------------------
 
-The genome and annotation items can be specified in different ways, depending on project/user needs. At the moment two modes are supported:
+The genome and annotation items can be specified in different ways depending on project/user needs. At the moment two modes are supported:
 
-- the one above is the simplest, in which only one genome and one annotation are assumed to be used for the whole project;
-- the second supported way is specifying different genome and annotation files depending on the sex of the samples. In that case, the example above would look like the following:
+- the one above is the simplest in which only one genome and one annotation are assumed to be used for the whole project;
+- the second supported way is specifying different genome and annotation files depending on the sex of the samples. In that case the example above would look like the following:
 
   .. code-block:: json
 
-    {
-        "name": "Test",
-        "quality": "33",
-        "annotations": {
-            "male": {
-                "path": "annotations/annotation.gtf"
-            }
-        },
-        "genomes": {
-            "male": {
-                "path": "genomes/genome_1Mbp.fa"
-            }
-        },
-    }
+    
+        name: Test
+        annotations:
+            human: 
+                male: annotations/annotation.gtf
+        genomes:
+            human: 
+                male: genomes/genome_1Mbp.fa
+            
+        
+    
 
-  In order to use this, the sex property for each dataset should be specified in the project index file. The key representing the sex in the configuration file must correspond to the value used to specify the sex in the index file. The path key is added here in case the user would like to specify additional information (e.g. the direct path to the genome index if already present). However, at the moment this additional information is ignored by the pipeline, if present.
+  In order to use this the sex property for each dataset should be specified in the project index file. The key representing the sex in the configuration file must correspond to the value used to specify the sex in the index file. The path key is added here in case the user would like to specify additional information (e.g. the direct path to the genome index if already present). However at the moment this additional information is ignored by the pipeline if present.

@@ -22,10 +22,6 @@ Contents:
    Commands <cli>
    projects
    execution
-   file_formats
-
-
-
 
 .. Indices and tables
    ==================
